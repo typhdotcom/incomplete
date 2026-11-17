@@ -1,0 +1,11 @@
+name = "incomplete"
+version = "0.1.0"
+defaultTargets = ["Incomplete"]
+
+[[require]]
+name = "lean4lean"
+git = "https://github.com/typhdotcom/lean4lean"
+rev = "979fe59306db077bc2c681319a53b4f521791603"
+
+[[lean_lib]]
+name = "Incomplete"

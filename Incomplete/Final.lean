@@ -1,0 +1,34 @@
+import Incomplete.Diag
+import Incomplete.CheckPR
+import Lean4Lean.Theory.Typing.EnvLemmas
+
+/-!
+# Incompleteness, from consistency alone
+
+For every environment extending `natEnv` that is `Checkable` — its constants and
+definitional-equality rules and inductive types are listed by finite tables, and it is
+ordered — consistency gives a true, unprovable halting sentence.
+-/
+
+namespace Lean4Lean.Incomplete
+
+/-- What the proof checker needs of an environment. `TablesFor env T`: `env.constants` is the
+first-match lookup in the finite list `T.consts`, and `env.defeqs` holds exactly of the members
+of the finite list `T.rules`, and `env.inducts` is the first-match lookup in `T.inducts`.
+`Ordered`: constants and rules were added well typed, which Σ₁-completeness uses. -/
+structure Checkable (env : VEnv) : Prop where
+  tables : ∃ T : Tables, TablesFor env T
+  ordered : env.Ordered
+
+/-- **Incompleteness.** A consistent checkable extension of `natEnv` leaves the halting sentence of
+some machine on its own number undecided: it is true and unprovable, and it is irrefutable if the
+theory's proofs of halting sentences are sound. -/
+theorem incomplete_of_consistent (env : VEnv) (hext : natEnv ≤ env) (hchk : Checkable env)
+    (hC : Consistent env) :
+    ∃ d : PR, ¬d.Halts d.code ∧ ¬Provable env (notHalts d d.code) ∧
+      (HaltsSound env → ¬Provable env (halts d d.code)) := by
+  obtain ⟨T, hT⟩ := hchk.tables
+  exact incomplete_of_check (hasNat_natEnv.mono hext) hchk.ordered
+    (checkDecidable_of_tables hT) hC
+
+end Lean4Lean.Incomplete
