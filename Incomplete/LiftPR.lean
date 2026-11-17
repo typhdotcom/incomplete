@@ -8,7 +8,8 @@ so the recursion runs on `pair e (min k (e + 1))`: an expression's variables are
 number, so lifting at a larger cutoff changes nothing, and the capped key decreases.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -167,4 +168,4 @@ def liftP (n e k : PR) : PR := comp3 liftC n e k
     (liftP n e k).eval ρ = liftNum (n.eval ρ) (e.eval ρ) (k.eval ρ) :=
   eval_comp3 liftC_computes n e k ρ
 
-end Lean4Lean.Incomplete
+end Incomplete

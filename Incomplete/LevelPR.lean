@@ -7,7 +7,8 @@ import Incomplete.Encode
 `levC` computes it by course-of-values recursion.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -114,4 +115,4 @@ def levC : PR := covC levStep
 theorem levC_computes : Computes1 levC levNum := by
   intro ρ; rw [levC, covC_computes levStep_computes, levF_eq]
 
-end Lean4Lean.Incomplete
+end Incomplete

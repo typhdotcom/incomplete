@@ -10,7 +10,8 @@ incompleteness holds of every consistent well-formed extension of `natEnv` (`inc
 in particular of one whose declarations include `Nat`'s (`incomplete_of_wf'`).
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 
 /-- First match in `l`, falling back to `f`. -/
 def tlookupD : List (Name × VConstant) → (Name → Option VConstant) → Name → Option VConstant
@@ -313,4 +314,4 @@ theorem twoEnv_incomplete_of_consistent (hC : Consistent twoEnv) :
       (HaltsSound twoEnv → ¬Provable twoEnv (halts d d.code)) :=
   incomplete_of_wf twoEnv twoEnv_wf natEnv_le_twoEnv hC
 
-end Lean4Lean.Incomplete
+end Incomplete

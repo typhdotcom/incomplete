@@ -10,7 +10,8 @@ variables: `Prop` is `two`, `Type` is the universe `V0`, a sort above is empty; 
 substitution and level instantiation commute with it.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr ZFSet
 
 attribute [local instance] Classical.propDecidable
@@ -154,4 +155,4 @@ theorem recV_app {u : Nat} {M z s n : ZS} (hM : M ∈ pi omega fun _ => univ u)
     (hn : n ∈ omega) : app (app (app (app (recV u) M) z) s) n = recN z s (natOf n) := by
   rw [recV, app_lam hM, app_lam hz, app_lam hs, app_lam hn]
 
-end Lean4Lean.Incomplete
+end Incomplete

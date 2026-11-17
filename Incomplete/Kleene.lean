@@ -11,7 +11,7 @@ The diagonal is Lawvere's: `d` describes the anti-diagonal of "`c` halts on `⌜
 answer about itself.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
 
 theorem kleene {C I S : Type} (quote : C → I) (Halts : C → I → Prop) (Provable : S → Prop)
     (halts notHalts : C → I → S)
@@ -25,4 +25,4 @@ theorem kleene {C I S : Type} (quote : C → I) (Halts : C → I → Prop) (Prov
     consistent _ _ (complete _ _ ((hd d).2 h)) h
   exact ⟨d, fun h => hn ((hd d).1 h), hn, fun sound h => hn ((hd d).1 (sound _ _ h))⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

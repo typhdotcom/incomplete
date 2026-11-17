@@ -10,7 +10,7 @@ partial recursive function is a search of this shape, so this is a universal mod
 correspondence with the object theory needs only the primitive recursive part.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
 
 inductive PR where
   | zero
@@ -84,4 +84,4 @@ theorem pair_inj {a b a' b' : Nat} (h : pair a b = pair a' b') : a = a' ∧ b = 
   have e := pair_sum h; unfold pair at h; rw [e] at h; omega
 
 end PR
-end Lean4Lean.Incomplete
+end Incomplete

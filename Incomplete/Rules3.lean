@@ -9,7 +9,8 @@ equivalence, and instantiating a fixed term at a numbered level list is a templa
 read that list (`tmplE`).
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -412,4 +413,4 @@ theorem extraC_spec {R : Nat → Bool} (hR : R 12 = true) {ρ : Val} (h : ρ 0 %
     (_ : HistOK T R ρ) : (extraC T.rules).eval ρ = certNum T R (ρ 0) := by
   rw [certNum_extra hR h, eval_extraC]
 
-end Lean4Lean.Incomplete
+end Incomplete

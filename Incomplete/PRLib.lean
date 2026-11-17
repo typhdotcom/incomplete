@@ -7,7 +7,7 @@ Renaming of variables, composition, numerals, addition, triangular numbers and p
 with its `eval` lemma.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
 namespace PR
 
 /-- A renaming under one more bound variable. -/
@@ -459,4 +459,4 @@ decreasing_by omega
 
 
 end PR
-end Lean4Lean.Incomplete
+end Incomplete

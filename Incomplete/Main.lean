@@ -15,7 +15,8 @@ are moreover sound (`HaltsSound`), it does not refute it either.
 `notHalts` (`refute`) are proved. The three hypotheses are what remains.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 
 /-- A machine's number, as input to another: the number of its closed object-level function. -/
 def PR.code (f : PR) : Nat := encExpr (fn f)
@@ -61,4 +62,4 @@ theorem natEnv_incomplete (hE : DiagEnumerable natEnv) (hC : Consistent natEnv) 
       (HaltsSound natEnv → ¬Provable natEnv (halts d d.code)) :=
   incomplete hasNat_natEnv natEnv_ordered hE hC
 
-end Lean4Lean.Incomplete
+end Incomplete

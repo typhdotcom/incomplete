@@ -9,7 +9,8 @@ end. This is how a projection's type instantiates a field's type at the paramete
 earlier projections. The recursion is capped as for lifting.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR VExpr
 
 attribute [local simp] eval_eqz eval_succ
@@ -197,4 +198,4 @@ def substP (e R k : PR) : PR := comp3 substC e R k
     (substP e R k).eval ρ = substNum (e.eval ρ) (R.eval ρ) (k.eval ρ) :=
   eval_comp3 substC_computes e R k ρ
 
-end Lean4Lean.Incomplete
+end Incomplete

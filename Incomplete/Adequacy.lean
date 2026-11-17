@@ -9,7 +9,8 @@ for them, it is definitionally equal to the numeral of `f`'s value: the object t
 every primitive recursive function on numerals by beta and iota.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 namespace PR
@@ -199,4 +200,4 @@ theorem fn_adequate (f : PR) (n k : Nat) :
 
 end
 
-end Lean4Lean.Incomplete
+end Incomplete

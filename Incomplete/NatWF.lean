@@ -7,7 +7,8 @@ Each constant's type is a type, and each iota rule's sides have its type, in the
 before it: `natEnv` is `VEnv.Ordered`, which the substitution and weakening lemmas need.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 theorem NatConsts.recTy {env : VEnv} (H : NatConsts env) : env.IsType 1 [] recTy := by
@@ -40,4 +41,4 @@ theorem natEnv_ordered : natEnv.Ordered := by
   have hI : envI.Ordered := .defeq hI0 (iotaSucc_wf (hRc.mono addDefEq_le) rfl)
   exact .block hI (d := natDecl) rfl
 
-end Lean4Lean.Incomplete
+end Incomplete

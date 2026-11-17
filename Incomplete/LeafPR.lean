@@ -9,7 +9,8 @@ fragment's bounds (`Cert.leafOK`), by course-of-values recursion over certificat
 the proof checker it decides provability in the fragment: `bcheckDecidable`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -196,4 +197,4 @@ def leafC : PR := covC leafStep
 theorem leafC_computes : Computes1 leafC leafNum := by
   intro ρ; rw [leafC, covC_computes leafStep_computes, leafF_eq]
 
-end Lean4Lean.Incomplete
+end Incomplete

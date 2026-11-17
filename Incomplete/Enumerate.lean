@@ -11,7 +11,8 @@ code computing the number of the diagonal sentence `notHalts f ⌜f⌝` from `�
 (`DiagComputable`). The diagonal machine runs the second and feeds its result to the first.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR (pair)
 
 /-- Some code checks proofs: given the number of a sentence `Q` in variable `0` and any number
@@ -55,4 +56,4 @@ theorem incomplete' {env : VEnv} (H : HasNat env) (henv : env.Ordered) (hG : Che
       (HaltsSound env → ¬Provable env (halts d d.code)) :=
   incomplete H henv (diagEnumerable_of hG hN) hC
 
-end Lean4Lean.Incomplete
+end Incomplete

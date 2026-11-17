@@ -9,7 +9,8 @@ import Lean4Lean.Theory.Typing.EnvLemmas
 declaration; `eqEnv` adds it to `natEnv`. Its recursor and iota rule are the generated ones.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 def eqTyE : VExpr := .forallE (.sort (.param 0)) (.forallE (.bvar 0) (.forallE (.bvar 1) (.sort .zero)))
@@ -142,4 +143,4 @@ theorem eqEnv_incomplete_of_consistent (hC : Consistent eqEnv) :
       (HaltsSound eqEnv → ¬Provable eqEnv (halts d d.code)) :=
   incomplete_of_wf eqEnv eqEnv_wf natEnv_le_eqEnv hC
 
-end Lean4Lean.Incomplete
+end Incomplete

@@ -8,7 +8,7 @@ sets of members of `V0` indexed by a type in `Type`, so it is closed under the c
 of `ZF.lean`; in particular under `pi`, which makes it a model of the object theory's `Type`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
 
 attribute [local instance] Classical.propDecidable
 
@@ -187,4 +187,4 @@ theorem omega_mem_V0 : (omega : ZFSet.{1}) ∈ V0 :=
 
 end ZFSet
 
-end Lean4Lean.Incomplete
+end Incomplete

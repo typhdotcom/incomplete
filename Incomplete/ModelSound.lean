@@ -8,7 +8,8 @@ their types, the two sides denote the same set, a member of the type. So the fra
 prove `False`, and it proves `halts f n` only when `f` halts on `n`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr ZFSet
 
 attribute [local instance] Classical.propDecidable
@@ -281,4 +282,4 @@ theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.H
     (zcons (num k) ρ)) (f := fun _ => empty) fun y hy => absurd hy (hIZ y)]
   exact lam_mem_pi fun y hy => absurd hy (hIZ y)
 
-end Lean4Lean.Incomplete
+end Incomplete

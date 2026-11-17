@@ -9,7 +9,8 @@ and `natEnv`'s rules are its two iota rules. `checkProof c P` therefore decides 
 `Provable natEnv P ↔ ∃ c, checkProof c P = true`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr
 
 theorem VLevel.eval_closed : ∀ {l : VLevel}, l.WF 0 → ∀ ls, l.eval ls = l.eval []
@@ -140,4 +141,4 @@ theorem natEnv_tables : TablesFor natEnv natT := by
       have : natDecl.types.findIdx? (·.name == m) = none := by
         rw [List.findIdx?_eq_none_iff]; simp [natDecl, Ne.symm h]
       rw [this]; rfl
-end Lean4Lean.Incomplete
+end Incomplete

@@ -7,7 +7,8 @@ import Incomplete.EqEnv
 fields, so all three projection rules apply to it; `andEnv` adds it to `natEnv`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 def andTyE : VExpr := .forallE (.sort .zero) (.forallE (.sort .zero) (.sort .zero))
@@ -202,4 +203,4 @@ theorem andEnv_incomplete_of_consistent (hC : Consistent andEnv) :
       (HaltsSound andEnv → ¬Provable andEnv (halts d d.code)) :=
   incomplete_of_wf andEnv andEnv_wf natEnv_le_andEnv hC
 
-end Lean4Lean.Incomplete
+end Incomplete

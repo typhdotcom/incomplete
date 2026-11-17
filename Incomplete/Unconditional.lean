@@ -12,7 +12,8 @@ sentences (both from the set model of `ModelSound.lean`). So the diagonal senten
 neither provable nor refutable there, with no hypothesis left.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 /-- A code decides proofs in the fragment, as `CheckDecidable` does for an environment. -/
@@ -69,4 +70,4 @@ theorem incomplete_unconditional :
     (fun _ _ h1 h2 => bconsistent (brefute h1 h2)) bdiagEnumerable
   exact ⟨d, h1, h2, h3 fun _ _ h => bhaltsSound h⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

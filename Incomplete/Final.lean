@@ -10,7 +10,8 @@ definitional-equality rules and inductive types are listed by finite tables, and
 ordered — consistency gives a true, unprovable halting sentence.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 
 /-- What the proof checker needs of an environment. `TablesFor env T`: `env.constants` is the
 first-match lookup in the finite list `T.consts`, and `env.defeqs` holds exactly of the members
@@ -31,4 +32,4 @@ theorem incomplete_of_consistent (env : VEnv) (hext : natEnv ≤ env) (hchk : Ch
   exact incomplete_of_check (hasNat_natEnv.mono hext) hchk.ordered
     (checkDecidable_of_tables hT) hC
 
-end Lean4Lean.Incomplete
+end Incomplete

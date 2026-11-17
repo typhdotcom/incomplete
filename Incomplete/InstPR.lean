@@ -7,7 +7,8 @@ import Incomplete.LiftPR
 recursion as lifting; a variable at the cutoff is replaced by the lifted term.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -127,4 +128,4 @@ def instP (e a k : PR) : PR := comp3 instC e a k
     (instP e a k).eval ρ = instNum (e.eval ρ) (a.eval ρ) (k.eval ρ) :=
   eval_comp3 instC_computes e a k ρ
 
-end Lean4Lean.Incomplete
+end Incomplete

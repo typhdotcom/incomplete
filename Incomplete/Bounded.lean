@@ -14,7 +14,8 @@ bounds and that uses no projection rule derives a `BDefEq` judgment, and every `
 judgment has one.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 inductive BDefEq (env : VEnv) : List VExpr → VExpr → VExpr → VExpr → Prop where
@@ -346,4 +347,4 @@ theorem Cert.check_bcomplete {env : VEnv} {K : Deciders} (hK : K.Spec env 0)
     simp only [check, Bool.and_eq_true, decide_eq_true_eq]
     exact ⟨⟨trivial, w, hl⟩, (hK.defeq _).2 hd⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

@@ -8,7 +8,8 @@ its rule; course-of-values recursion over it computes `certNum T R`, and `chkC T
 of the conclusion: `ChkComputableFor T R` holds for all tables `T` and rule sets `R`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -206,4 +207,4 @@ theorem checkDecidable_of_tables {env : VEnv} {T : Tables} (hT : TablesFor env T
 
 theorem checkDecidable : CheckDecidable natEnv := checkDecidable_of_tables natEnv_tables
 
-end Lean4Lean.Incomplete
+end Incomplete

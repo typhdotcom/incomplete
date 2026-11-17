@@ -13,7 +13,8 @@ Bijectivity is what lets a machine check numbers instead of objects: there are n
 and two objects are equal exactly when their numbers are.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR (pair unpair1 unpair2 pair_unpair unpair1_pair unpair2_pair unpair1_le unpair2_le)
 
 abbrev p1 := unpair1
@@ -473,4 +474,4 @@ decreasing_by
 theorem encCert_inj {c c' : Cert} (h : encCert c = encCert c') : c = c' := by
   rw [← decCert_enc c, h, decCert_enc]
 
-end Lean4Lean.Incomplete
+end Incomplete

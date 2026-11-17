@@ -8,7 +8,7 @@ the kernel implementation in lean4lean or Lean's own kernel.
 
 ## Theorems
 
-All are in namespace `Lean4Lean.Incomplete`.
+All are in namespace `Incomplete`.
 
 ```lean
 theorem incomplete_unconditional :
@@ -99,7 +99,7 @@ To audit, check the axioms of each theorem in a file importing the library:
 
 ```lean
 import Incomplete
-open Lean4Lean.Incomplete
+open Incomplete
 #print axioms incomplete_unconditional
 #print axioms incomplete_of_wf
 #print axioms incomplete_of_wf'

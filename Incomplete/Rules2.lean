@@ -8,7 +8,8 @@ import Incomplete.InstPR
 past the later entries (`lookNum`, by course-of-values recursion over the context and index).
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -223,4 +224,4 @@ theorem betaC_spec {R : Nat → Bool} (hR : R 9 = true) {ρ : Val} (h : ρ 0 % 1
   rw [certNum_beta hR h]
   simp [betaC, hv _ (fld_lt (by omega) 5), hv _ (rest_lt (by omega) 6)]
 
-end Lean4Lean.Incomplete
+end Incomplete

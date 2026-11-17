@@ -9,7 +9,8 @@ it is well typed, so `natEnv` is a `VEnv.WF` environment: the one-declaration de
 `[.induct natDecl]`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 private theorem natT' {env : VEnv} (h : env.constants ``Nat = some ⟨0, .sort (.succ .zero)⟩) :
@@ -91,4 +92,4 @@ theorem natDecl_generatedWF : natDecl.GeneratedWF .empty := by
 theorem natEnv_wf : natEnv.WF :=
   ⟨_, .decl (.induct natDecl_wf natDecl_generatedWF addInduct_natDecl) .empty⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

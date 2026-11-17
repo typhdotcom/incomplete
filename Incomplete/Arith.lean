@@ -7,7 +7,8 @@ import Incomplete.NatWF
 in any context, and computes on numerals by the iota rules.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 section
@@ -241,4 +242,4 @@ theorem HasNat.iota_succ (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
 
 end
 
-end Lean4Lean.Incomplete
+end Incomplete

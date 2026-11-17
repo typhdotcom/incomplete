@@ -8,7 +8,7 @@ extensional equality: the quotient of well-founded trees `PSet.{u}` by bisimilar
 built that way.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
 
 universe u
 
@@ -375,4 +375,4 @@ theorem num_mem_omega (n : Nat) : (num n : ZFSet.{u}) âˆˆ omega := mem_omega.2 â
 
 end ZFSet
 
-end Lean4Lean.Incomplete
+end Incomplete

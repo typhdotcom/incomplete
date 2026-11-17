@@ -9,7 +9,8 @@ inductive type it needs. `halts f n` is its negation. Every true `halts` sentenc
 (`halts_provable`), and the two are never both provable unless `False` is (`refute`).
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 def falseS : VExpr := .forallE (.sort .zero) (.bvar 0)
@@ -106,4 +107,4 @@ theorem refute {env : VEnv} {f : PR} {n : Nat} :
     Provable env (halts f n) → Provable env (notHalts f n) → Provable env falseS
   | ⟨_, hp⟩, ⟨_, hq⟩ => ⟨_, .app' hp hq rfl⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

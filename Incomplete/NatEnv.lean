@@ -9,7 +9,8 @@ import Lean4Lean.Theory.Typing.Meta
 generated ones, stated here explicitly.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr
 
 def nat : VExpr := .const ``Nat []
@@ -109,4 +110,4 @@ theorem natConsts_envS : NatConsts envS := ⟨rfl, rfl, rfl⟩
 
 theorem hasNat_natEnv : HasNat natEnv := ⟨⟨rfl, rfl, rfl⟩, rfl, .inr (.inl rfl), .inl rfl⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

@@ -8,7 +8,8 @@ allowed is decided at the closed levels a certificate supplies, by evaluating th
 fields' levels there.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR VExpr
 
 attribute [local simp] eval_eqz eval_succ
@@ -696,4 +697,4 @@ theorem projDFC_spec {R : Nat → Bool} (hR : R 13 = true) {ρ : Val} (h : ρ 0 
   · exact (eval_dfEntryC h hv d T' c _ f hf).trans
       (ite_iff (by simp only [dfCondT, hl, hs, hf]) _ _)
 
-end Lean4Lean.Incomplete
+end Incomplete

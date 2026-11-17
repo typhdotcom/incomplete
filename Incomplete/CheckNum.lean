@@ -9,7 +9,8 @@ once a code computes it. `chkNumFor R` checks only certificates whose rules (by 
 order of `Cert`'s constructors) are in `R`; for `R` all rules it is `chkNum`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 
 def Cert.tag : Cert → Nat
   | .bvar .. => 0 | .symm .. => 1 | .trans .. => 2 | .sortDF .. => 3 | .constDF .. => 4
@@ -63,4 +64,4 @@ theorem checkDecidable_of_chk {env : VEnv} {T : Tables} (hT : TablesFor env T)
     (h : ChkComputableFor T fun _ => true) : CheckDecidable env :=
   checkDecidable_of_chkFor hT (fun c _ => Cert.usesOnly_all c) h
 
-end Lean4Lean.Incomplete
+end Incomplete

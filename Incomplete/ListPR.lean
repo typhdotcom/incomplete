@@ -8,7 +8,8 @@ import Incomplete.SubstPR
 substitution, these give a projection's type as a number (`projType_num`).
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR VExpr
 
 attribute [local simp] eval_eqz eval_succ
@@ -95,4 +96,4 @@ theorem projType_num (c : VConstructor) (ls : List VLevel) (s : Name) (k : Nat)
     consList_eq_listS, List.reverse_append, List.reverse_reverse]
   rfl
 
-end Lean4Lean.Incomplete
+end Incomplete

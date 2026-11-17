@@ -8,7 +8,8 @@ The adequacy of `PR.tr` and the proof of a true `halts` sentence (`Adequacy.lean
 `Nat` and propositions, and use `Nat.rec` at `Type`.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 section
@@ -227,4 +228,4 @@ theorem brefute {env : VEnv} {f : PR} {n : Nat} :
     BProvable env (halts f n) → BProvable env (notHalts f n) → BProvable env falseS
   | ⟨_, hp⟩, ⟨_, hq⟩ => ⟨_, .app' hp hq rfl⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

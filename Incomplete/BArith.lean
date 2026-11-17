@@ -8,7 +8,8 @@ the iota rules. The iota rules are stated over binders whose types live in `Type
 reduced here by one beta step per argument, never typing those binders.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr VEnv
 
 section
@@ -257,4 +258,4 @@ theorem HasNat.biota_succ {A z s n : VExpr} (hI : Inert A)
 
 end
 
-end Lean4Lean.Incomplete
+end Incomplete

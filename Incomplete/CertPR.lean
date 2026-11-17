@@ -10,7 +10,8 @@ fields of `n / 16` and numbers built from them, and `certNum T R` at the childre
 condition has a code; `certStep` dispatches on the tag.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 attribute [local simp] eval_eqz eval_succ
@@ -396,4 +397,4 @@ theorem proofIrrelC_spec {R : Nat → Bool} (hR : R 11 = true) {ρ : Val} (h : �
   simp [proofIrrelC, hv _ (fld_lt (by omega) 4), hv _ (fld_lt (by omega) 5),
     hv _ (rest_lt (by omega) 6)]
 
-end Lean4Lean.Incomplete
+end Incomplete

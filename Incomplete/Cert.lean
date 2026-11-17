@@ -9,7 +9,8 @@ children, given deciders for the environment's rules and for level equivalence. 
 and complete.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open VExpr
 
 deriving instance DecidableEq for VLevel
@@ -380,4 +381,4 @@ theorem Cert.check_complete {env : VEnv} {U : Nat} {K : Deciders} (hK : K.Spec e
       List.all_eq_true]
     exact ⟨w, hp⟩
 
-end Lean4Lean.Incomplete
+end Incomplete

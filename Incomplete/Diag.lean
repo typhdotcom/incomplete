@@ -8,7 +8,8 @@ Codes for constants in binary, a code for the number of the numeral `lit n`, and
 code `diagC` for `diagNum`: `DiagComputable` holds.
 -/
 
-namespace Lean4Lean.Incomplete
+namespace Incomplete
+open Lean4Lean
 open PR
 
 /-- The number of the numeral `lit (ρ 0)`. -/
@@ -45,4 +46,4 @@ theorem incomplete_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)
       (HaltsSound env → ¬Provable env (halts d d.code)) :=
   incomplete' H henv hG diagComputable hC
 
-end Lean4Lean.Incomplete
+end Incomplete
