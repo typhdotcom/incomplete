@@ -192,6 +192,16 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
 - `Bounded`, `BArith`, `BSigma`, `ZF`, `ZFUniv`, `Model`, `ModelSound`,
   `Unconditional`: the Prop/Type fragment, its set model, and the unconditional
   result.
+- `Obj/*`: natural deduction inside the object theory, over any environment
+  with `Nat` that is ordered (`ObjEnv`). `Obj/Core`: the judgment
+  `Thm env Γ P` (a proof of `P` in context `Γ`), the formulas `imp`, `all` and
+  Leibniz equality `EqN`, and the rules, with induction by `Nat.rec` into
+  `Prop`. `Obj/Tactic`: `otype` for typing side conditions, `orw` for
+  rewriting by object equations, `ointro`, `oind`, `ospec`, and `∀ₒ x y, P`
+  statements with named variables. `Obj/Rec`: binary functions by primitive
+  recursion and their computation rules. `Obj/Arith`: `add` and `mul`,
+  commutativity and associativity, closed in `natEnv` and at arbitrary terms.
+  `Obj/Code`: the compiled codes `fn f` as closed atoms.
 
 ## License
 

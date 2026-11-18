@@ -27,3 +27,9 @@ import Incomplete.Unconditional
 import Incomplete.Induct
 import Incomplete.Rosser
 import Incomplete.Second
+import Incomplete.Obj.Attr
+import Incomplete.Obj.Core
+import Incomplete.Obj.Tactic
+import Incomplete.Obj.Rec
+import Incomplete.Obj.Arith
+import Incomplete.Obj.Code
