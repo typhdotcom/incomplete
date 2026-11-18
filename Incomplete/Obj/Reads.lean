@@ -6,7 +6,9 @@ import Incomplete.InstPR
 
 `bnd (comp2 g a b) ≤ m` from bounds on `g`, `a` and `b`, and likewise for `comp3`, `push`,
 `succ` and `prec`; `obnd` proves `bnd f ≤ m` for a code composed from `PRLib`'s combinators by
-following its structure, never evaluating `bnd` on the whole code.
+following its structure, never evaluating `bnd` on the whole code nor unfolding a combinator
+that repeats its argument (`fstC`, `sndC`, `divC`, `modC`); at a further combinator it applies
+the bounds labelled `obnd_le` for its head.
 -/
 
 namespace Incomplete.Obj
@@ -55,6 +57,25 @@ theorem bnd_triRootC : bnd triRootC ≤ 1 := by decide
 theorem bnd_iterC : bnd iterC ≤ 2 := by simp [bnd_simp]
 theorem bnd_dmC (k : Nat) : bnd (dmC k) ≤ 1 := by simp [bnd_simp]
 
+theorem bnd_fstC_sndC_le {a : PR} {m : Nat} (h : bnd a ≤ m) : bnd (fstC.sndC a) ≤ m :=
+  bnd_comp2_le (bnd_const_le bnd_subC) h
+    (bnd_push_le (bnd_push_le h (bnd_const_le bnd_triRootC)) (bnd_const_le bnd_triC))
+
+theorem bnd_sndC_le {a : PR} {m : Nat} (h : bnd a ≤ m) : bnd (sndC a) ≤ m := bnd_fstC_sndC_le h
+
+theorem bnd_fstC_le {a : PR} {m : Nat} (h : bnd a ≤ m) : bnd (fstC a) ≤ m :=
+  bnd_comp2_le (bnd_const_le bnd_subC) (bnd_push_le h (bnd_const_le bnd_triRootC))
+    (bnd_fstC_sndC_le h)
+
+theorem bnd_divC_le {k : Nat} {a : PR} {m : Nat} (h : bnd a ≤ m) : bnd (divC k a) ≤ m :=
+  bnd_fstC_le (bnd_push_le h (bnd_const_le (bnd_dmC k)))
+
+theorem bnd_modC_le {k : Nat} {a : PR} {m : Nat} (h : bnd a ≤ m) : bnd (modC k a) ≤ m :=
+  bnd_sndC_le (bnd_push_le h (bnd_const_le (bnd_dmC k)))
+
+theorem bnd_numC_le (n m : Nat) : bnd (numC n) ≤ m := by rw [bnd_numC]; exact Nat.zero_le _
+
+
 open Lean Meta Elab Tactic in
 /-- The code `f` of a goal `bnd f ≤ m`. -/
 def bndGoal? (t : Expr) : MetaM (Option Expr) := do
@@ -72,11 +93,15 @@ partial def obndCore (g : MVarId) : TacticM Unit := g.withContext do
       unless ← g'.isAssigned do
         if (← bndGoal? (← g'.getType)).isSome then obndCore g'
         else
-          setGoals [g']; evalTactic (← `(tactic| decide))
+          setGoals [g']; evalTactic (← `(tactic| omega))
   let apply (n : Name) : TacticM Unit := do finish (← g.apply (← mkConstWithFreshMVarLevels n))
   let atom (h : Expr) : TacticM Unit := do
     setGoals [g]
-    evalTactic (← `(tactic| exact bnd_const_le $(← Term.exprToSyntax h) (by decide)))
+    evalTactic (← `(tactic| exact bnd_const_le $(← Term.exprToSyntax h) (by omega)))
+  for d in ← getLCtx do
+    if d.isImplementationDetail then continue
+    if let some f' ← bndGoal? d.type then
+      if f' == f then atom d.toExpr; return
   let .const c _ := f.getAppFn | throwError "obnd: no bound for {f}"
   if c == ``comp2 then apply ``bnd_comp2_le
   else if c == ``comp3 then apply ``bnd_comp3_le
@@ -86,6 +111,12 @@ partial def obndCore (g : MVarId) : TacticM Unit := g.withContext do
   else if c == ``PR.num then apply ``bnd_num_le
   else if c == ``PR.zero then apply ``Nat.zero_le
   else if c == ``PR.prec then apply ``bnd_prec_le
+  else if c == ``fstC then apply ``bnd_fstC_le
+  else if c == ``sndC then apply ``bnd_sndC_le
+  else if c == ``fstC.sndC then apply ``bnd_fstC_sndC_le
+  else if c == ``divC then apply ``bnd_divC_le
+  else if c == ``modC then apply ``bnd_modC_le
+  else if c == ``numC then apply ``bnd_numC_le
   else
     let table := [(``subC, ``bnd_subC), (``addC, ``bnd_addC), (``mulC, ``bnd_mulC),
       (``pairC, ``bnd_pairC), (``selC, ``bnd_selC), (``triC, ``bnd_triC),
@@ -93,18 +124,26 @@ partial def obndCore (g : MVarId) : TacticM Unit := g.withContext do
     if let some (_, n) := table.find? (·.1 == c) then atom (mkConst n)
     else if c == ``dmC then atom (mkApp (mkConst ``bnd_dmC) f.appArg!)
     else
-      for d in ← getLCtx do
-        if d.isImplementationDetail then continue
-        if let some f' ← bndGoal? d.type then
-          if f' == f then atom d.toExpr; return
+      for n in ← labelled `obnd_le do
+        let some ci := (← getEnv).find? n | continue
+        let hd ← forallTelescopeReducing ci.type fun _ t => do
+          let some f' ← bndGoal? t | return none
+          return f'.getAppFn.constName?
+        unless hd == some c do continue
+        let s ← saveState
+        try
+          let gs ← g.apply (← mkConstWithFreshMVarLevels n)
+          finish gs
+          return
+        catch _ => s.restore
       throwError "obnd: no bound for {f}"
 
 elab "obnd_core" : tactic => do obndCore (← Lean.Elab.Tactic.getMainGoal)
 
 /-- Prove `bnd f ≤ m` for a code `f` composed from `PRLib`'s combinators. -/
 macro "obnd" : tactic => `(tactic| (
-  try simp only [ifz, leq, eqz, cpair, fstC, fstC.sndC, sndC, modC, divC, tagC, histK, keyC, minP, nthC,
-    addP, liftP, instP, covPC, histPC, covC, histC]
+  try simp only [ifz, leq, eqz, cpair, tagC, histK, keyC, minP, nthC, addP, liftP, instP, covPC,
+    histPC, covC, histC]
   obnd_core))
 
 end Incomplete.Obj

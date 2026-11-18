@@ -240,14 +240,23 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `nthC`, `histC`/`covC` and `histPC`/`covPC` with the step symbolic:
   `hist (S n) = S (pair (cov n) (hist n))`, and `cov j` read back from the
   history at `n` for `j < n`. `Obj/Reads`: `obnd`, bounds on the variables a
-  composed code reads, by its structure. `Obj/Key`: the recursion of `liftC`
+  composed code reads, by its structure and the bounds labelled `obnd_le`.
+  `Obj/Key`: the recursion of `liftC`
   and `instC` on the capped key `pair e (min k (e + 1))`, one equation per
   constructor of `encExpr` for any step of their shape. `Obj/Lift`, `Obj/Inst`:
   `liftC` and `instC` one constructor at a time at symbolic components:
   variables below, at and above the cutoff, sorts, constants, `app`, `lam`,
   `forallE`, `proj`. `Obj/Numeral`: the binary numeral codes `numC n` at
   `n = k * a + b`, and the number of the numeral `lit v` (`litC`) left
-  unchanged by lifting and instantiation, for every `v`.
+  unchanged by lifting and instantiation, for every `v`. `Obj/Fields`: the
+  fields of a tuple as `fldC` and `restC` compute them, and a code at numerals
+  as the numeral of its value, by adequacy (`ev_lits`). `Obj/Check`:
+  `bnd (certStep T R) ≤ 2`, from bounds on every rule's code. `Obj/Certs`: the
+  checker at symbolic certificate numbers: `certT T R c`, its verdict, and
+  `jT c`, the number of the judgment; the `appDF` certificate `appT …` checks
+  when its children do and certifies `f a ≡ f' a' : B[a]`, with `B[a]` the code
+  `instT B a 0`; and `chkT T` accepts a checking certificate of `[] ⊢ e ≡ e : s`
+  as a proof of the sentence numbered `s` (`prfT`).
 
 ## License
 
