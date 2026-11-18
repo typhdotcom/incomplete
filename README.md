@@ -197,38 +197,40 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `Thm env Γ P` (a proof of `P` in context `Γ`), the formulas `imp`, `all` and
   Leibniz equality `EqN`, and the rules, with induction by `Nat.rec` into
   `Prop`. `Obj/Tactic`: `otype` for typing side conditions, `orw` for
-  rewriting by object equations in the goal or a hypothesis, `ointro`, `oind`,
-  `ospec`, `olift`, and `∀ₒ x y, P` statements with named variables.
-  `Obj/Iota`: the iota rules and `Nat.rec` congruence in every context.
-  `Obj/Logic`: impredicative `⊥`, `¬`, `∧`, `∨`, `↔` and `∃` over `Nat`, their
-  rules and tactics (`ocases`, `osplit`, `oleft`, `oright`, `oexists`),
-  `0 ≠ S n`, injectivity of `S`, and `n = 0 ∨ ∃ m, n = S m`. `Obj/Rec`: binary
-  functions by primitive recursion and their computation rules. `Obj/Arith`:
-  `add` and `mul`, commutativity and associativity, closed in `natEnv` and at
-  arbitrary terms. `Obj/Code`: the compiled codes `fn f` as closed atoms; `add`
-  is `fn PR.addC`. `Obj/Eval`: `ev f l`, the code `f` at symbolic arguments
-  `l`, with `fn f x y` equal to `ev f [y, x]`, and the computation rules of each
-  constructor and of `ren`, `comp2` and `comp3` in every context. `Obj/Codes`:
-  the defining equations of `mulC`, `predC` and `subC`, and of `leq`, `eqz`,
-  `selC`, `ifz` and `andz` on codes. `Obj/Order`: `a ≤ₒ b` as `a - b = 0`, its
-  equivalence with `∃ c, a + c = b`, the laws of truncated subtraction,
-  `fn mulC = mul`, and what `leq` and `eqz` test. `Obj/Closed`: these as closed
-  theorems, and so `Provable natEnv`. `Obj/Ring`: distributivity, associativity
-  of `mul` and cancellation; `ONat env Γ`, the terms of `Nat` in `Γ` up to
-  provable equality, as a `Lean.Grind` commutative semiring; and `oring [h, …]`,
-  which proves an equation from equations by `grind` in it. `Obj/Ineq`:
-  `a <ₒ b` as `S a ≤ₒ b`; reflexivity, transitivity, totality, trichotomy,
-  monotonicity and cancellation of `+` and `*`, and truncated subtraction; and
-  `ole c [h, …]`, which proves `a ≤ₒ b` from `a + c = b` by `oring`.
-  `Obj/Bnd`: the variables read by codes with symbolic numerals (`num n`,
-  `numC n`), for `ev_fn1` and `ev_fn2`. `Obj/Pair`: `triC`, `triRootC`,
-  `pairC`, `fstC`, `sndC` and `cpair` at symbolic arguments:
-  `tri (S n) = tri n + S n`, monotonicity,
+  rewriting by object equations in the goal or a hypothesis, also under object
+  binders, `ointro`, `oind`, `ospec`, `olift`, and `∀ₒ x y, P` statements with
+  named variables. `Obj/Iota`: the iota rules and `Nat.rec` congruence in every
+  context. `Obj/Logic`: impredicative `⊥`, `¬`, `∧`, `∨`, `↔` and `∃` over
+  `Nat`, their rules and tactics (`ocases`, which can name an existential's
+  witness, `osplit`, `oleft`, `oright`, `oexists`), `0 ≠ S n`, injectivity of
+  `S`, and `n = 0 ∨ ∃ m, n = S m`. `Obj/Rec`: binary functions by primitive
+  recursion and their computation rules. `Obj/Arith`: `add` and `mul`,
+  commutativity and associativity, closed in `natEnv` and at arbitrary terms.
+  `Obj/Code`: the compiled codes `fn f` as closed atoms; `add` is
+  `fn PR.addC`. `Obj/Eval`: `ev f l`, the code `f` at symbolic arguments `l`,
+  with `fn f x y` equal to `ev f [y, x]`, and the computation rules of each
+  constructor and of `ren`, `comp2` and `comp3` in every context. `Obj/Bnd`:
+  the variables read by codes with symbolic numerals (`num n`, `numC n`), for
+  `ev_fn1` and `ev_fn2`. `Obj/Codes`: the defining equations of `mulC`,
+  `predC` and `subC`, and of `leq`, `eqz`, `selC`, `ifz` and `andz` on codes.
+  `Obj/Order`: `a ≤ₒ b` as `a - b = 0`, its equivalence with
+  `∃ c, a + c = b`, the laws of truncated subtraction, `fn mulC = mul`, and
+  what `leq` and `eqz` test. `Obj/Closed`: these as closed theorems, and so
+  `Provable natEnv`. `Obj/Ring`: distributivity, associativity of `mul` and
+  cancellation; `ONat env Γ`, the terms of `Nat` in `Γ` up to provable
+  equality, as a `Lean.Grind` commutative semiring; and `oring [h, …]`, which
+  proves an equation from equations by `grind` in it. `Obj/Ineq`: `a <ₒ b` as
+  `S a ≤ₒ b`; reflexivity, transitivity, totality, trichotomy, monotonicity
+  and cancellation of `+` and `*`, truncated subtraction, and `eqz` nonzero at
+  unequal values; and `ole c [h, …]`, which proves `a ≤ₒ b` from `a + c = b`
+  by `oring`. `Obj/Pair`: `triC`, `triRootC`, `pairC`, `fstC`, `sndC` and
+  `cpair` at symbolic arguments: `tri (S n) = tri n + S n`, monotonicity,
   `tri (triRoot n) ≤ n < tri (S (triRoot n))`, `triRoot (tri w + j) = w` for
-  `j ≤ w`, `fst (pair a b) = a`, `snd (pair a b) = b`, and `a, b ≤ pair a b`. `Obj/DivMod`: `dmC k`, `divC k`,
-  `modC k` and `tagC` for every `k ≥ 1`: `y = k * div y + mod y` with
-  `mod y < k`, uniqueness, and `div (k * p + t) = p`, `mod (k * p + t) = t` for
-  `t < k`; schematically and as `Provable natEnv`.
+  `j ≤ w`, `fst (pair a b) = a`, `snd (pair a b) = b`, and `a, b ≤ pair a b`.
+  `Obj/DivMod`: `dmC k`, `divC k`, `modC k` and `tagC` for every `k ≥ 1`:
+  `y = k * div y + mod y` with `mod y < k`, uniqueness, and
+  `div (k * p + t) = p`, `mod (k * p + t) = t` for `t < k`. Both as schematic
+  `Thm env Γ` lemmas and as `Provable natEnv`.
 
 ## License
 

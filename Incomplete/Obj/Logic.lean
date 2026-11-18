@@ -224,6 +224,13 @@ theorem exEH (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (hR : env.HasType 
     Thm env Γ R :=
   exE hR h (intro hP (by simpa only [obj_simp] using k (hyp .zero)))
 
+/-- `exE`, with the typing of the witness `bvar 1` and the hypothesis on it. -/
+theorem exEHT (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (hR : env.HasType 0 Γ R (.sort .zero))
+    (h : Thm env Γ (ex P)) (k : Tm env (P :: nat :: Γ) (.bvar 1) →
+      Thm env (P :: nat :: Γ) P.lift → Thm env (P :: nat :: Γ) R.lift.lift) :
+    Thm env Γ R :=
+  exEH hP hR h (k (.bvar (.succ .zero)))
+
 /-- Case analysis on a number: `P 0` and `P (S n)` prove `∀ n, P n`. -/
 theorem cases (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (h0 : Thm env Γ (P.inst zero))
     (hs : Thm env (nat :: Γ) ((P.liftN 1 1).inst (S (.bvar 0)))) : Thm env Γ (all P) :=
@@ -248,16 +255,21 @@ macro "oexists " t:term : tactic =>
 macro "oexfalso" : tactic => `(tactic| (refine Thm.exfalso ?_ ?_ <;> [skip; otype]))
 
 /-- `ocases h with h₁ h₂` eliminates `h`: a disjunction into two goals with the disjuncts `h₁`
-and `h₂` as hypotheses, an existential into a goal over the witness `bvar 0` with `h₁` its
-property, or a conjunction into its conjuncts `h₁` and `h₂`. `ocases` alone splits a goal
-`∀ n, P n` into `P 0` and `∀ n, P (S n)`. -/
+and `h₂` as hypotheses, or a conjunction into its conjuncts `h₁` and `h₂`. On an existential,
+`ocases h with h₁` gives a goal over the witness `bvar 1` with `h₁` its property, and
+`ocases h with x h₁` names the witness: the goal and `h₁` are generalized over it as `x`, with
+`xT` its typing. `ocases` alone splits a goal `∀ n, P n` into `P 0` and `∀ n, P (S n)`. -/
 syntax "ocases" (ppSpace colGt term:max " with" (ppSpace colGt ident)+)? : tactic
 
 macro_rules
   | `(tactic| ocases) => `(tactic| (refine Thm.cases ?_ ?_ ?_; otype; (try onorm); on_goal 2 => try onorm))
-  | `(tactic| ocases $h with $x $y) => `(tactic| first
+  | `(tactic| ocases $h with $x $y) => do
+    let xT := Lean.mkIdent (x.getId.appendAfter "T")
+    `(tactic| first
     | (refine Thm.disjEH ?_ ?_ ?_ $h (fun $x => ?_) (fun $y => ?_) <;> [otype; otype; otype;
         (try onorm at $x:ident ⊢); (try onorm at $y:ident ⊢)])
+    | (refine Thm.exEHT ?_ ?_ $h (fun $xT $y => ?_) <;> [otype; otype;
+        ((try onorm at $y:ident ⊢); generalize VExpr.bvar 1 = $x at $y $xT ⊢)])
     | (have $x := Thm.conjE1 (by otype) (by otype) $h
        have $y := Thm.conjE2 (by otype) (by otype) $h))
   | `(tactic| ocases $h with $x) => `(tactic|

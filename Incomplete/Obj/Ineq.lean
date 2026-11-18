@@ -8,8 +8,8 @@ import Incomplete.Obj.Ring
 `a ≤ₒ b` gives back the witness `b - a` (`le_elim`), so linear facts reduce to equations that
 `oring` proves; `ole c [h₁, …]` does this for a goal `a ≤ₒ b` or `a <ₒ b` at the witness `c`,
 reading each `hᵢ : x ≤ₒ y` as `x + (y - x) = y`. On top: reflexivity, transitivity, totality and
-trichotomy, antisymmetry, monotonicity and cancellation of `+` and `*`, and the interaction with
-truncated subtraction.
+trichotomy, antisymmetry, monotonicity and cancellation of `+` and `*`, the interaction with
+truncated subtraction, and `eqz` being nonzero exactly at unequal values.
 -/
 
 namespace Incomplete.Obj
@@ -231,6 +231,20 @@ theorem sub_sub (ha : Tm env Γ a) (hb : Tm env Γ b) (hc : Tm env Γ c) :
     · orw [sub_zero, add_zero]
     · ointro ih; orw [sub_succ, ih, add_succ, sub_succ]
   ospec this ha hb hc
+
+/-! ### `eqz` -/
+
+theorem ev_eqz_of_eq {p q : PR} {l : List VExpr} (hl : Tms env Γ l)
+    (h : Thm env Γ (ev p l =ₒ ev q l)) : Thm env Γ (ev (eqz p q) l =ₒ zero) := by
+  orw [ev_eqz rfl, h, sub_self, add_zero]
+
+/-- A nonzero `eqz` tests unequal values. -/
+theorem ev_eqz_ne {p q : PR} {l : List VExpr} (hl : Tms env Γ l) (hm : Tm env Γ m)
+    (h : Thm env Γ (ev (eqz p q) l =ₒ S m)) : Thm env Γ (¬ₒ (ev p l =ₒ ev q l)) := by
+  ointro e
+  olift h
+  orw [ev_eqz rfl, e, sub_self, add_zero] at h
+  exact (zero_ne_succ (by otype)).mp h
 
 end
 

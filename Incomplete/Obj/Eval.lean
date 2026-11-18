@@ -145,6 +145,15 @@ theorem lift1Ty {A e : VExpr} (h : Tm env (nat :: Γ) e) : Tm env (nat :: A :: �
 theorem lift2Ty {A e : VExpr} (h : Tm env (nat :: nat :: Γ) e) :
     Tm env (nat :: nat :: A :: Γ) (e.liftN 1 2) := liftNTy (.succ (.succ .one)) h
 
+theorem liftN_nats {A : VExpr} : ∀ k, Ctx.LiftN 1 k (List.replicate k nat ++ Γ)
+    (List.replicate k nat ++ A :: Γ)
+  | 0 => .zero [A]
+  | k + 1 => .succ (liftN_nats k)
+
+/-- A term lifted at `k` under `k` binders over `Nat`. -/
+theorem liftNatsTy {A e : VExpr} (k : Nat) (h : Tm env (List.replicate k nat ++ Γ) e) :
+    Tm env (List.replicate k nat ++ A :: Γ) (e.liftN 1 k) := liftNTy (liftN_nats k) h
+
 theorem substTy {σ : Subst} (hσ : ∀ i, Tm env Γ (σ i)) (f : PR) : Tm env Γ (f.tr.subst σ) :=
   f.trT E.hasNat E.ordered hσ
 
@@ -165,6 +174,19 @@ macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine Tms.lift2 ?_
 macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine lift1Ty ?_); otype))
 macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine lift2Ty ?_); otype))
 macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine evTy ?_); otype))
+
+/-- Reduce typing `liftN 1 e k`, for a literal `k`, to typing `e` without the `k`th binder. -/
+elab "otype_liftN" : tactic => Lean.Elab.Tactic.withMainContext do
+  let tgt ← Lean.Meta.whnfR (← Lean.Elab.Tactic.getMainTarget)
+  let_expr VEnv.HasType _ _ _ e _ := tgt | throwError "otype_liftN: not a typing"
+  let_expr VExpr.liftN n _ k := e | throwError "otype_liftN: not a lift"
+  let (some 1, some k) := (n.nat?, k.nat?) | throwError "otype_liftN: not a literal lift"
+  if k == 0 then throwError "otype_liftN: lift at 0"
+  Lean.Elab.Tactic.evalTactic (← `(tactic| refine liftNatsTy $(Lean.quote k) ?_))
+  Lean.Elab.Tactic.evalTactic (← `(tactic|
+    simp only [List.replicate_succ, List.replicate_zero, List.cons_append, List.nil_append]))
+
+macro_rules | `(tactic| otype) => `(tactic| (otype_liftN; otype))
 macro_rules | `(tactic| otype) => `(tactic| ((with_reducible show bnd _ ≤ _); decide))
 
 /-- The step of `prec g h`'s recursion, at the values `σ` of its other variables. -/

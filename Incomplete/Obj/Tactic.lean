@@ -11,8 +11,9 @@ On goals `Thm env Γ P`:
 - `ohyp` closes the goal by a hypothesis in `Γ`; `orefl` by reflexivity.
 - `olift h` weakens the hypothesis `h` to the goal's context.
 - `orw [h, ← h']` rewrites by equations `h : ∀ …, Thm env Γ (EqN a b)`, abstracting the
-  outermost occurrences of the left side (instantiating its metavariables at the first match at
-  which the rule's equational premises hold by `rfl`) and proving the motive's typing and the
+  outermost occurrences of the left side, also under object binders where they do not mention the
+  bound variables (instantiating its metavariables at the first match at which the rule's
+  equational premises hold by `rfl`) and proving the motive's typing and the
   rule's typing premises by `otype`; `orw [h] at h₁` rewrites the hypothesis `h₁`.
 -/
 
@@ -80,9 +81,13 @@ def isBinder (c : Name) : Bool := c == ``Obj.all || c == `Incomplete.Obj.ex
 
 /-- For `fn` applied to `args` returning an object term or a list of them, which arguments are
 object terms or lists of them (`true`) and which are codes or numbers (`false`); `none` if some
-argument is neither. Such a function is taken to keep its term arguments at its own depth. -/
+argument is neither. Such a function is taken to keep its term arguments at its own depth, so
+lifting and instantiation are excluded. -/
 def termArgs (fn : Expr) (args : Array Expr) : MetaM (Option (Array Bool)) := do
   if args.isEmpty then return none
+  if let .const c _ := fn then
+    if c == ``VExpr.liftN || c == ``VExpr.lift || c == ``VExpr.inst || c == ``VExpr.subst then
+      return none
   let vexpr := mkConst ``VExpr
   let list := mkApp (mkConst ``List [.zero]) vexpr
   forallTelescopeReducing (← inferType fn) fun xs body => do
@@ -112,14 +117,48 @@ def matchOcc (conds : Array MVarId) (a e : Expr) : MetaM Bool := do
       return false
   return true
 
-/-- The motive body `M` with `M.inst a d = e`, abstracting the occurrences of `a` at depth 0;
-`occ` records the first. -/
+/-- `e₀` with `e₀.liftN d = e` up to `obj_simp`'s normal form, read off syntactically: `bvar i`
+for `i ≥ d`, `d` outer `lift`s, and functions of terms over these; `none` if `e` may mention one
+of the `d` innermost variables. -/
+partial def unliftN (d : Nat) (e : Expr) : MetaM (Option Expr) := do
+  if d == 0 then return some e
+  let e ← instantiateMVars e
+  let fn := e.getAppFn
+  let args := e.getAppArgs
+  match fn with
+  | .const c _ =>
+    if c == ``VExpr.bvar && args.size == 1 then
+      let some i := args[0]!.nat? | return none
+      return if i < d then none else some (mkApp (mkConst ``VExpr.bvar) (toExpr (i - d)))
+    else if c == ``VExpr.lift && args.size == 1 then unliftN (d - 1) args[0]!
+    else if c == ``VExpr.liftN && args.size == 3 then
+      let (some n, some 0) := (args[0]!.nat?, args[2]!.nat?) | return none
+      if n ≤ d then unliftN (d - n) args[1]!
+      else return some (mkApp3 fn (toExpr (n - d)) args[1]! args[2]!)
+    else if c == ``VExpr.lam || c == ``VExpr.forallE || isBinder c then return none
+    else if c == ``VExpr.sort || c == ``VExpr.const || c == ``List.nil then return some e
+    else if c == ``List.cons && args.size == 3 then
+      let (some x, some l) := (← unliftN d args[1]!, ← unliftN d args[2]!) | return none
+      return some (mkApp3 fn args[0]! x l)
+    else
+      let some ks ← termArgs fn args | return if e.hasFVar || e.hasMVar then none else some e
+      let mut out := #[]
+      for (x, k) in args.zip ks do
+        if k then
+          let some x ← unliftN d x | return none
+          out := out.push x
+        else out := out.push x
+      return some (mkAppN fn out)
+  | _ => return none
+
+/-- The motive body `M` with `M.inst a d = e`, abstracting the occurrences of `a`, and under `d`
+binders those of `a.liftN d`; `occ` records the first. -/
 partial def absMotive (occ : IO.Ref (Option Expr)) (conds : Array MVarId) (a : Expr) (d : Nat)
     (e : Expr) : MetaM Expr := do
   let e ← instantiateMVars e
-  if d == 0 then
-    if ← matchOcc conds a e then
-      if (← occ.get).isNone then occ.set e
+  if let some e₀ ← unliftN d e then
+    if ← matchOcc conds a e₀ then
+      if (← occ.get).isNone then occ.set e₀
       return mkApp (mkConst ``VExpr.bvar) (toExpr d)
   let fn := e.getAppFn
   let args := e.getAppArgs
