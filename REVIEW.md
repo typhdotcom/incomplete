@@ -1,37 +1,40 @@
 State: COMPLETE
 Turn: none
-Candidate: xoxunolxrqqpppyutwzzqrwmtuxsvkwt / 455a5958306bfead092ff9b68bb79b41e030455e
+Candidate: zyrnlxqwwtmqoznwooqwmpswrsyrunrq / 9b89319577b57cd66a4fa1d38ac1732010fec0ed
 
-# Provability-logic soundness review
+# Finite Kripke completeness review
 
 ## Objective and meaning
 
-Review the internal derivability conditions D2 and D3, formalized Löb,
-arithmetical soundness of GL and its intuitionistic fragment, and the FairBot
-corollary, for the actual arithmetized certificate checker.
+Review soundness and completeness of GL for finite transitive irreflexive
+Kripke models, including the stronger existence of a nonempty rooted
+countermodel whose valuation is false off the variables of the formula.
 
-The candidate comprises the three commits after `ea2463e4`, adding
-`Incomplete/Obj/Derivability.lean`, `Incomplete/Obj/GL.lean`, their public
-imports, README statements, and version `0.6.0`. This accepts the delivered
-soundness milestone toward the user's announced Solovay target. It does not
-certify arithmetical completeness; the README explicitly says that result is
-not proved.
+The candidate comprises the five commits after `ef37e658`: extraction of the
+unchanged modal syntax and Hilbert system into `Modal/Basic.lean`, Kripke
+semantics and evaluation, derivations from hypotheses, the finite completeness
+construction, public imports, README statements and version `0.7.0`.
+
+This accepts the delivered modal completeness milestone toward the user's
+announced Solovay target. Arithmetical completeness remains outside this
+candidate, as the README explicitly states.
 
 ## Accepted foundation
 
 - The formal judgment and upstream/fork dependencies remain as documented in
-  `README.md`. These are results about that specification; they establish no
-  kernel implementation correctness.
+  `README.md`. The object-theory results establish no kernel implementation
+  correctness.
 - Preserve the accepted Gödel–Kleene, Rosser, second incompleteness, Löb,
-  omega-inconsistent-context and bounded unconditional results. Their
-  statements and axiom constraints are unchanged.
+  omega-inconsistent-context, derivability, formalized Löb, arithmetical
+  soundness, FairBot and bounded unconditional results. The modal extraction
+  preserves the syntax and derivability rules used by those results.
 - `Prov T P` is the object proposition asserting an impredicatively encoded
-  existential witness for `chkT T` accepting a certificate of `P`, distinct
-  from the host predicate `Provable env P`.
-- The full object theory is intuitionistic. Classical GL soundness explicitly
-  requires `Provable env dneS`. The intuitionistic fragment, derivability
-  conditions, formalized Löb and FairBot require neither this premise nor
-  consistency or halting soundness.
+  existential certificate for `chkT T`, distinct from host provability.
+  Classical arithmetical GL soundness retains its explicit `dneS` premise.
+- `Modal/` is ordinary Lean mathematics independent of the object theory.
+  Its forcing has classical implication at a world and universal quantification
+  over accessible worlds for boxes. No intuitionistic Kripke semantics is
+  claimed for this construction.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
@@ -39,31 +42,31 @@ not proved.
 Accepted. No blocking finding was identified. This review is complete, and
 no worker action remains for the submitted milestone.
 
-D2 combines two existential certificates using the existing internal modus
-ponens construction, preserving the closed-conclusion condition. D3 supplies
-the proved graph lemma for `provM` to internal completeness: a primitive
-recursive transformer takes a certificate of `P` to a certificate of
-`Prov T P`. Existential elimination and introduction then establish the
-object implication, without extracting a host witness from a proof.
+General Kripke soundness uses transitivity and well-foundedness of the
+converse accessibility relation in the correct direction. For finite models,
+the number of successors strictly decreases along accessibility, establishing
+that well-foundedness from transitivity and irreflexivity. The Boolean
+evaluator agrees with forcing, including universal box evaluation and empty
+successor sets.
 
-Formalized Löb applies the accepted Löb rule to
-`X → Prov T P`, where `X := Prov T (Prov T P → P)`. D3 supplies `Prov T X` from
-`X`, and two D2 applications establish the required reflection premise. The
-public theorem matches the displayed modal Löb axiom.
+Derivations from hypotheses permit modus ponens over GL theorems, without
+necessitation of a local assumption. The deduction theorem, boxed-context
+rule, derivation of 4 from Löb, and literal-extension step support the finite
+construction without changing the accepted Hilbert calculus.
 
-The Hilbert system includes the stated propositional and modal axioms and
-rules. Realizations send atoms to closed propositions, which makes the raw
-`forallE` translation of implication agree with object implication. The
-soundness induction handles every constructor; its DNE case uses the explicit
-object-theory premise, and necessitation applies D1 only to a closed theorem.
-The intuitionistic instance discharges the impossible classical case.
+The canonical worlds are consistent literal assignments over the subformula
+list. Accessibility preserves and unboxes every existing box and requires a
+new boxed member. This relation is transitive and irreflexive. The successor
+witness uses Löb and 4 to establish consistency of the required successor
+literals, including a new box and the negation of its body.
 
-FairBot uses the assumed object equivalences to obtain the two implications
-from provability. D3, D2 and Löb prove the first proposition, after which D1
-and the other implication prove the second. Its claim is conditional on
-those equivalences; it does not assert construction of programs or fixed
-points. The README accurately states the public assumptions and the absence
-of an arithmetical completeness result.
+The truth lemma covers every subformula. Restricting worlds to the selected
+root and all its successors preserves witnesses by transitivity. Thus the
+countermodel is nonempty and rooted, and its valuation support is contained
+in the formula's variables. `GL_iff` correctly combines this result with
+soundness over all finite models. The construction is a classical existence
+proof; evaluation decides forcing for a supplied finite model. The README
+accurately distinguishes these results from arithmetical completeness.
 
 ## Current drawers
 
@@ -71,21 +74,22 @@ None. D1 remains closed; the accepted hypothesis-search fix is unchanged.
 
 ## Verification
 
-- `nix develop -c lake build` passed (135 jobs).
-- Independently re-elaborated both new source modules with
-  `lake env lean --trust=0`; both passed without warnings.
-- A separate `lake env lean --trust=0` audit passed for all 21 README headline
-  theorems, plus `Obj.sigma_prov`, `Obj.prov_mp_ctx`, `Obj.prov_prov`,
-  `Obj.loeb_int`, and `Modal.deriv_sound`. Each reports exactly
-  `[propext, Classical.choice, Quot.sound]`.
-- Disposable probes checked explicit public hypotheses, translation of closed
-  implication, the exact realization of the modal Löb axiom through both
-  formalized Löb and intuitionistic soundness, and the classical DNE path.
-- An independently checked terminal-world interpretation of the Hilbert
-  calculus rules out derivations of bottom and `□p → p` in GL. A three-element
-  Heyting-chain interpretation rules out DNE in the intuitionistic fragment,
-  checking that the two calculus settings remain distinct.
+- `nix develop -c lake build` passed (139 jobs).
+- Independently re-elaborated all four `Modal/` modules and the changed
+  `Obj/GL.lean` with `lake env lean --trust=0`; all passed without warnings.
+- A separate audit passed for all 25 README headline theorems. Each reports
+  exactly `[propext, Classical.choice, Quot.sound]`. Additional audits covered
+  `GL_four`, deduction, boxing, successor witnesses, literal extension,
+  evaluator correctness and finite well-foundedness; their axiom dependencies
+  are subsets of that set.
+- Disposable concrete one- and two-world models checked terminal box truth,
+  relation direction, changing valuations, refutation of unrestricted
+  reflection and local necessitation, and evaluations of 4 and Löb.
+- An independent forcing induction for derivations from hypotheses ruled out
+  `Der [p] (box p)`. A specialization of `GL_complete` produced a nonempty
+  rooted countermodel for `box bot` with valuation false everywhere, checking
+  both additional guarantees in the public theorem.
 - Source inspection found no proof holes, native decision proofs, custom
-  axiom declarations, or unsafe definitions in the new modules.
+  axiom declarations, or unsafe definitions in the changed modules.
 - `nix flake check` passed. Existing warnings in unchanged modules remain
   nonblocking. Disposable probes were removed after use.
