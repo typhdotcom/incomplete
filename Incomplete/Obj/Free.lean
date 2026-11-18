@@ -68,20 +68,19 @@ theorem numT_proj (s : Lean.Name) (i : Nat) (e : VExpr) : Thm env Γ (numT (encE
 
 end
 
-/-- **Closed judgments are free.** A judgment derivable in the environment of `T` has a
-certificate number `c` that the object theory proves to check and to certify it. -/
-theorem closed_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {e1 e2 A : VExpr}
-    (h : envT.IsDefEq 0 [] e1 e2 A) :
-    ∃ c : Nat, ∀ {env : Typing} [ObjEnv env] {Γ : List VExpr},
-      Thm env Γ (certT T (fun _ => true) (numT c) =ₒ zero) ∧
-      Thm env Γ (jT (numT c) =ₒ
+/-- The internal facts about a closed certificate `c` that checks against the environment of `T`:
+the theory proves that it checks and what it certifies. -/
+theorem closed_cert_of {envT : VEnv} {T : Tables} (hT : TablesFor envT T) (c : Cert)
+    (k : c.check envT 0 T.deciders = true) {e1 e2 A : VExpr} (hj : c.j = ⟨[], e1, e2, A⟩) :
+    ∀ {env : Typing} [ObjEnv env] {Γ : List VExpr},
+      Thm env Γ (certT T (fun _ => true) (numT (encCert c)) =ₒ zero) ∧
+      Thm env Γ (jT (numT (encCert c)) =ₒ
         judgT zero (numT (encExpr e1)) (numT (encExpr e2)) (numT (encExpr A))) := by
-  obtain ⟨c, k, hj⟩ := Cert.check_complete (Tables.deciders_spec hT) h
   have hc : c.check T.env 0 T.deciders = true := by
     rw [Cert.check_congr (fun n => (hT.consts n).symm) (fun n => (hT.inducts n).symm)]; exact k
   have h0 : certNum T (fun _ => true) (encCert c) = 0 :=
     certNum_eq_zero.2 (by simp [decCert_enc, Cert.usesOnly_all, hc])
-  refine ⟨encCert c, fun {env} _ {Γ} => ⟨?_, ?_⟩⟩
+  refine fun {env} _ {Γ} => ⟨?_, ?_⟩
   · have h1 := ev_lits (env := env) (Γ := Γ) (certC T (fun _ => true)) [encCert c]
     rw [certC_computes] at h1
     simp only [List.getD_cons_zero, h0, lit_zero, List.map_cons, List.map_nil] at h1
@@ -92,6 +91,17 @@ theorem closed_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {e1 e2 A 
     have h2 := ev_childJC (env := env) (Γ := Γ) (p := var 0) (l := [lit (encCert c)]) (by otype)
     simp only [obj_simp] at h2
     orw [numT_lit, ← h2, h1, ← numT_lit, numT_judg_nil]
+
+/-- **Closed judgments are free.** A judgment derivable in the environment of `T` has a
+certificate number `c` that the object theory proves to check and to certify it. -/
+theorem closed_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {e1 e2 A : VExpr}
+    (h : envT.IsDefEq 0 [] e1 e2 A) :
+    ∃ c : Nat, ∀ {env : Typing} [ObjEnv env] {Γ : List VExpr},
+      Thm env Γ (certT T (fun _ => true) (numT c) =ₒ zero) ∧
+      Thm env Γ (jT (numT c) =ₒ
+        judgT zero (numT (encExpr e1)) (numT (encExpr e2)) (numT (encExpr A))) := by
+  obtain ⟨c, k, hj⟩ := Cert.check_complete (Tables.deciders_spec hT) h
+  exact ⟨encCert c, closed_cert_of hT c k hj⟩
 
 /-- **Closed theorems are free.** A closed provable `P` has a proof `e` and a certificate number
 `c` that the object theory proves to check and to certify `[] ⊢ e ≡ e : P`. -/
