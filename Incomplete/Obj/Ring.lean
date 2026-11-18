@@ -186,11 +186,15 @@ open Lean Elab Tactic in
 elab_rules : tactic
   | `(tactic| oring $[[$hs,*]]?) => do
     evalTactic (← `(tactic| try simp only [obj_simp]))
-    evalTactic (← `(tactic| refine eq_of_omk (by otype) (by otype) ?_))
+    let Γ ← withMainContext do
+      let_expr Thm _ Γ _ := ← instantiateMVars (← getMainTarget)
+        | throwError "oring: goal is not `Thm env Γ P`"
+      Term.exprToSyntax Γ
+    evalTactic (← `(tactic| refine eq_of_omk (Γ := $Γ) (by otype) (by otype) ?_))
     for h in (hs.map (·.getElems)).getD #[] do
-      evalTactic (← `(tactic| have h' := $h))
+      evalTactic (← `(tactic| have h' := $(⟨h⟩)))
       evalTactic (← `(tactic| try simp only [obj_simp] at h'))
-      evalTactic (← `(tactic| have := omk_eq (by otype) (by otype) h'))
+      evalTactic (← `(tactic| have := omk_eq (Γ := $Γ) (by otype) (by otype) h'))
       evalTactic (← `(tactic| clear h'))
     evalTactic (← `(tactic| simp (disch := otype) only [omk_add, omk_mul, omk_S, omk_zero, omk_lit] at *))
     evalTactic (← `(tactic| grind))

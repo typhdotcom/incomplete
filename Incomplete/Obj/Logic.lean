@@ -110,16 +110,16 @@ theorem iffTy (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (
 
 end
 
-macro_rules | `(tactic| otype) => `(tactic| exact falseTy)
-macro_rules | `(tactic| otype) => `(tactic| exact propTy)
-macro_rules | `(tactic| otype) => `(tactic| (refine weakProp ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine weakNat ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine liftN11Ty ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine negTy ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine conjTy ?_ ?_ <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine disjTy ?_ ?_ <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine exTy ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine iffTy ?_ ?_ <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| with_reducible exact falseTy)
+macro_rules | `(tactic| otype) => `(tactic| with_reducible exact propTy)
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine weakProp ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine weakNat ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine liftN11Ty ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine negTy ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine conjTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine disjTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine exTy ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine iffTy ?_ ?_) <;> otype))
 
 /-! ### Rules -/
 

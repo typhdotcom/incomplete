@@ -220,6 +220,15 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `a <ₒ b` as `S a ≤ₒ b`; reflexivity, transitivity, totality, trichotomy,
   monotonicity and cancellation of `+` and `*`, and truncated subtraction; and
   `ole c [h, …]`, which proves `a ≤ₒ b` from `a + c = b` by `oring`.
+  `Obj/Bnd`: the variables read by codes with symbolic numerals (`num n`,
+  `numC n`), for `ev_fn1` and `ev_fn2`. `Obj/Pair`: `triC`, `triRootC`,
+  `pairC`, `fstC`, `sndC` and `cpair` at symbolic arguments:
+  `tri (S n) = tri n + S n`, monotonicity,
+  `tri (triRoot n) ≤ n < tri (S (triRoot n))`, `triRoot (tri w + j) = w` for
+  `j ≤ w`, `fst (pair a b) = a`, `snd (pair a b) = b`, and `a, b ≤ pair a b`. `Obj/DivMod`: `dmC k`, `divC k`,
+  `modC k` and `tagC` for every `k ≥ 1`: `y = k * div y + mod y` with
+  `mod y < k`, uniqueness, and `div (k * p + t) = p`, `mod (k * p + t) = t` for
+  `t < k`; schematically and as `Provable natEnv`.
 
 ## License
 

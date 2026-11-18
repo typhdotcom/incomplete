@@ -50,8 +50,8 @@ theorem subTy (ha : Tm env Γ a) (hb : Tm env Γ b) : Tm env Γ (sub a b) := app
 
 end
 
-macro_rules | `(tactic| otype) => `(tactic| (refine predTy' ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine subTy ?_ ?_ <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine predTy' ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine subTy ?_ ?_) <;> otype))
 
 section
 variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c n : VExpr} {f g h : PR}

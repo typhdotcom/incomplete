@@ -101,6 +101,14 @@ attribute [obj_simp] nat_liftN nat_inst zero_liftN zero_inst succ_liftN succ_ins
 
 theorem EqN_lift : (EqN a b).lift = EqN a.lift b.lift := EqN_liftN
 
+/-- Lifts of a lifted term are normalized to iterated `lift`s. -/
+@[obj_simp] theorem liftN_lift_succ : (e.liftN 1 0).liftN n (k + 1) = (e.liftN n k).liftN 1 0 :=
+  (lift_liftN' e k).symm
+@[obj_simp] theorem liftN_succ_zero : e.liftN (n + 2) 0 = (e.liftN (n + 1) 0).liftN 1 0 :=
+  liftN_succ e (n + 1)
+@[obj_simp] theorem inst_lift_succ : (e.liftN 1 0).inst a (k + 1) = (e.inst a k).liftN 1 0 :=
+  (lift_instN_lo e a).symm
+
 end
 
 /-! ### Typing -/
@@ -156,17 +164,17 @@ macro_rules | `(tactic| olookup) => `(tactic| first
 
 /-- Proves `HasType env 0 Γ e A` for object terms and formulas; extended with `macro_rules`. -/
 syntax "otype" : tactic
-macro_rules | `(tactic| otype) => `(tactic| assumption)
-macro_rules | `(tactic| otype) => `(tactic| exact natTy)
-macro_rules | `(tactic| otype) => `(tactic| exact zeroTy)
-macro_rules | `(tactic| otype) => `(tactic| (refine STy ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine HasType.bvar ?_; olookup))
-macro_rules | `(tactic| otype) => `(tactic| exact litTy _)
-macro_rules | `(tactic| otype) => `(tactic| (refine app2Ty ?_ ?_ ?_ <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine impTy ?_ ?_ <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine allTy ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine EqNTy ?_ ?_ <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine weakTy ?_; otype))
+macro_rules | `(tactic| otype) => `(tactic| with_reducible assumption)
+macro_rules | `(tactic| otype) => `(tactic| with_reducible exact natTy)
+macro_rules | `(tactic| otype) => `(tactic| with_reducible exact zeroTy)
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine STy ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine HasType.bvar ?_); olookup))
+macro_rules | `(tactic| otype) => `(tactic| with_reducible exact litTy _)
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine app2Ty ?_ ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine impTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine allTy ?_); otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine EqNTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine weakTy ?_); otype))
 
 /-! ### Conversion -/
 

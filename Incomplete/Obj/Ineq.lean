@@ -248,14 +248,13 @@ elab_rules : tactic
     let mut hyps : Array Term := #[]
     for h in (hs.map (·.getElems)).getD #[] do
       let h : Term := ⟨h⟩
-      let ty ← instantiateMVars (← Meta.inferType (← elabTerm h none))
-      let isLe := match_expr ty with
-        | Thm _ _ P => match_expr P with
-          | EqN l r => (match_expr r with
-            | Incomplete.zero => l.isAppOfArity ``sub 2
-            | _ => false)
-          | _ => false
-        | _ => false
+      let isLe ← withMainContext do
+        let ty ← instantiateMVars (← Meta.inferType (← elabTerm h none))
+        let_expr Thm _ _ P := ty | return false
+        let_expr EqN l r := P | return false
+        let_expr Incomplete.zero := r | return false
+        let_expr app2 f _ _ := ← Meta.whnfR l | return false
+        Meta.isDefEq f (mkApp (mkConst ``fn) (mkConst ``PR.subC))
       hyps := hyps.push h
       if isLe then hyps := hyps.push (← `(le_elim (by otype) (by otype) $h))
     evalTactic (← `(tactic| oring [$hyps,*]))

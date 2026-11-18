@@ -41,3 +41,6 @@ import Incomplete.Obj.Order
 import Incomplete.Obj.Closed
 import Incomplete.Obj.Ring
 import Incomplete.Obj.Ineq
+import Incomplete.Obj.Pair
+import Incomplete.Obj.Bnd
+import Incomplete.Obj.DivMod
