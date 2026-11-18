@@ -7,8 +7,8 @@ import Incomplete.CheckPR
 `casc c bs d j` tests the value of `c` against `j, j+1, …` and runs the matching branch of `bs`,
 or `d` past the end: the shape of `PRLib`-style dispatch codes. At a known numeral value of `c`
 the matching branch is one rewrite (`ev_casc`, `ev_casc_end`). The checker's `dispC` is such a
-cascade on the certificate's tag (`dispC_casc`), so `certStep` at a known tag runs that tag's rule
-(`ev_certStep`). Numerals compute: `lit a + lit b`
+cascade on the certificate's tag (`dispC_casc`), so `certStep` at a known tag, as at a number
+`16 * x + t`, runs that tag's rule (`ev_certStep`, `ev_certStep_tag`). Numerals compute: `lit a + lit b`
 and `lit a - lit b` are numerals (`add_lit`, `sub_lit`), and `eqz` of distinct numerals is
 nonzero.
 -/
@@ -92,6 +92,16 @@ theorem ev_certStep {T : Tables} {R : Nat → Bool} {t : Nat} (ht : t < 16) (hl 
   simp only [List.getElem_map, List.getElem_range, Nat.zero_add] at h
   rw [certStep, dispC_casc]
   simpa only [Nat.zero_add] using h
+
+/-- The checker's step at a certificate number `16 * x + t`, with any history `h`, runs the rule
+of `t`. -/
+theorem ev_certStep_tag {T : Tables} {R : Nat → Bool} {t : Nat} (ht : t < 16) {x h : VExpr}
+    (hx : Tm env Γ x) (hh : Tm env Γ h) :
+    Thm env Γ (ev (certStep T R) [add (mul (lit 16) x) (lit t), h] =ₒ
+      ev (if R t then ruleC T t else num 1) [add (mul (lit 16) x) (lit t), h]) := by
+  refine ev_certStep ht (by otype) ?_
+  orw [ev_modC, ← mod_eq]
+  exact mod_tag (by decide) hx (litTy t) (lit_lt ht)
 
 end
 
