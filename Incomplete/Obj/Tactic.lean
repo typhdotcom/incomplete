@@ -64,12 +64,19 @@ macro "oind" : tactic => `(tactic|
   (refine Thm.ind ?_ ?_ ?_; otype; (try onorm); on_goal 2 => try onorm))
 
 /-- Close the goal by the hypothesis at the first de Bruijn index whose type matches. -/
-elab "ohyp" : tactic => do
-  for i in List.range 16 do
+elab "ohyp" : tactic => withMainContext do
+  let_expr Thm _ Γ _ := ← instantiateMVars (← (← getMainGoal).getType)
+    | throwError "ohyp: goal is not `Thm env Γ P`"
+  let mut cur ← whnfR Γ
+  let mut n := 0
+  while cur.isAppOfArity ``List.cons 3 do
+    n := n + 1
+    cur ← whnfR cur.appArg!
+  for i in List.range n do
     let s ← saveState
     try
-      Term.withoutErrToSorry <| evalTactic
-        (← `(tactic| exact Thm.hyp (i := $(Lean.quote i)) (by olookup)))
+      withoutRecover <| evalTactic
+        (← `(tactic| (refine Thm.hyp (i := $(Lean.quote i)) ?_; olookup; done)))
       return
     catch _ => s.restore
   throwError "ohyp: no hypothesis matches"
