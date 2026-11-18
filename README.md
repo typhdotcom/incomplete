@@ -2,7 +2,7 @@
 
 Lean 4 proofs of the Gödel–Kleene, Rosser, and second incompleteness theorems
 and of Löb's theorem, together with the derivability conditions and
-arithmetical soundness of the provability logic GL, for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
+arithmetical soundness and completeness of the provability logic GL, for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
 extended with concrete inductives and primitive projections from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
 
@@ -181,6 +181,38 @@ countermodel from the consistent sets of literals over the subformulas of
 `A` (`Incomplete/Modal/`). This part is ordinary Lean mathematics about
 `Modal` and does not involve the object theory.
 
+### Arithmetical completeness of GL
+
+```lean
+theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal}
+    (h : ¬Modal.GL A) :
+    ∃ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) ∧
+      ¬Provable env (A.real T σ)
+
+theorem GL_iff_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal} :
+    Modal.GL A ↔ ∀ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) →
+      Provable env (A.real T σ)
+```
+
+Solovay's theorem: in a well-formed extension of `natEnv` that proves `dneS`
+and is `halts`-sound, a modal formula is a theorem of GL exactly when the
+theory proves it under every realization by closed propositions with `□` read
+as `Prov T`. For `¬GL A`, the finite countermodel of `Modal.GL_complete`, below
+a new root `0`, is the frame of a `PR` walk `hM T K` that, run on its own code,
+starts at `0` and moves to a world `b` above its current one when the first
+component of the step checks as a proof of `¬S_b`. `S_b` says that the walk
+reaches `b` and never leaves it; each variable is realized as the disjunction
+of the `S_(w+1)` over the worlds `w` forcing it (`solσ`). Inside the theory,
+the `S_b` are pairwise exclusive, `S_i` refutes `Prov T ¬S_j` for `i R j`, and
+for `i ≠ 0`, `S_i` proves `Prov T` of the disjunction of the `S_j` with `i R j`;
+so `S_(w+1)` proves `A`'s realization or its negation as `w` forces `A` or not
+(`truth`). A proof of the realization of `A` would refute `S_0`, and
+`halts`-soundness turns every refutation of a sentence `S_b` at a world the
+walk reaches into a move of the walk up the finite frame (`no_refuted`)
+(`Incomplete/Obj/Solovay*.lean`).
+
 ### A consistent, ω-inconsistent context
 
 ```lean
@@ -268,7 +300,8 @@ incompleteness theorem assume `Consistent`, and Gödel–Kleene irrefutability
 additionally assumes `HaltsSound`; neither hypothesis is proved here for the
 full type theory. Löb's theorem, the derivability conditions, formalized Löb,
 `iGL_sound`, and `fairbot` assume neither; `GL_sound` assumes only that the
-theory proves `dneS`. Arithmetical completeness of GL is not proved.
+theory proves `dneS`; `GL_arith_complete` and `GL_iff_provable` assume that
+and `HaltsSound env`.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -341,6 +374,8 @@ open Incomplete
 #print axioms Modal.FinModel.GL_sound
 #print axioms Modal.GL_complete
 #print axioms Modal.GL_iff
+#print axioms GL_arith_complete
+#print axioms GL_iff_provable
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -395,6 +430,12 @@ results.
     (`omega_inconsistent`).
   - *Provability logic* (`Derivability`, `GL`): the derivability conditions,
     formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`.
+  - *Arithmetical completeness* (`SolovayCode`, `SolovayStep`,
+    `SolovayLemmas`, `Solovay`): Solovay's walk on a finite frame, as a `PR`
+    code that finds the numbers of the sentences about itself from its input
+    and its external behaviour; its step read inside the theory; Solovay's
+    lemmas about the sentences `S_b`; the truth lemma; and
+    `GL_arith_complete`.
 - **Modal logic (`Modal/`)**, independent of the object theory: `Modal`,
   `GL` and `iGL` (`Basic`); derivations from hypotheses, the deduction
   theorem, the 4 axiom and the Lindenbaum step (`Deduction`); Kripke models,

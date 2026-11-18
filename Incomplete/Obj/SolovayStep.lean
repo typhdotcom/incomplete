@@ -3,12 +3,13 @@ import Incomplete.Obj.SolovayCode
 /-!
 # The walk, internally
 
-For Solovay's machine `hM T K` at an input `d`, `hT k` is the walk at `k` as an object term, and
-`Ss a` the sentence `S_a`: the walk reaches `a` (`Pa a`) and never leaves it (`Stay a`).
-When `d` is the machine's own code, the theory computes the walk's step (`hT_succ`) and reads it
-at each world: from `h k = a` the walk stays at `a` at `k + 1` or moves to a world `b` that `a`
-sees while the first component of `k` proves `¬S_b` (`step`); and such a proof makes it leave `a`
-(`step_ne`).
+For a code `f` at an input `d`, `hT f d k` is its value at `k` as an object term, and `Ss f d a`
+the sentence `S_a`: the walk reaches `a` (`Pa`) and never leaves it (`Stay`); `bigOr` is finite
+disjunction. For a walk stepping by `nextC K q` whose tests `q b` read the checks `Qt b` of `¬S_b`
+at the first component of the step, the theory reads the step at each world: from `h k = a` the
+walk stays at `a` at `k + 1` or moves to a world `b` that `a` sees with `Qt b k = 0` (`step`); and
+`Qt b k = 0` makes it leave `a` (`step_ne`). Solovay's machine is such a walk at its own code
+(`hM_zero`, `hM_succ`, `hM_test`).
 -/
 
 namespace Incomplete.Obj

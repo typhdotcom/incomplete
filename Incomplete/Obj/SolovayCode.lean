@@ -4,16 +4,17 @@ import Incomplete.Obj.GL
 # Solovay's machine
 
 A Solovay frame (`SFrame`) is a transitive irreflexive relation `R` on the worlds `0, …, N`.
-For it and the checker `chkT T`, the machine `hM T K` computes, at its own code `d` and a step
-`k`, the walk `h`: `h 0 = 0`, and `h (k + 1)` is the first `b` with `h k R b` such that the first
+For it and the checker `chkT T`, the machine `hM T K` computes, at an input `d` and a step `k`,
+the walk `h`: `h 0 = 0`, and `h (k + 1)` is the first `b` with `h k R b` such that the first
 component of `k` checks as a proof of `¬S_b`, or `h k` if there is none (`nextC`). Here
-`S_b := Sb (fn f) (lit d) b` says that `h` reaches `b` and never leaves it.
+`S_b := Sb (fn (hM T K)) (lit d) b` says that `h` reaches `b` and never leaves it; the walk that
+matters is the one at the machine's own code `d`.
 
 The machine finds the numbers of the sentences `¬S_b` about the code numbered by its input from
 that input: `fillC` is the code of an expression with two holes, filled with the numbers of
 `fn f` and of `lit d` (`eval_negSC`). Externally, `h` stays among the worlds (`hN_le`), and every
-move goes up `R` along a provable `¬S_b` (`hN_move`). `lvM T K a` halts exactly when `h` leaves
-`a` (`lvM_eval`).
+move goes up `R` along a certificate of `¬S_b` (`hN_move`). `lvM T K a` halts only where `h`
+leaves `a` (`lvM_eval`).
 -/
 
 namespace Incomplete.Obj

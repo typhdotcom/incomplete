@@ -69,3 +69,7 @@ import Incomplete.Obj.Omega
 import Incomplete.Obj.Derivability
 import Incomplete.Obj.GL
 import Incomplete.Modal.Complete
+import Incomplete.Obj.SolovayCode
+import Incomplete.Obj.SolovayStep
+import Incomplete.Obj.SolovayLemmas
+import Incomplete.Obj.Solovay
