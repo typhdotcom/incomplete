@@ -16,7 +16,7 @@ definitional equality (`*_df`) and as an object equation for `orw`, about any co
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-! ### Values and their terms -/
 
@@ -27,7 +27,7 @@ def valS (l : List VExpr) : Subst := fun i => l.getD i zero
 def ev (f : PR) (l : List VExpr) : VExpr := f.tr.subst (valS l)
 
 /-- Every term of `l` is a number in `Γ`. -/
-inductive Tms (env : VEnv) (Γ : List VExpr) : List VExpr → Prop
+inductive Tms (env : Typing) (Γ : List VExpr) : List VExpr → Prop
   | nil : Tms env Γ []
   | cons : Tm env Γ a → Tms env Γ l → Tms env Γ (a :: l)
 
@@ -114,7 +114,7 @@ theorem ev_append_zero (f : PR) (l : List VExpr) : ev f (l ++ [zero]) = ev f l :
 /-! ### Computation rules -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr} {f g h a b c : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr} {f g h a b c : PR}
   {t x y : VExpr}
 
 theorem Tms.get (hl : Tms env Γ l) : ∀ i, Tm env Γ (valS l i) := by
@@ -131,10 +131,10 @@ theorem Tms.liftN {k : Nat} {Γ0 Γ1 : List VExpr} (W : Ctx.LiftN 1 k Γ0 Γ1) (
     Tms env Γ1 (l.map fun x => x.liftN 1 k) := by
   induction hl with
   | nil => exact .nil
-  | cons ha _ ih => exact .cons (ha.weakN E.ordered W) ih
+  | cons ha _ ih => exact .cons (ha.weakN W) ih
 
 theorem liftNTy {k : Nat} {Γ0 Γ1 : List VExpr} {e : VExpr} (W : Ctx.LiftN 1 k Γ0 Γ1)
-    (h : Tm env Γ0 e) : Tm env Γ1 (e.liftN 1 k) := h.weakN E.ordered W
+    (h : Tm env Γ0 e) : Tm env Γ1 (e.liftN 1 k) := h.weakN W
 
 theorem Tms.lift1 {A : VExpr} (hl : Tms env (nat :: Γ) l) :
     Tms env (nat :: A :: Γ) (l.map fun x => x.liftN 1 1) := hl.liftN (.succ .one)
@@ -155,7 +155,7 @@ theorem liftNatsTy {A e : VExpr} (k : Nat) (h : Tm env (List.replicate k nat ++ 
     Tm env (List.replicate k nat ++ A :: Γ) (e.liftN 1 k) := liftNTy (liftN_nats k) h
 
 theorem substTy {σ : Subst} (hσ : ∀ i, Tm env Γ (σ i)) (f : PR) : Tm env Γ (f.tr.subst σ) :=
-  f.trT E.hasNat E.ordered hσ
+  trSubstT f hσ
 
 theorem evTy (hl : Tms env Γ l) : Tm env Γ (ev f l) := substTy hl.get f
 
@@ -178,7 +178,7 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine evTy ?
 /-- Reduce typing `liftN 1 e k`, for a literal `k`, to typing `e` without the `k`th binder. -/
 elab "otype_liftN" : tactic => Lean.Elab.Tactic.withMainContext do
   let tgt ← Lean.Meta.whnfR (← Lean.Elab.Tactic.getMainTarget)
-  let_expr VEnv.HasType _ _ _ e _ := tgt | throwError "otype_liftN: not a typing"
+  let_expr Typing.HasType _ _ e _ := tgt | throwError "otype_liftN: not a typing"
   let_expr VExpr.liftN n _ k := e | throwError "otype_liftN: not a lift"
   let (some 1, some k) := (n.nat?, k.nat?) | throwError "otype_liftN: not a literal lift"
   if k == 0 then throwError "otype_liftN: lift at 0"
@@ -214,39 +214,39 @@ theorem precBody_inst (e : VExpr) (σ : Subst) (t r : VExpr) :
     rw [← instN_eq, VExpr.lift, VExpr.lift, liftN_liftN, inst_liftN_lo' _ _ 1 0]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr} {f g h a b c : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr} {f g h a b c : PR}
   {t x y : VExpr}
 
 theorem precStepTy (h : PR) {σ : Subst} (hσ : ∀ i, Tm env Γ (σ i)) :
-    env.HasType 0 Γ (precStep h σ) (stepT nat) :=
+    env.HasType Γ (precStep h σ) (stepT nat) :=
   HasType.lam natTy (HasType.lam natTy (substTy (liftS_T (liftS_T hσ)) h))
 
-theorem ev_push_df' (hl : Tms env Γ l) (hx : env.IsDefEq 0 Γ (ev h l) x nat) :
-    env.IsDefEq 0 Γ (ev (.push h g) l) (ev g (x :: l)) nat := by
+theorem ev_push_df' (hl : Tms env Γ l) (hx : env.IsDefEq Γ (ev h l) x nat) :
+    env.IsDefEq Γ (ev (.push h g) l) (ev g (x :: l)) nat := by
   have hg := substTy (liftS_T hl.get) g
   have := IsDefEq.beta hg hx.hasType.2
   rw [inst_lift_cons, ← valS_cons] at this
   exact (IsDefEq.appDF (HasType.lam natTy hg) hx).trans this
 
 theorem ev_push_df (hl : Tms env Γ l) :
-    env.IsDefEq 0 Γ (ev (.push h g) l) (ev g (ev h l :: l)) nat :=
+    env.IsDefEq Γ (ev (.push h g) l) (ev g (ev h l :: l)) nat :=
   ev_push_df' hl (evTy hl)
 
 theorem ev_prec_zero_df (hl : Tms env Γ l) :
-    env.IsDefEq 0 Γ (ev (.prec g h) (zero :: l)) (ev g l) nat := by
+    env.IsDefEq Γ (ev (.prec g h) (zero :: l)) (ev g l) nat := by
   rw [ev, valS_cons, tr_prec_subst]
   exact natRec_zero (A := nat) trivial (fun _ => natTy) (evTy hl) (precStepTy h hl.get)
 
 theorem ev_prec_succ_df (hl : Tms env Γ l) (ht : Tm env Γ t) :
-    env.IsDefEq 0 Γ (ev (.prec g h) (S t :: l)) (ev h (ev (.prec g h) (t :: l) :: t :: l)) nat := by
+    env.IsDefEq Γ (ev (.prec g h) (S t :: l)) (ev h (ev (.prec g h) (t :: l) :: t :: l)) nat := by
   have hst := precStepTy h hl.get
   have hr : Tm env Γ (natRec nat (ev g l) (precStep h (valS l)) t) :=
-    E.hasNat.natRecT Inert.nat (fun _ => natTy) (evTy hl) hst ht
+    natRecT Inert.nat (fun _ => natTy) (evTy hl) hst ht
   have i := natRec_succ (A := nat) trivial (fun _ => natTy) (evTy (f := g) hl) hst ht
-  have hB : env.HasType 0 (nat :: nat :: Γ) (h.tr.subst (valS l).lift.lift) nat :=
+  have hB : env.HasType (nat :: nat :: Γ) (h.tr.subst (valS l).lift.lift) nat :=
     substTy (liftS_T (liftS_T hl.get)) h
   have b1 := IsDefEq.beta (HasType.lam natTy hB) ht
-  have b2 := IsDefEq.beta (hB.instN E.ordered (.succ .zero) ht) hr
+  have b2 := IsDefEq.beta (hB.instN (.succ .zero) ht) hr
   rw [precBody_inst] at b2
   have e1 : ∀ x, ev (.prec g h) (x :: l) = natRec nat (ev g l) (precStep h (valS l)) x := by
     intro x; rw [ev, valS_cons, tr_prec_subst]; rfl
@@ -257,10 +257,10 @@ theorem ev_prec_succ_df (hl : Tms env Γ l) (ht : Tm env Γ t) :
 
 /-- Renaming: `ren ρ f` at `σ` is `f` at `σ ∘ ρ`. -/
 theorem tr_ren : ∀ (f : PR) {Γ : List VExpr} (ρ : Nat → Nat) {σ : Subst}, (∀ i, Tm env Γ (σ i)) →
-    env.IsDefEq 0 Γ ((ren ρ f).tr.subst σ) (f.tr.subst fun i => σ (ρ i)) nat
+    env.IsDefEq Γ ((ren ρ f).tr.subst σ) (f.tr.subst fun i => σ (ρ i)) nat
   | .zero, _, _, _, _ => zeroTy
   | .var i, _, _, _, hσ => hσ _
-  | .succ f, _, ρ, _, hσ => .appDF E.hasNat.succT (tr_ren f ρ hσ)
+  | .succ f, _, ρ, _, hσ => .appDF succT (tr_ren f ρ hσ)
   | .push h g, _, ρ, σ, hσ => by
     have ih := tr_ren g (liftR ρ) (liftS_T hσ)
     have e : (fun i => σ.lift (liftR ρ i)) = Subst.lift (fun i => σ (ρ i)) := by
@@ -272,7 +272,7 @@ theorem tr_ren : ∀ (f : PR) {Γ : List VExpr} (ρ : Nat → Nat) {σ : Subst},
       funext i; cases i <;> rfl
     have e1 := tr_prec_subst g h (fun i => σ (ρ (i + 1))) (σ (ρ 0))
     rw [← e0] at e1
-    show env.IsDefEq 0 _ (.app (.lam nat ((PR.prec _ _).tr.subst σ.lift)) (σ (ρ 0))) _ nat
+    show env.IsDefEq _ (.app (.lam nat ((PR.prec _ _).tr.subst σ.lift)) (σ (ρ 0))) _ nat
     rw [e1]
     have hp := substTy (liftS_T hσ)
       (PR.prec (ren (fun i => ρ (i + 1)) g) (ren (liftR (liftR fun i => ρ (i + 1))) h))
@@ -287,11 +287,11 @@ theorem tr_ren : ∀ (f : PR) {Γ : List VExpr} (ρ : Nat → Nat) {σ : Subst},
     exact .lamDF natTy (.lamDF natTy ih)
 
 theorem ev_ren_df (hl : Tms env Γ l) (ρ : Nat → Nat) (f : PR) :
-    env.IsDefEq 0 Γ (ev (ren ρ f) l) (f.tr.subst fun i => valS l (ρ i)) nat :=
+    env.IsDefEq Γ (ev (ren ρ f) l) (f.tr.subst fun i => valS l (ρ i)) nat :=
   tr_ren f ρ hl.get
 
 theorem ev_comp2_df (hl : Tms env Γ l) :
-    env.IsDefEq 0 Γ (ev (comp2 g a b) l) (ev g (ev a l :: ev b l :: l)) nat := by
+    env.IsDefEq Γ (ev (comp2 g a b) l) (ev g (ev a l :: ev b l :: l)) nat := by
   have hl1 : Tms env Γ (ev a l :: l) := .cons (evTy hl) hl
   have h1 := ev_push_df (h := a) (g := push (ren Nat.succ b) (ren (fun | 0 => 1 | 1 => 0 | i => i) g)) hl
   have h2 := ev_push_df' (g := ren (fun | 0 => 1 | 1 => 0 | i => i) g) hl1 (ev_ren_df hl1 Nat.succ b)
@@ -303,7 +303,7 @@ theorem ev_comp2_df (hl : Tms env Γ l) :
   exact h1.trans (h2.trans h3)
 
 theorem ev_comp3_df (hl : Tms env Γ l) :
-    env.IsDefEq 0 Γ (ev (comp3 g a b c) l) (ev g (ev a l :: ev b l :: ev c l :: l)) nat := by
+    env.IsDefEq Γ (ev (comp3 g a b c) l) (ev g (ev a l :: ev b l :: ev c l :: l)) nat := by
   have hl1 : Tms env Γ (ev a l :: l) := .cons (evTy hl) hl
   have hl2 : Tms env Γ (ev b l :: ev a l :: l) := .cons (evTy hl) hl1
   have h1 := ev_push_df (h := a) (g := push (ren Nat.succ b) (push (ren (· + 2) c)
@@ -322,22 +322,22 @@ theorem ev_comp3_df (hl : Tms env Γ l) :
 
 /-- `fn f x y` is `f` at `[y, x]`. -/
 theorem fn_ev_df (hx : Tm env Γ x) (hy : Tm env Γ y) :
-    env.IsDefEq 0 Γ (app2 (fn f) x y) (ev f [y, x]) nat := by
-  have hB : env.HasType 0 (nat :: nat :: Γ) (fnBody f) nat :=
+    env.IsDefEq Γ (app2 (fn f) x y) (ev f [y, x]) nat := by
+  have hB : env.HasType (nat :: nat :: Γ) (fnBody f) nat :=
     substTy (liftS_T (liftS_T fun _ => litTy 0)) f
   have b1 := IsDefEq.beta (HasType.lam natTy hB) hx
-  have b2 := IsDefEq.beta (hB.instN E.ordered (.succ .zero) hx) hy
+  have b2 := IsDefEq.beta (hB.instN (.succ .zero) hx) hy
   have e : ((fnBody f).inst x 1).inst y = ev f [y, x] := by
     rw [fnBody, precBody_inst, ev]; congr 1; funext i; rcases i with _ | _ | i <;> rfl
   rw [e] at b2
   exact (IsDefEq.appDF b1 hy).trans b2
 
 theorem ev_fn2_df (hf : bnd f ≤ 2) (hx : Tm env Γ x) (hy : Tm env Γ y) (l : List VExpr) :
-    env.IsDefEq 0 Γ (ev f (y :: x :: l)) (app2 (fn f) x y) nat := by
+    env.IsDefEq Γ (ev f (y :: x :: l)) (app2 (fn f) x y) nat := by
   rw [ev_take 2 hf]; exact (fn_ev_df hx hy).symm
 
 theorem ev_fn1_df (hf : bnd f ≤ 1) (hy : Tm env Γ y) (l : List VExpr) :
-    env.IsDefEq 0 Γ (ev f (y :: l)) (app2 (fn f) zero y) nat := by
+    env.IsDefEq Γ (ev f (y :: l)) (app2 (fn f) zero y) nat := by
   rw [ev_take 1 hf, List.take_succ_cons, List.take_zero, ← ev_append_zero]
   exact (fn_ev_df zeroTy hy).symm
 

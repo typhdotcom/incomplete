@@ -14,7 +14,7 @@ meta level computes is an object equation.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The tuple `x` with its first `i` fields dropped, as `restC` computes it. -/
 def restT : Nat → VExpr → VExpr
@@ -38,7 +38,7 @@ variable {n k : Nat} {e x : VExpr}
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b x : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b x : VExpr}
 
 theorem restTTy : ∀ (i : Nat) {x : VExpr}, Tm env Γ x → Tm env Γ (restT i x)
   | 0, _, h => h
@@ -49,7 +49,7 @@ end
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine restTTy _ ?_); otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b x y : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b x y : VExpr}
 
 theorem ev_restC (hl : Tms env Γ l) : ∀ (i : Nat) (p : PR),
     Thm env Γ (ev (restC i p) l =ₒ restT i (ev p l))
@@ -131,7 +131,7 @@ theorem getD_map_lit : ∀ (ns : List Nat) (i : Nat), (ns.map lit).getD i zero =
 /-- **Closed computation.** A code at numerals is the numeral of its value. -/
 theorem ev_lits (f : PR) (ns : List Nat) :
     Thm env Γ (ev f (ns.map lit) =ₒ lit (f.eval fun i => ns.getD i 0)) := by
-  have h := PR.adequate E.hasNat E.ordered f (fun i => ns.getD i 0)
+  have h := E.adequate f (fun i => ns.getD i 0)
   have e : ev f (ns.map lit) = f.tr.subst (litS fun i => ns.getD i 0) := by
     unfold ev; congr 1; funext i; exact getD_map_lit ns i
   rw [e]; exact (Thm.ofDefEq h).weak0

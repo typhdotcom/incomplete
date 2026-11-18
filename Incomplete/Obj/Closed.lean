@@ -10,10 +10,10 @@ theorems of any `ObjEnv`, and so `Provable natEnv`.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
 
 theorem mulC_succ' (ha : Tm env Γ a) (hb : Tm env Γ b) :
     Thm env Γ (app2 (fn mulC) a (S b) =ₒ add (app2 (fn mulC) a b) a) := by
@@ -84,45 +84,45 @@ end
 section
 open PR
 
-theorem mulC_zero_provable : Provable natEnv (∀ₒ a, app2 (fn mulC) a zero =ₒ zero) := mulC_zero_c
+theorem mulC_zero_provable : Provable natEnv (∀ₒ a, app2 (fn mulC) a zero =ₒ zero) := Thm.provable mulC_zero_c
 theorem mulC_succ_provable :
-    Provable natEnv (∀ₒ a b, app2 (fn mulC) a (S b) =ₒ add (app2 (fn mulC) a b) a) := mulC_succ_c
+    Provable natEnv (∀ₒ a b, app2 (fn mulC) a (S b) =ₒ add (app2 (fn mulC) a b) a) := Thm.provable mulC_succ_c
 theorem mulC_eq_mul_provable : Provable natEnv (∀ₒ a b, app2 (fn mulC) a b =ₒ mul a b) :=
-  mulC_eq_mul_c
+  Thm.provable mulC_eq_mul_c
 
-theorem pred_zero_provable : Provable natEnv (pred zero =ₒ zero) := pred_zero_c
-theorem pred_succ_provable : Provable natEnv (∀ₒ a, pred (S a) =ₒ a) := pred_succ_c
-theorem sub_zero_provable : Provable natEnv (∀ₒ a, sub a zero =ₒ a) := sub_zero_c
-theorem sub_succ_provable : Provable natEnv (∀ₒ a b, sub a (S b) =ₒ pred (sub a b)) := sub_succ_c
+theorem pred_zero_provable : Provable natEnv (pred zero =ₒ zero) := Thm.provable pred_zero_c
+theorem pred_succ_provable : Provable natEnv (∀ₒ a, pred (S a) =ₒ a) := Thm.provable pred_succ_c
+theorem sub_zero_provable : Provable natEnv (∀ₒ a, sub a zero =ₒ a) := Thm.provable sub_zero_c
+theorem sub_succ_provable : Provable natEnv (∀ₒ a b, sub a (S b) =ₒ pred (sub a b)) := Thm.provable sub_succ_c
 theorem add_sub_cancel_provable : Provable natEnv (∀ₒ a b, sub (add a b) b =ₒ a) :=
-  add_sub_cancel_c
-theorem sub_self_provable : Provable natEnv (∀ₒ a, sub a a =ₒ zero) := sub_self_c
+  Thm.provable add_sub_cancel_c
+theorem sub_self_provable : Provable natEnv (∀ₒ a, sub a a =ₒ zero) := Thm.provable sub_self_c
 theorem le_iff_exists_provable : Provable natEnv (∀ₒ a b, a ≤ₒ b ↔ₒ ∃ₒ c, add a c =ₒ b) :=
-  le_iff_exists_c
+  Thm.provable le_iff_exists_c
 
 theorem eqz_self_provable (p : PR) :
-    Provable natEnv (∀ₒ x y, app2 (fn (eqz p p)) x y =ₒ zero) := eqz_self_c p
+    Provable natEnv (∀ₒ x y, app2 (fn (eqz p p)) x y =ₒ zero) := Thm.provable (eqz_self_c p)
 theorem eqz_zero_provable (p q : PR) : Provable natEnv
     (∀ₒ x y, app2 (fn (eqz p q)) x y =ₒ zero →ₒ app2 (fn p) x y =ₒ app2 (fn q) x y) :=
-  eqz_zero_c p q
+  Thm.provable (eqz_zero_c p q)
 theorem leq_iff_provable (p q : PR) : Provable natEnv
     (∀ₒ x y, app2 (fn (leq p q)) x y =ₒ zero ↔ₒ app2 (fn p) x y ≤ₒ app2 (fn q) x y) :=
-  leq_iff_c p q
+  Thm.provable (leq_iff_c p q)
 
-theorem selC_zero_provable : Provable natEnv (∀ₒ a b, ev selC [zero, a, b] =ₒ a) := selC_zero_c
-theorem selC_succ_provable : Provable natEnv (∀ₒ n a b, ev selC [S n, a, b] =ₒ b) := selC_succ_c
+theorem selC_zero_provable : Provable natEnv (∀ₒ a b, ev selC [zero, a, b] =ₒ a) := Thm.provable selC_zero_c
+theorem selC_succ_provable : Provable natEnv (∀ₒ n a b, ev selC [S n, a, b] =ₒ b) := Thm.provable selC_succ_c
 theorem ifz_zero_provable (c p q : PR) : Provable natEnv
     (∀ₒ x y, app2 (fn c) x y =ₒ zero →ₒ app2 (fn (ifz c p q)) x y =ₒ app2 (fn p) x y) :=
-  ifz_zero_c p q c
+  Thm.provable (ifz_zero_c p q c)
 theorem ifz_succ_provable (c p q : PR) : Provable natEnv
     (∀ₒ x y n, app2 (fn c) x y =ₒ S n →ₒ app2 (fn (ifz c p q)) x y =ₒ app2 (fn q) x y) :=
-  ifz_succ_c p q c
+  Thm.provable (ifz_succ_c p q c)
 theorem andz_zero_provable (p q : PR) : Provable natEnv (∀ₒ x y, app2 (fn p) x y =ₒ zero →ₒ
-    app2 (fn q) x y =ₒ zero →ₒ app2 (fn (andz p q)) x y =ₒ zero) := andz_zero_c p q
+    app2 (fn q) x y =ₒ zero →ₒ app2 (fn (andz p q)) x y =ₒ zero) := Thm.provable (andz_zero_c p q)
 theorem andz_left_provable (p q : PR) : Provable natEnv
-    (∀ₒ x y n, app2 (fn p) x y =ₒ S n →ₒ app2 (fn (andz p q)) x y =ₒ lit 1) := andz_left_c p q
+    (∀ₒ x y n, app2 (fn p) x y =ₒ S n →ₒ app2 (fn (andz p q)) x y =ₒ lit 1) := Thm.provable (andz_left_c p q)
 theorem andz_right_provable (p q : PR) : Provable natEnv (∀ₒ x y n, app2 (fn p) x y =ₒ zero →ₒ
-    app2 (fn q) x y =ₒ S n →ₒ app2 (fn (andz p q)) x y =ₒ lit 1) := andz_right_c p q
+    app2 (fn q) x y =ₒ S n →ₒ app2 (fn (andz p q)) x y =ₒ lit 1) := Thm.provable (andz_right_c p q)
 
 end
 

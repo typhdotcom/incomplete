@@ -18,7 +18,7 @@ off the history (`kcov_child`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `min a b`, as `minP` computes it: `a - (a - b)`. -/
 abbrev minT (a b : VExpr) : VExpr := sub a (sub a b)
@@ -46,7 +46,7 @@ def stBranches : List PR := [stE, stE,
 def stProj : PR := tagC 7 6 (cpair (fstC stP) (cpair (fstC (sndC stP)) (histK (sndC (sndC stP)) stK)))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c e f k k' n p t : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c e f k k' n p t : VExpr}
   {st B0 : PR}
 
 /-! ### `min` -/

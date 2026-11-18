@@ -12,7 +12,7 @@ is moved up by `n` (`liftT_bvar_lt`, `liftT_bvar_ge`); sorts and constants are k
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `liftNum n e k`: the code `liftC` at `[n, e, k]`. -/
 abbrev liftT (n e k : VExpr) : VExpr := ev liftC [n, e, k]
@@ -28,7 +28,7 @@ def liftB0 : PR := tagC 7 0 (ifz (leq (PR.succ stP) stK) stP (addP (var 0) stP))
 theorem liftStep_casc : liftStep = ifz stT liftB0 (casc stT stBranches stProj 1) := rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b e f k n p : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b e f k n p : VExpr}
 
 theorem liftT_eq (hn : Tm env Γ n) (he : Tm env Γ e) (hk : Tm env Γ k) :
     Thm env Γ (liftT n e k =ₒ kcov liftStep n e k) := by

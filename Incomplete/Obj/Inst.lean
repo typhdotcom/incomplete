@@ -12,7 +12,7 @@ are as for lifting.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `instNum e a k`: the code `instC` at `[e, a, k]`. -/
 abbrev instT (e a k : VExpr) : VExpr := ev instC [e, a, k]
@@ -27,7 +27,7 @@ def instB0 : PR := ifz (leq (PR.succ stP) stK) (tagC 7 0 stP)
 theorem instStep_casc : instStep = ifz stT instB0 (casc stT stBranches stProj 1) := rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c e f k p : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b c e f k p : VExpr}
 
 theorem instT_eq (he : Tm env Γ e) (ha : Tm env Γ a) (hk : Tm env Γ k) :
     Thm env Γ (instT e a k =ₒ kcov instStep a e k) := by

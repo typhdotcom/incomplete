@@ -14,7 +14,7 @@ symbolic: it needs only to read at most its first two (three) variables.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `iter i L`, the code `iterC` at `[i, L]`: `L` with `i` entries dropped. -/
 abbrev iter (i L : VExpr) : VExpr := app2 (fn iterC) L i
@@ -44,7 +44,7 @@ theorem ev_take3 {f : PR} (hf : bnd f ≤ 3) (a b c : VExpr) (l : List VExpr) :
     ev f (a :: b :: c :: l) = ev f [a, b, c] := ev_take 3 hf _
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b i j n p L : VExpr} {step : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b i j n p L : VExpr} {step : PR}
 
 /-! ### Lists -/
 

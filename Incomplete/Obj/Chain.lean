@@ -13,7 +13,7 @@ instantiation at a numeral (`prf_allH`) keep them templates. Instantiating a clo
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The `appDF` certificate from `c₁ : ⊢ p : ∀ A, B` and `c₂ : ⊢ q : A`, its parts read off the
 children's judgments. -/
@@ -29,7 +29,7 @@ noncomputable def mpX (c₁ c₂ : VExpr) : VExpr :=
     (mpX c₁ c₂).inst e k = mpX (c₁.inst e k) (c₂.inst e k) := by
   simp only [mpX, obj_simp]
 
-theorem mpXTy {env : VEnv} [ObjEnv env] {Γ : List VExpr} {c₁ c₂ : VExpr} (h₁ : Tm env Γ c₁)
+theorem mpXTy {env : Typing} [ObjEnv env] {Γ : List VExpr} {c₁ c₂ : VExpr} (h₁ : Tm env Γ c₁)
     (h₂ : Tm env Γ c₂) : Tm env Γ (mpX c₁ c₂) := by
   unfold mpX; otype
 
@@ -46,7 +46,7 @@ def allN : Nat → VExpr → VExpr
   | m + 1, P => all (allN m P)
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {T : Tables}
 
 theorem ev_mpP {p₁ p₂ : PR} (hl : Tms env Γ l) :
     Thm env Γ (ev (mpP p₁ p₂) l =ₒ mpX (ev p₁ l) (ev p₂ l)) := by
@@ -54,7 +54,6 @@ theorem ev_mpP {p₁ p₂ : PR} (hl : Tms env Γ l) :
   orw [ev_appC hl, ev_fstC hl, ev_sndC hl, ev_divC hl, ev_restC hl, ev_fldC hl, ev_fldC hl,
     ev_childJC hl, ev_childJC hl, ← div_eq]
 
-omit E in
 theorem Tms.mem {l : List VExpr} (hl : Tms env Γ l) : ∀ {y}, y ∈ l → Tm env Γ y := by
   induction hl with
   | nil => intro y h; cases h
@@ -69,14 +68,12 @@ theorem Tms.map_litT {l : List VExpr} (hl : Tms env Γ l) : Tms env Γ (l.map li
   | nil => exact .nil
   | cons ha _ ih => exact .cons (evTy (.cons ha .nil)) ih
 
-omit E in
 theorem Tms.append {l l' : List VExpr} (hl : Tms env Γ l) (hl' : Tms env Γ l') :
     Tms env Γ (l ++ l') := by
   induction hl with
   | nil => exact hl'
   | cons ha _ ih => exact .cons ha ih
 
-omit E in
 theorem Tms.reverse {l : List VExpr} (hl : Tms env Γ l) : Tms env Γ l.reverse := by
   induction hl with
   | nil => exact .nil
@@ -96,7 +93,7 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.re
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.map_ev ?_); otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {T : Tables}
 
 /-- Rewriting the sentence of a proof. -/
 theorem prf_congr {s s' c : VExpr} (hs : Tm env Γ s) (hs' : Tm env Γ s') (hc : Tm env Γ c)

@@ -11,7 +11,7 @@ recursion argument inside the theory.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The certificate of a closed `∀ x₁ … xₘ, P` numbered `c`, instantiated at the codes `as`. -/
 def instC (z s c : Nat) (as : List PR) : PR :=
@@ -73,12 +73,12 @@ theorem getD_map_litT {xs : List VExpr} {i : Nat} (h : i < xs.length) :
     Option.map_some, Option.getD_some]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 /-- A closed theorem has a certificate proving it, internally. -/
-theorem closed_prf (hT : TablesFor env T) {P : VExpr} (h : Thm env [] P) :
+theorem closed_prf (hT : TablesFor env.env T) {P : VExpr} (h : Thm env [] P) :
     ∃ c : Nat, ∀ {Γ : List VExpr}, Thm env Γ (prfT T (tmplH [] P 0) (numT c) =ₒ zero) := by
-  obtain ⟨e, c, hc⟩ := provable_cert hT h.provable
+  obtain ⟨e, c, hc⟩ := provable_cert hT h.toFull
   refine ⟨c, fun {Γ} => ?_⟩
   have h1 := prfT_of_cert (T := T) (s := numT (encExpr P)) (e := numT (encExpr e)) (by otype)
     (by otype) (by otype) (hc (env := env) (Γ := Γ)).1 (hc (env := env) (Γ := Γ)).2
@@ -140,7 +140,7 @@ theorem ev_precS {Γ L : List VExpr} {z s c n : Nat} {g h τh : PR} (hL : Tms en
   orw [ev_mpP hL, ev_mpP hL]
 
 theorem EqN_closed {a b : VExpr} (ha : Tm env [] a) (hb : Tm env [] b) : (a =ₒ b).ClosedN :=
-  (EqNTy ha hb).closedN E.ordered trivial
+  (EqNTy ha hb).closedN.1
 
 variable {z s : Nat}
   (hz : Thm env [] (certT T (fun _ => true) (numT z) =ₒ zero))
@@ -160,7 +160,7 @@ theorem prf_instC {Γ l : List VExpr} {c : Nat} {P : VExpr} (as : List PR) (hl :
   unfold instC
   simpa only [List.append_nil] using this
 
-variable (hT : TablesFor env T)
+variable (hT : TablesFor env.env T)
 include hT
 
 omit hz jz hs js in

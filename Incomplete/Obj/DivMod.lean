@@ -12,7 +12,7 @@ quotient and remainder are unique, so `div (k * p + t) = p` and `mod (k * p + t)
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv
+open VExpr Typing
 open PR (dmC divC modC tagC selC fstC sndC cpair)
 
 /-- `dm k a`, the code `dmC k` at `a`: `pair (a / k) (a % k)`. -/
@@ -27,7 +27,7 @@ abbrev mod (k : Nat) (a : VExpr) : VExpr := app2 (fn (modC k (.var 0))) zero a
 @[obj_simp] theorem lit_zero : lit 0 = zero := rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c p q r t y k' q' r' : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c p q r t y k' q' r' : VExpr}
   {k : Nat} {f : PR}
 
 theorem lit_pos (hk : 0 < k) : Thm env Γ (zero <ₒ lit k) := by
@@ -196,14 +196,14 @@ end
 
 theorem dm_spec_provable {k : Nat} (hk : 0 < k) : Provable natEnv
     (∀ₒ y, y =ₒ add (mul (lit k) (fst (dm k y))) (snd (dm k y)) ∧ₒ snd (dm k y) <ₒ lit k) :=
-  dm_spec_c hk
+  Thm.provable (dm_spec_c hk)
 theorem div_mod_spec_provable {k : Nat} (hk : 0 < k) : Provable natEnv
-    (∀ₒ y, y =ₒ add (mul (lit k) (div k y)) (mod k y) ∧ₒ mod k y <ₒ lit k) := div_mod_spec_c hk
+    (∀ₒ y, y =ₒ add (mul (lit k) (div k y)) (mod k y) ∧ₒ mod k y <ₒ lit k) := Thm.provable (div_mod_spec_c hk)
 theorem div_tag_provable {k : Nat} (hk : 0 < k) : Provable natEnv
-    (∀ₒ p t, t <ₒ lit k →ₒ div k (add (mul (lit k) p) t) =ₒ p) := div_tag_c hk
+    (∀ₒ p t, t <ₒ lit k →ₒ div k (add (mul (lit k) p) t) =ₒ p) := Thm.provable (div_tag_c hk)
 theorem mod_tag_provable {k : Nat} (hk : 0 < k) : Provable natEnv
-    (∀ₒ p t, t <ₒ lit k →ₒ mod k (add (mul (lit k) p) t) =ₒ t) := mod_tag_c hk
+    (∀ₒ p t, t <ₒ lit k →ₒ mod k (add (mul (lit k) p) t) =ₒ t) := Thm.provable (mod_tag_c hk)
 theorem div_mod_unique_provable : Provable natEnv (∀ₒ k q r q' r', add (mul k q) r =ₒ
-    add (mul k q') r' →ₒ r <ₒ k →ₒ r' <ₒ k →ₒ q =ₒ q' ∧ₒ r =ₒ r') := div_mod_unique_c
+    add (mul k q') r' →ₒ r <ₒ k →ₒ r' <ₒ k →ₒ q =ₒ q' ∧ₒ r =ₒ r') := Thm.provable div_mod_unique_c
 
 end Incomplete.Obj

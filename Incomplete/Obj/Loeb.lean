@@ -32,7 +32,7 @@ end Incomplete
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `∃ k, IsZero (f n k)`: `f` halts on `n`, positively. -/
 def haltsE (f : PR) (n : Nat) : VExpr := ∃ₒ k, isZero (app2 (fn f) (lit n) k)
@@ -89,16 +89,16 @@ theorem haltsEV_inst (f : PR) (d : Nat) : (haltsEV f (.bvar 1)).inst (lit d) 1 =
   simp only [haltsEV, haltsE, obj_simp]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 theorem haltsEVTy {f : PR} {x : VExpr} (hx : Tm env Γ x) :
-    env.HasType 0 Γ (haltsEV f x) (.sort .zero) := by
+    env.HasType Γ (haltsEV f x) (.sort .zero) := by
   unfold haltsEV; otype
 
-theorem haltsETy (f : PR) (n : Nat) : env.HasType 0 Γ (haltsE f n) (.sort .zero) := by
+theorem haltsETy (f : PR) (n : Nat) : env.HasType Γ (haltsE f n) (.sort .zero) := by
   unfold haltsE; otype
 
-theorem ProvTy (T : Tables) (P : VExpr) : env.HasType 0 Γ (Prov T P) (.sort .zero) := by
+theorem ProvTy (T : Tables) (P : VExpr) : env.HasType Γ (Prov T P) (.sort .zero) := by
   unfold Prov; otype
 
 end
@@ -108,10 +108,10 @@ macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible exact ProvTy _ 
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine haltsEVTy ?_); otype))
 
 theorem haltsE_closed (f : PR) (n : Nat) : (haltsE f n).ClosedN :=
-  (haltsETy (env := natEnv) (Γ := []) f n).closedN natEnv_ordered trivial
+  (haltsETy (env := natEnv) (Γ := []) f n).closedN.1
 
 theorem Prov_closed (T : Tables) (P : VExpr) : (Prov T P).ClosedN :=
-  (ProvTy (env := natEnv) (Γ := []) T P).closedN natEnv_ordered trivial
+  (ProvTy (env := natEnv) (Γ := []) T P).closedN.1
 
 @[obj_simp] theorem Prov_liftN {T : Tables} {P : VExpr} {n k : Nat} :
     (Prov T P).liftN n k = Prov T P := (Prov_closed T P).liftN_eq (Nat.zero_le _)
@@ -119,7 +119,7 @@ theorem Prov_closed (T : Tables) (P : VExpr) : (Prov T P).ClosedN :=
     (Prov T P).inst e k = Prov T P := (Prov_closed T P).instN_eq (Nat.zero_le _)
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables} {k : VExpr} {p : Nat}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables} {k : VExpr} {p : Nat}
 
 theorem gp_finE {f : PR} {x : VExpr} (hk : Tm env Γ k) (hx : Tm env Γ x) :
     Thm env Γ (imp (ev f [k, x] =ₒ zero) (haltsEV f x)) := by
@@ -168,9 +168,20 @@ theorem fn_provM {P : VExpr} (hk : Tm env Γ k) :
     Thm env Γ (app2 (fn (provM T P)) (lit 0) k =ₒ prfT T (numT (encExpr P)) k) :=
   fn_push_chkT (by otype) hk 0 (by rw [ev_numC_ctx]; orefl)
 
+/-- **Necessitation (D1)**, in any context. -/
+theorem Thm.nec (hT : TablesFor env.env T) {P : VExpr} (h : Thm env [] P) :
+    Thm env Γ (Prov T P) := by
+  obtain ⟨e, c, hc⟩ := provable_cert hT h.toFull
+  have h1 := prfT_of_cert (T := T) (s := numT (encExpr P)) (e := numT (encExpr e)) (by otype)
+    (by otype) (by otype) (hc (env := env) (Γ := Γ)).1 (hc (env := env) (Γ := Γ)).2
+  unfold Prov
+  refine Thm.exI (t := numT c) (by otype) (by otype) ?_
+  simp only [obj_simp]
+  exact h1
+
 /-- **Internal Σ₁-completeness for `haltsE`.** If `f` at `d` and `k` is `Prf(⌜A⌝, k)`, then for
 some code `σ` the theory proves `∀ k, Prf(⌜A⌝, k) → Prf(⌜haltsE f d⌝, σ k)`. -/
-theorem sigma_E (hT : TablesFor env T) {f : PR} {d : Nat} {A : VExpr}
+theorem sigma_E (hT : TablesFor env.env T) {f : PR} {d : Nat} {A : VExpr}
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
       Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr A)) k)) :
     ∃ σ : PR, Thm env [] (∀ₒ k, prfT T (numT (encExpr A)) k =ₒ zero →ₒ
@@ -185,7 +196,7 @@ theorem sigma_E (hT : TablesFor env T) {f : PR} {d : Nat} {A : VExpr}
 and from `Prov T P → P`, the theory proves `H → P`. A witness `k` of `H` is a proof of `H → P`,
 `σ k` one of `H`, so modus ponens gives a proof of `P`, hence `Prov T P`, hence `P`. -/
 theorem loeb_of_fn {f σ : PR} {d : Nat} {P : VExpr} (hPc : P.ClosedN)
-    (hPT : env.HasType 0 [] P (.sort .zero))
+    (hPT : env.HasType [] P (.sort .zero))
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
       Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr (imp (haltsE f d) P))) k))
     (hσ : Thm env [] (∀ₒ k, prfT T (numT (encExpr (imp (haltsE f d) P))) k =ₒ zero →ₒ
@@ -193,7 +204,7 @@ theorem loeb_of_fn {f σ : PR} {d : Nat} {P : VExpr} (hPc : P.ClosedN)
     (hL : Thm env [] (imp (Prov T P) P)) :
     Thm env [] (imp (haltsE f d) P) := by
   have hPl : ∀ n j, P.liftN n j = P := fun n j => hPc.liftN_eq (Nat.zero_le _)
-  have hP0 : ∀ {Δ : List VExpr}, env.HasType 0 Δ P (.sort .zero) := closedTy hPT
+  have hP0 : ∀ {Δ : List VExpr}, env.HasType Δ P (.sort .zero) := closedTy hPT
   unfold haltsE
   ointro hH
   ocases hH with hk
@@ -217,8 +228,8 @@ theorem loeb_of_fn {f σ : PR} {d : Nat} {P : VExpr} (hPc : P.ClosedN)
 /-- **Löb's theorem over a code `f` and an input `d`** at which `f` reads `Prf(⌜H → P⌝, ·)` for
 `H := haltsE f d`. The theory proves `H → P` (`loeb_of_fn`); that proof has a closed certificate
 `c`, so `f` at `d` and `c` is `0`, a witness of `H`; then `P`. -/
-theorem loeb_core (hT : TablesFor env T) {f : PR} {d : Nat} {P : VExpr} (hPc : P.ClosedN)
-    (hPT : env.HasType 0 [] P (.sort .zero))
+theorem loeb_core (hT : TablesFor env.env T) {f : PR} {d : Nat} {P : VExpr} (hPc : P.ClosedN)
+    (hPT : env.HasType [] P (.sort .zero))
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
       Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr (imp (haltsE f d) P))) k))
     (hL : Thm env [] (imp (Prov T P) P)) : Thm env [] P := by
@@ -285,19 +296,13 @@ variable {env : VEnv} {T : Tables}
 /-- `Prov T P` is a closed proposition. -/
 theorem ProvT (H : HasNat env) (henv : env.Ordered) (T : Tables) (P : VExpr) :
     env.HasType 0 [] (Prov T P) (.sort .zero) :=
-  @ProvTy env ⟨H, henv⟩ [] T P
+  @ProvTy env (.full H henv) [] T P
 
 /-- **Necessitation (D1).** A provable `P` is provably provable. -/
 theorem prov_of_provable (H : HasNat env) (henv : env.Ordered) (hT : TablesFor env T) {P : VExpr}
-    (h : Provable env P) : Provable env (Prov T P) := by
-  have : ObjEnv env := ⟨H, henv⟩
-  obtain ⟨e, c, hc⟩ := provable_cert hT h
-  have h1 := prfT_of_cert (T := T) (s := numT (encExpr P)) (e := numT (encExpr e)) (by otype)
-    (by otype) (by otype) (hc (env := env) (Γ := [])).1 (hc (env := env) (Γ := [])).2
-  unfold Prov
-  refine (Thm.exI (t := numT c) (by otype) (by otype) ?_).provable
-  simp only [obj_simp]
-  exact h1
+    (h : Provable env P) : Provable env (Prov T P) :=
+  have : ObjEnv env := .full H henv
+  Thm.nec (env := env) hT h
 
 /-- The body of `Prov T P` at the numeral `k` is, provably, the checker's verdict on `⌜P⌝` and
 `k`. -/
@@ -314,7 +319,7 @@ numeral witness exactly when `P` is provable. -/
 theorem prov_lit_iff (H : HasNat env) (henv : env.Ordered) (hT : TablesFor env T)
     (hC : Consistent env) (P : VExpr) :
     (∃ k : Nat, Provable env (prfT T (numT (encExpr P)) (lit k) =ₒ zero)) ↔ Provable env P := by
-  have : ObjEnv env := ⟨H, henv⟩
+  have : ObjEnv env := .full H henv
   rw [← chkNum_eq_zero hT]
   constructor
   · rintro ⟨k, hk⟩
@@ -334,7 +339,7 @@ theorem prov_lit_iff (H : HasNat env) (henv : env.Ordered) (hT : TablesFor env T
 /-- `notHalts (provM T P) 0 ↔ ¬Prov T P` inside the theory. -/
 theorem notHalts_provM_iff (H : HasNat env) (henv : env.Ordered) (T : Tables) (P : VExpr) :
     Provable env (iff (notHalts (provM T P) 0) (neg (Prov T P))) := by
-  have : ObjEnv env := ⟨H, henv⟩
+  have : ObjEnv env := .full H henv
   exact (notHalts_iff_of_fn fun hk => fn_provM hk).provable
 
 /-- **Consistency is unprovability of `⊥`**, inside the theory: `Con T ↔ ¬Prov T ⊥`. -/
@@ -345,10 +350,11 @@ theorem con_iff_not_prov (H : HasNat env) (henv : env.Ordered) (T : Tables) :
 /-- The double-negation form follows from the positive one: `Prov T P → halts (provM T P) 0`. -/
 theorem prov_imp_halts (H : HasNat env) (henv : env.Ordered) (T : Tables) (P : VExpr) :
     Provable env (imp (Prov T P) (halts (provM T P) 0)) := by
-  have : ObjEnv env := ⟨H, henv⟩
+  have : ObjEnv env := .full H henv
+  refine Thm.provable ?_
   have hN : (notHalts (provM T P) 0).ClosedN := (notHalts_prop H henv _ _).closedN henv trivial
-  have hNT : ∀ {Γ}, env.HasType 0 Γ (notHalts (provM T P) 0) (.sort .zero) :=
-    closedTy (notHalts_prop H henv _ _)
+  have hNT : ∀ {Γ}, Typing.HasType env Γ (notHalts (provM T P) 0) (.sort .zero) :=
+    closedTy (env := env) (notHalts_prop H henv _ _)
   have hi : Thm env [] (imp (notHalts (provM T P) 0) (neg (Prov T P))) :=
     Thm.iffE1 hNT (negTy (by otype)) (notHalts_provM_iff H henv T P)
   refine Thm.intro (by otype) ?_
@@ -365,19 +371,19 @@ the theory proves `Prov T P → P`, it proves `P`. -/
 theorem loeb (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero))
     (h : Provable env (.forallE (Prov T P) P)) : Provable env P := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hPc : P.ClosedN := hP.closedN hwf.ordered trivial
   have hL : Thm env [] (imp (Prov T P) P) := by
     show Thm env [] (.forallE _ (P.liftN 1 0))
     rw [hPc.liftN_eq (Nat.zero_le _)]
     exact h
-  exact (loeb_core hT hPc hP (fun hk => fn_loebM_code hPc hk) hL).provable
+  exact (loeb_core (env := env) hT hPc hP (fun hk => fn_loebM_code hPc hk) hL).provable
 
 /-- Löb's theorem with the double-negation provability sentence `halts (provM T P) 0`. -/
 theorem loeb_halts (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero))
     (h : Provable env (.forallE (halts (provM T P) 0) P)) : Provable env P := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have H := hasNat_natEnv.mono hext
   have hPc : P.ClosedN := hP.closedN hwf.ordered trivial
   refine loeb env hwf hext hT hP ?_
@@ -386,7 +392,7 @@ theorem loeb_halts (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tabl
     show Thm env [] (.forallE _ (P.liftN 1 0))
     rw [hPc.liftN_eq (Nat.zero_le _)]
     exact h
-  have hP0 : ∀ {Γ : List VExpr}, env.HasType 0 Γ P (.sort .zero) := closedTy hP
+  have hP0 : ∀ {Γ : List VExpr}, Typing.HasType env Γ P (.sort .zero) := closedTy (env := env) hP
   have : Thm env [] (imp (Prov T P) P) := by
     ointro hp
     have := (hh.weak0 (Γ := [Prov T P])).mp ((hi.weak0 (Γ := [Prov T P])).mp hp)
@@ -401,16 +407,16 @@ theorem loeb_halts (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tabl
 theorem con_unprovable_of_loeb (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T) := by
   intro hcon
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have H := hasNat_natEnv.mono hext
-  have hi := Thm.iffE1 (ConT H hwf.ordered) (negTy (by otype)) (con_iff_not_prov H hwf.ordered T)
+  have hi := Thm.iffE1 (env := env) (ConT H hwf.ordered) (negTy (by otype)) (con_iff_not_prov H hwf.ordered T)
   exact hC (loeb env hwf hext hT falseT (hi.mp hcon))
 
 /-- With 1-consistency for halting sentences, `Prov T P` is provable only when `P` is. -/
 theorem prov_sound (H : HasNat env) (henv : env.Ordered) (hT : TablesFor env T)
     (hS : HaltsSound env) {P : VExpr} (h : Provable env (Prov T P)) : Provable env P := by
-  have : ObjEnv env := ⟨H, henv⟩
-  exact (provM_halts_iff hT P).1 (hS _ _ (Thm.mp (prov_imp_halts H henv T P) h))
+  have : ObjEnv env := .full H henv
+  exact (provM_halts_iff hT P).1 (hS _ _ (Thm.mp (env := env) (prov_imp_halts H henv T P) h))
 
 end
 

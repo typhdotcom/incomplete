@@ -14,10 +14,10 @@ commutative semiring with cancellation, so `grind` decides its equations, from h
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv
+open VExpr Typing
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c a' b' : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b c a' b' : VExpr}
 
 theorem mul_add_c : Thm env [] (∀ₒ a b c, mul a (add b c) =ₒ add (mul a b) (mul a c)) := by
   ointro; ointro; oind
@@ -64,18 +64,18 @@ end
 /-! ### The quotient -/
 
 /-- The terms of `Nat` in `Γ`. -/
-def OTm (env : VEnv) (Γ : List VExpr) : Type := {e : VExpr // Tm env Γ e}
+def OTm (env : Typing) (Γ : List VExpr) : Type := {e : VExpr // Tm env Γ e}
 
-instance OTm.setoid (env : VEnv) [ObjEnv env] (Γ : List VExpr) : Setoid (OTm env Γ) where
+instance OTm.setoid (env : Typing) [ObjEnv env] (Γ : List VExpr) : Setoid (OTm env Γ) where
   r a b := Thm env Γ (a.1 =ₒ b.1)
   iseqv := ⟨fun a => Thm.refl a.2, fun {a b} h => Thm.symm a.2 b.2 h,
     fun {a b c} h1 h2 => Thm.trans a.2 b.2 c.2 h1 h2⟩
 
 /-- The terms of `Nat` in `Γ` up to provable equality. -/
-def ONat (env : VEnv) [ObjEnv env] (Γ : List VExpr) : Type := Quotient (OTm.setoid env Γ)
+def ONat (env : Typing) [ObjEnv env] (Γ : List VExpr) : Type := Quotient (OTm.setoid env Γ)
 
 namespace ONat
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 
 /-- The class of a typed term. -/
 def of (e : VExpr) (h : Tm env Γ e) : ONat env Γ := Quotient.mk _ ⟨e, h⟩
@@ -148,11 +148,11 @@ end ONat
 
 open Classical in
 /-- The class of `e` if it is a term of `Nat` in `Γ`, and `0` otherwise. -/
-noncomputable def omk (env : VEnv) [ObjEnv env] (Γ : List VExpr) (e : VExpr) : ONat env Γ :=
+noncomputable def omk (env : Typing) [ObjEnv env] (Γ : List VExpr) (e : VExpr) : ONat env Γ :=
   if h : Tm env Γ e then ONat.of e h else 0
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
 
 theorem omk_of (h : Tm env Γ a) : omk env Γ a = ONat.of a h := dif_pos h
 

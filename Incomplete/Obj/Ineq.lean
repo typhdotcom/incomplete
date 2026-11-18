@@ -14,13 +14,13 @@ truncated subtraction, and `eqz` being nonzero exactly at unequal values.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `a < b`, as `S a ≤ b`. -/
 scoped notation:50 a:51 " <ₒ " b:51 => EqN (sub (S a) b) zero
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c d k m : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b c d k m : VExpr}
 
 theorem le_intro (ha : Tm env Γ a) (hb : Tm env Γ b) (hc : Tm env Γ c)
     (h : Thm env Γ (add a c =ₒ b)) : Thm env Γ (a ≤ₒ b) := by

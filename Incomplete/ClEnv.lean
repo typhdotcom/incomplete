@@ -30,13 +30,13 @@ theorem natEnv_le_clEnv : natEnv ≤ clEnv where
 theorem clEnv_wf : clEnv.WF := by
   obtain ⟨ds, h⟩ := natEnv_wf
   exact ⟨.axiom ⟨⟨0, dneS⟩, dneName⟩ :: ds,
-    .decl (.axiom ⟨_, dneTy (env := natEnv)⟩ (addConst_eq natEnv_dneName)) h⟩
+    .decl (.axiom ⟨_, dneTy (env := full natEnv)⟩ (addConst_eq natEnv_dneName)) h⟩
 
 theorem hasNat_clEnv : HasNat clEnv := hasNat_natEnv.mono natEnv_le_clEnv
 
 theorem clEnv_ordered : clEnv.Ordered := clEnv_wf.ordered
 
-instance : ObjEnv clEnv := ⟨hasNat_clEnv, clEnv_ordered⟩
+instance : ObjEnv (full clEnv) := .full hasNat_clEnv clEnv_ordered
 
 /-- `clEnv`'s tables. -/
 def clT : Tables := { natT with consts := (dneName, ⟨0, dneS⟩) :: natT.consts }

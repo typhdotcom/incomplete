@@ -19,7 +19,7 @@ leaves `a` (`lvM_eval`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-! ### Expressions with two holes -/
 

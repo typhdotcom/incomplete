@@ -20,10 +20,10 @@ theorem gives `X → Prov T P`.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 /-- `provM T P` at any arguments `[k, x]` is `Prf(⌜P⌝, k)`. -/
 theorem ev_provM {P k x : VExpr} (hk : Tm env Γ k) (hx : Tm env Γ x) :
@@ -50,7 +50,7 @@ theorem gp_prov {P k x : VExpr} (hk : Tm env Γ k) (hx : Tm env Γ x) :
 
 /-- **Internal Σ₁-completeness for `Prov`**: a code `σ` turns, provably, every certificate `k` of
 `P` into a certificate `σ k` of `Prov T P`. -/
-theorem sigma_prov (hT : TablesFor env T) (P : VExpr) :
+theorem sigma_prov (hT : TablesFor env.env T) (P : VExpr) :
     ∃ σ : PR, Thm env [] (∀ₒ k, prfT T (numT (encExpr P)) k =ₒ zero →ₒ
       prfT T (numT (encExpr (Prov T P))) (ev σ [k]) =ₒ zero) := by
   have hG : Thm env [] (allN 2 (imp ((valF (provM T P) 2).inst zero 0) (Prov T P))) := by
@@ -59,7 +59,7 @@ theorem sigma_prov (hT : TablesFor env T) (P : VExpr) :
   exact sigma_of_fin hT (by simp only [obj_simp]) (Prov_closed T P) hG (fun hk => fn_provM hk)
 
 /-- **D3**, internally. -/
-theorem prov_prov (hT : TablesFor env T) (P : VExpr) :
+theorem prov_prov (hT : TablesFor env.env T) (P : VExpr) :
     Thm env [] (imp (Prov T P) (Prov T (Prov T P))) := by
   obtain ⟨σ, hσ⟩ := sigma_prov hT P
   ointro h
@@ -92,7 +92,7 @@ theorem prov_mp {A B : VExpr} (hB : B.ClosedN) :
     ((Thm.hyp .zero).cast (by simp only [obj_simp]))
 
 /-- **D3**, in context. -/
-theorem prov_prov_ctx (hT : TablesFor env T) {P : VExpr} (h : Thm env Γ (Prov T P)) :
+theorem prov_prov_ctx (hT : TablesFor env.env T) {P : VExpr} (h : Thm env Γ (Prov T P)) :
     Thm env Γ (Prov T (Prov T P)) :=
   (prov_prov hT P).weak0.mp h
 
@@ -100,15 +100,15 @@ theorem prov_prov_ctx (hT : TablesFor env T) {P : VExpr} (h : Thm env Γ (Prov T
 `X := Prov T (Prov T P → P)`, the theory proves `Prov T (X → Prov T P) → X → Prov T P`: from
 `X`, D3 gives `Prov T X`, D2 `Prov T (Prov T P)`, and D2 at `X` itself `Prov T P`. Löb's theorem
 (`loeb_core`) at `X → Prov T P` concludes. -/
-theorem loeb_int (hT : TablesFor env T) {P : VExpr} (hPc : P.ClosedN) :
+theorem loeb_int (hT : TablesFor env.env T) {P : VExpr} (hPc : P.ClosedN) :
     Thm env [] (imp (Prov T (imp (Prov T P) P)) (Prov T P)) := by
   generalize hX : Prov T (imp (Prov T P) P) = X
   have hXc : X.ClosedN := hX ▸ Prov_closed T _
-  have hXT : env.HasType 0 [] X (.sort .zero) := hX ▸ ProvTy T _
+  have hXT : env.HasType [] X (.sort .zero) := hX ▸ ProvTy T _
   have hQc : (imp X (Prov T P)).ClosedN := by
     show VExpr.ClosedN (.forallE _ _)
     exact ⟨hXc, (Prov_closed T P).liftN⟩
-  have hQT : env.HasType 0 [] (imp X (Prov T P)) (.sort .zero) := impTy hXT (ProvTy T P)
+  have hQT : env.HasType [] (imp X (Prov T P)) (.sort .zero) := impTy hXT (ProvTy T P)
   have hL : Thm env [] (imp (Prov T (imp X (Prov T P))) (imp X (Prov T P))) := by
     refine Thm.intro (ProvTy T _) ?_
     rw [hQc.lift_eq]
@@ -140,11 +140,11 @@ theorem imp_eq_forallE {A B : VExpr} (hB : B.ClosedN) : Obj.imp A B = .forallE A
 theorem prov_mp_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     {P Q : VExpr} (hQ : env.HasType 0 [] Q (.sort .zero)) :
     Provable env (.forallE (Prov T (.forallE P Q)) (.forallE (Prov T P) (Prov T Q))) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hQc : Q.ClosedN := hQ.closedN hwf.ordered trivial
   have h := prov_mp (env := env) (T := T) (A := P) hQc
   have hc : (imp (Prov T P) (Prov T Q)).ClosedN :=
-    (impTy (ProvTy (Γ := []) T P) (ProvTy T Q)).closedN hwf.ordered trivial
+    (impTy (env := env) (ProvTy (Γ := []) T P) (ProvTy T Q)).closedN.1
   rw [imp_eq_forallE hc, imp_eq_forallE hQc, imp_eq_forallE (Prov_closed T Q)] at h
   exact h.provable
 
@@ -152,8 +152,8 @@ theorem prov_mp_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T 
 theorem prov_prov_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (P : VExpr) :
     Provable env (.forallE (Prov T P) (Prov T (Prov T P))) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
-  have h := prov_prov hT P
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
+  have h := prov_prov (env := env) hT P
   rw [imp_eq_forallE (Prov_closed T _)] at h
   exact h.provable
 
@@ -163,9 +163,9 @@ theorem loeb_formalized (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T :
     (hT : TablesFor env T) {P : VExpr}
     (hP : env.HasType 0 [] P (.sort .zero)) :
     Provable env (.forallE (Prov T (.forallE (Prov T P) P)) (Prov T P)) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hPc : P.ClosedN := hP.closedN hwf.ordered trivial
-  have h := loeb_int hT hPc
+  have h := loeb_int (env := env) hT hPc
   rw [imp_eq_forallE hPc, imp_eq_forallE (Prov_closed T P)] at h
   exact h.provable
 

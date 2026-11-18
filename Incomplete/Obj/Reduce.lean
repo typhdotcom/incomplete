@@ -13,7 +13,7 @@ follows (`second_of_sigma`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The diagonal sentence's number, as `diagC` assembles it from the code `x`. -/
 noncomputable def diagT (x : VExpr) : VExpr :=
@@ -31,11 +31,11 @@ theorem bnd_chkT (T : Tables) : bnd (chkT T) ≤ 2 := bnd_chkC T _
   rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {k x : VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {k x : VExpr} {T : Tables}
 
 theorem diagTTy (hx : Tm env Γ x) : Tm env Γ (diagT x) := by unfold diagT; otype
 
-theorem isZeroTy (hx : Tm env Γ x) : env.HasType 0 Γ (isZero x) (.sort .zero) := isZeroT E.hasNat hx
+theorem isZeroTy (hx : Tm env Γ x) : env.HasType Γ (isZero x) (.sort .zero) := isZeroT hx
 
 end
 
@@ -43,7 +43,7 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine diagTT
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine isZeroTy ?_); otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {k x : VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {k x : VExpr} {T : Tables}
 
 theorem ev_diagC (hk : Tm env Γ k) (hx : Tm env Γ x) : Thm env Γ (ev diagC [k, x] =ₒ diagT x) := by
   simp only [diagC, diagT]
@@ -86,15 +86,15 @@ theorem fn_dg_code (hk : Tm env Γ k) :
 /-! ### `isZero` -/
 
 theorem isZero_of_eq_zero (hx : Tm env Γ x) (h : Thm env Γ (x =ₒ zero)) : Thm env Γ (isZero x) := by
-  have hM : env.HasType 0 (nat :: Γ) (isZero (.bvar 0)) (.sort .zero) := isZeroT E.hasNat (.bvar .zero)
+  have hM : env.HasType (nat :: Γ) (isZero (.bvar 0)) (.sort .zero) := isZeroT (.bvar .zero)
   have h0 : Thm env Γ (isZero zero) := ⟨_, (isZero_zero (env := env) (Γ := Γ)).symm.defeq trueI_T⟩
   have h1 := Thm.subst hM (Thm.symm hx zeroTy h) zeroTy hx (h0.cast (by simp only [obj_simp]))
   simp only [obj_simp] at h1
   exact h1
 
 theorem eq_zero_of_isZero (hx : Tm env Γ x) (h : Thm env Γ (isZero x)) : Thm env Γ (x =ₒ zero) := by
-  have hM : ∀ {Δ : List VExpr}, env.HasType 0 (nat :: Δ) (isZero (.bvar 0)) (.sort .zero) :=
-    isZeroT E.hasNat (.bvar .zero)
+  have hM : ∀ {Δ : List VExpr}, env.HasType (nat :: Δ) (isZero (.bvar 0)) (.sort .zero) :=
+    isZeroT (.bvar .zero)
   ocases (zero_or_succ (n := x) hx) with hz hs
   · exact hz
   · ocases hs with m hm
@@ -119,7 +119,7 @@ theorem Con_eq (T : Tables) : Con T =
 theorem halts_eq (f : PR) (n : Nat) : halts f n = imp (notHalts f n) falseS := rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 /-- **Internal modus ponens on proofs**, for closed `B`: proofs `c₁` of `A → B` and `c₂` of `A`
 give the proof `mpT A B p q c₁ c₂` of `B`, with `p` and `q` the terms they prove. -/
@@ -139,7 +139,7 @@ theorem prf_mpT {A B c₁ c₂ : VExpr} (hB : B.ClosedN) (hc₁ : Tm env Γ c₁
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {σ cm f : PR} {d : Nat} {A : VExpr}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {σ cm f : PR} {d : Nat} {A : VExpr}
 
 /-- The argument of `con_imp_G0` over arbitrary codes `cm` and `f`, which `Prf` reads: if
 `cm` at `0` reads `Prf(⌜⊥⌝, ·)`, `f` at `d` reads `Prf(⌜A⌝, ·)`, and the theory proves
@@ -186,7 +186,7 @@ theorem con_imp_G0
 
 end
 
-theorem G0_closed {env : VEnv} [E : ObjEnv env] (T : Tables) : (G0 T).ClosedN :=
+theorem G0_closed {env : Typing} [E : ObjEnv env] (T : Tables) : (G0 T).ClosedN :=
   (notHalts_prop E.hasNat E.ordered _ _).closedN E.ordered trivial
 
 /-- **The second theorem, from internal Σ₁-completeness for the diagonal machine.** If for some

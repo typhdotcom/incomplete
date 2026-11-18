@@ -16,7 +16,7 @@ judgment is `Γ ⊢ f a ≡ f' a' : B[a]` with `B[a]` the code `instT B a 0` (`j
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The checker's verdict on the certificate number `c`: `0` when it checks. -/
 noncomputable abbrev certT (T : Tables) (R : Nat → Bool) (c : VExpr) : VExpr := cov (certStep T R) c
@@ -46,7 +46,7 @@ def appT (g A B f f' a a' c₁ c₂ : VExpr) : VExpr :=
       (f.inst e k) (f'.inst e k) (a.inst e k) (a'.inst e k) (c₁.inst e k) (c₂.inst e k) := by
   simp only [appT, obj_simp]
 
-theorem appTTy {env : VEnv} [ObjEnv env] {Γ : List VExpr} {g A B f f' a a' c₁ c₂ : VExpr}
+theorem appTTy {env : Typing} [ObjEnv env] {Γ : List VExpr} {g A B f f' a a' c₁ c₂ : VExpr}
     (hg : Tm env Γ g) (hA : Tm env Γ A) (hB : Tm env Γ B) (hf : Tm env Γ f) (hf' : Tm env Γ f')
     (ha : Tm env Γ a) (ha' : Tm env Γ a') (hc₁ : Tm env Γ c₁) (hc₂ : Tm env Γ c₂) :
     Tm env Γ (appT g A B f f' a a' c₁ c₂) := by
@@ -65,7 +65,7 @@ sentence numbered `s`. -/
 noncomputable abbrev prfT (T : Tables) (s c : VExpr) : VExpr := ev (chkT T) [s, c]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c d e g A B f f' a' c₁ c₂ x : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c d e g A B f f' a' c₁ c₂ x : VExpr}
 
 /-! ### Codes of the rules at symbolic arguments -/
 

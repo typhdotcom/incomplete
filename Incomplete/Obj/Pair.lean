@@ -11,7 +11,7 @@ invert `pair`, whose value bounds both components.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv
+open VExpr Typing
 open PR (triC triRootC pairC fstC sndC cpair selC)
 
 /-- `tri a`, the code `triC` at `a`. -/
@@ -30,7 +30,7 @@ abbrev fst (a : VExpr) : VExpr := app2 (fn (fstC (.var 0))) zero a
 abbrev snd (a : VExpr) : VExpr := app2 (fn (sndC (.var 0))) zero a
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c j n r s w : VExpr} {p q : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c j n r s w : VExpr} {p q : PR}
 
 /-! ### `triC` -/
 
@@ -208,16 +208,16 @@ theorem le_pair_right_c : Thm env [] (∀ₒ a b, b ≤ₒ pair a b) := by
 
 end
 
-theorem tri_zero_provable : Provable natEnv (tri zero =ₒ zero) := tri_zero (Γ := [])
-theorem tri_succ_provable : Provable natEnv (∀ₒ a, tri (S a) =ₒ add (tri a) (S a)) := tri_succ_c
-theorem tri_mono_provable : Provable natEnv (∀ₒ a b, a ≤ₒ b →ₒ tri a ≤ₒ tri b) := tri_mono_c
+theorem tri_zero_provable : Provable natEnv (tri zero =ₒ zero) := Thm.provable (tri_zero (Γ := []))
+theorem tri_succ_provable : Provable natEnv (∀ₒ a, tri (S a) =ₒ add (tri a) (S a)) := Thm.provable tri_succ_c
+theorem tri_mono_provable : Provable natEnv (∀ₒ a b, a ≤ₒ b →ₒ tri a ≤ₒ tri b) := Thm.provable tri_mono_c
 theorem triRoot_spec_provable :
-    Provable natEnv (∀ₒ n, tri (triRoot n) ≤ₒ n ∧ₒ n <ₒ tri (S (triRoot n))) := triRoot_spec_c
+    Provable natEnv (∀ₒ n, tri (triRoot n) ≤ₒ n ∧ₒ n <ₒ tri (S (triRoot n))) := Thm.provable triRoot_spec_c
 theorem triRoot_tri_add_provable :
-    Provable natEnv (∀ₒ w j, j ≤ₒ w →ₒ triRoot (add (tri w) j) =ₒ w) := triRoot_tri_add_c
-theorem fst_pair_provable : Provable natEnv (∀ₒ a b, fst (pair a b) =ₒ a) := fst_pair_c
-theorem snd_pair_provable : Provable natEnv (∀ₒ a b, snd (pair a b) =ₒ b) := snd_pair_c
-theorem le_pair_left_provable : Provable natEnv (∀ₒ a b, a ≤ₒ pair a b) := le_pair_left_c
-theorem le_pair_right_provable : Provable natEnv (∀ₒ a b, b ≤ₒ pair a b) := le_pair_right_c
+    Provable natEnv (∀ₒ w j, j ≤ₒ w →ₒ triRoot (add (tri w) j) =ₒ w) := Thm.provable triRoot_tri_add_c
+theorem fst_pair_provable : Provable natEnv (∀ₒ a b, fst (pair a b) =ₒ a) := Thm.provable fst_pair_c
+theorem snd_pair_provable : Provable natEnv (∀ₒ a b, snd (pair a b) =ₒ b) := Thm.provable snd_pair_c
+theorem le_pair_left_provable : Provable natEnv (∀ₒ a b, a ≤ₒ pair a b) := Thm.provable le_pair_left_c
+theorem le_pair_right_provable : Provable natEnv (∀ₒ a b, b ≤ₒ pair a b) := Thm.provable le_pair_right_c
 
 end Incomplete.Obj

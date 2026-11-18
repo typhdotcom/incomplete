@@ -15,7 +15,7 @@ eliminates a disjunction, existential or conjunction `h`, and `ocases` alone spl
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv
+open VExpr Typing
 
 /-! ### Formulas -/
 
@@ -70,42 +70,40 @@ end
 /-! ### Typing -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {P Q : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {P Q : VExpr}
 
-omit E in
-theorem propTy : env.HasType 0 Γ (.sort .zero) (.sort (.succ .zero)) := .sort trivial
+theorem propTy : env.HasType Γ (.sort .zero) (.sort (.succ .zero)) := .sort0
 
-omit E in
-theorem falseTy : env.HasType 0 Γ falseS (.sort .zero) := falseT
+theorem falseTy : env.HasType Γ falseS (.sort .zero) := falseT
 
-theorem negTy (hP : env.HasType 0 Γ P (.sort .zero)) : env.HasType 0 Γ (neg P) (.sort .zero) :=
+theorem negTy (hP : env.HasType Γ P (.sort .zero)) : env.HasType Γ (neg P) (.sort .zero) :=
   impTy hP falseT
 
-theorem conjTy (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero)) :
-    env.HasType 0 Γ (conj P Q) (.sort .zero) :=
+theorem conjTy (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero)) :
+    env.HasType Γ (conj P Q) (.sort .zero) :=
   forallE_prop propTy (impTy (impTy (weakTy hP) (impTy (weakTy hQ) (.bvar .zero))) (.bvar .zero))
 
-theorem disjTy (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero)) :
-    env.HasType 0 Γ (disj P Q) (.sort .zero) :=
+theorem disjTy (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero)) :
+    env.HasType Γ (disj P Q) (.sort .zero) :=
   forallE_prop propTy (impTy (impTy (weakTy hP) (.bvar .zero))
     (impTy (impTy (weakTy hQ) (.bvar .zero)) (.bvar .zero)))
 
-theorem liftN11Ty {A : VExpr} (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) :
-    env.HasType 0 (nat :: A :: Γ) (P.liftN 1 1) (.sort .zero) :=
-  hP.weakN E.ordered (.succ .one)
+theorem liftN11Ty {A : VExpr} (hP : env.HasType (nat :: Γ) P (.sort .zero)) :
+    env.HasType (nat :: A :: Γ) (P.liftN 1 1) (.sort .zero) :=
+  hP.weakN (.succ .one)
 
-theorem exTy (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) :
-    env.HasType 0 Γ (ex P) (.sort .zero) :=
+theorem exTy (hP : env.HasType (nat :: Γ) P (.sort .zero)) :
+    env.HasType Γ (ex P) (.sort .zero) :=
   forallE_prop propTy (impTy (allTy (impTy (liftN11Ty hP) (.bvar (.succ .zero)))) (.bvar .zero))
 
-theorem weakProp {B : VExpr} (hP : env.HasType 0 Γ P (.sort .zero)) :
-    env.HasType 0 (B :: Γ) P.lift (.sort .zero) := weakTy hP
+theorem weakProp {B : VExpr} (hP : env.HasType Γ P (.sort .zero)) :
+    env.HasType (B :: Γ) P.lift (.sort .zero) := weakTy hP
 
-theorem weakNat {B a : VExpr} (ha : env.HasType 0 Γ a nat) : env.HasType 0 (B :: Γ) a.lift nat :=
+theorem weakNat {B a : VExpr} (ha : env.HasType Γ a nat) : env.HasType (B :: Γ) a.lift nat :=
   weakTy ha
 
-theorem iffTy (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero)) :
-    env.HasType 0 Γ (iff P Q) (.sort .zero) :=
+theorem iffTy (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero)) :
+    env.HasType Γ (iff P Q) (.sort .zero) :=
   conjTy (impTy hP hQ) (impTy hQ hP)
 
 end
@@ -124,65 +122,63 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine iffTy 
 /-! ### Rules -/
 
 namespace Thm
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {P Q R a b t : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {P Q R a b t : VExpr}
 
-omit E in
 /-- `∀ R : Prop, P`, introduced. -/
 theorem pallI (h : Thm env (.sort .zero :: Γ) P) : Thm env Γ (.forallE (.sort .zero) P) :=
-  let ⟨_, hp⟩ := h; ⟨_, .lam (.sort trivial) hp⟩
+  let ⟨_, hp⟩ := h; ⟨_, .lam .sort0 hp⟩
 
-omit E in
-theorem pallE (h : Thm env Γ (.forallE (.sort .zero) P)) (hR : env.HasType 0 Γ R (.sort .zero)) :
+theorem pallE (h : Thm env Γ (.forallE (.sort .zero) P)) (hR : env.HasType Γ R (.sort .zero)) :
     Thm env Γ (P.inst R) :=
   let ⟨_, hp⟩ := h; ⟨_, .app hp hR⟩
 
-theorem exfalso (h : Thm env Γ falseS) (hP : env.HasType 0 Γ P (.sort .zero)) : Thm env Γ P :=
+theorem exfalso (h : Thm env Γ falseS) (hP : env.HasType Γ P (.sort .zero)) : Thm env Γ P :=
   (pallE h hP).cast (by simp only [obj_simp])
 
 theorem absurd (h : Thm env Γ (neg P)) (hP : Thm env Γ P) : Thm env Γ falseS := mp h hP
 
-theorem conjI (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem conjI (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h1 : Thm env Γ P) (h2 : Thm env Γ Q) : Thm env Γ (conj P Q) := by
   refine pallI ?_
   ointro k
   exact mp (mp k h1.weak.weak) h2.weak.weak
 
-theorem conjE1 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem conjE1 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ (conj P Q)) : Thm env Γ P := by
   have h := pallE h hP
   onorm at h
   refine mp h ?_
   ointro; ointro; ohyp
 
-theorem conjE2 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem conjE2 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ (conj P Q)) : Thm env Γ Q := by
   have h := pallE h hQ
   onorm at h
   refine mp h ?_
   ointro; ointro; ohyp
 
-theorem disjI1 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem disjI1 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ P) : Thm env Γ (disj P Q) := by
   refine pallI ?_
   ointro k
   ointro
   exact mp k.weak (by simpa only [obj_simp] using h.weak.weak.weak)
 
-theorem disjI2 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem disjI2 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ Q) : Thm env Γ (disj P Q) := by
   refine pallI ?_
   ointro
   ointro k
   exact mp k (by simpa only [obj_simp] using h.weak.weak.weak)
 
-theorem disjE (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
-    (hR : env.HasType 0 Γ R (.sort .zero)) (h : Thm env Γ (disj P Q))
+theorem disjE (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
+    (hR : env.HasType Γ R (.sort .zero)) (h : Thm env Γ (disj P Q))
     (k1 : Thm env (P :: Γ) R.lift) (k2 : Thm env (Q :: Γ) R.lift) : Thm env Γ R := by
   have h := pallE h hR
   onorm at h
   exact mp (mp h (intro hP k1)) (intro hQ k2)
 
-theorem exI (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (ht : env.HasType 0 Γ t nat)
+theorem exI (hP : env.HasType (nat :: Γ) P (.sort .zero)) (ht : env.HasType Γ t nat)
     (h : Thm env Γ (P.inst t)) : Thm env Γ (ex P) := by
   refine pallI ?_
   ointro k
@@ -195,44 +191,44 @@ theorem exI (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (ht : env.HasType 0
   rw [e] at k
   exact mp k h.weak.weak
 
-theorem exE (hR : env.HasType 0 Γ R (.sort .zero))
+theorem exE (hR : env.HasType Γ R (.sort .zero))
     (h : Thm env Γ (ex P)) (k : Thm env (nat :: Γ) (imp P R.lift)) : Thm env Γ R := by
   have h := pallE h hR
   simp only [obj_simp, inst_liftN] at h
   exact mp h (allI k)
 
-theorem iffI (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem iffI (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h1 : Thm env Γ (imp P Q)) (h2 : Thm env Γ (imp Q P)) : Thm env Γ (iff P Q) :=
   conjI (impTy hP hQ) (impTy hQ hP) h1 h2
 
-theorem iffE1 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem iffE1 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ (iff P Q)) : Thm env Γ (imp P Q) := conjE1 (impTy hP hQ) (impTy hQ hP) h
 
-theorem iffE2 (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
+theorem iffE2 (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
     (h : Thm env Γ (iff P Q)) : Thm env Γ (imp Q P) := conjE2 (impTy hP hQ) (impTy hQ hP) h
 
 /-- `disjE`, naming each case's hypothesis. -/
-theorem disjEH (hP : env.HasType 0 Γ P (.sort .zero)) (hQ : env.HasType 0 Γ Q (.sort .zero))
-    (hR : env.HasType 0 Γ R (.sort .zero)) (h : Thm env Γ (disj P Q))
+theorem disjEH (hP : env.HasType Γ P (.sort .zero)) (hQ : env.HasType Γ Q (.sort .zero))
+    (hR : env.HasType Γ R (.sort .zero)) (h : Thm env Γ (disj P Q))
     (k1 : Thm env (P :: Γ) P.lift → Thm env (P :: Γ) R.lift)
     (k2 : Thm env (Q :: Γ) Q.lift → Thm env (Q :: Γ) R.lift) : Thm env Γ R :=
   disjE hP hQ hR h (k1 (hyp .zero)) (k2 (hyp .zero))
 
 /-- `exE`, naming the hypothesis on the witness `bvar 0`. -/
-theorem exEH (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (hR : env.HasType 0 Γ R (.sort .zero))
+theorem exEH (hP : env.HasType (nat :: Γ) P (.sort .zero)) (hR : env.HasType Γ R (.sort .zero))
     (h : Thm env Γ (ex P)) (k : Thm env (P :: nat :: Γ) P.lift → Thm env (P :: nat :: Γ) R.lift.lift) :
     Thm env Γ R :=
   exE hR h (intro hP (by simpa only [obj_simp] using k (hyp .zero)))
 
 /-- `exE`, with the typing of the witness `bvar 1` and the hypothesis on it. -/
-theorem exEHT (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (hR : env.HasType 0 Γ R (.sort .zero))
+theorem exEHT (hP : env.HasType (nat :: Γ) P (.sort .zero)) (hR : env.HasType Γ R (.sort .zero))
     (h : Thm env Γ (ex P)) (k : Tm env (P :: nat :: Γ) (.bvar 1) →
       Thm env (P :: nat :: Γ) P.lift → Thm env (P :: nat :: Γ) R.lift.lift) :
     Thm env Γ R :=
   exEH hP hR h (k (.bvar (.succ .zero)))
 
 /-- Case analysis on a number: `P 0` and `P (S n)` prove `∀ n, P n`. -/
-theorem cases (hP : env.HasType 0 (nat :: Γ) P (.sort .zero)) (h0 : Thm env Γ (P.inst zero))
+theorem cases (hP : env.HasType (nat :: Γ) P (.sort .zero)) (h0 : Thm env Γ (P.inst zero))
     (hs : Thm env (nat :: Γ) ((P.liftN 1 1).inst (S (.bvar 0)))) : Thm env Γ (all P) :=
   ind hP h0 (intro hP hs.weak)
 
@@ -298,42 +294,40 @@ scoped notation "⊥ₒ" => falseS
 def predR (a : VExpr) : VExpr := natRec nat zero (.lam nat (.lam nat (.bvar 1))) a
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b n : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b n : VExpr}
 
-theorem isZero_zero : env.IsDefEq 0 Γ (isZero zero) trueS (.sort .zero) :=
-  natRec_zero (A := .sort .zero) trivial (fun _ => propTy) trueT (isZeroStepT E.hasNat)
+theorem isZero_zero : env.IsDefEq Γ (isZero zero) trueS (.sort .zero) :=
+  natRec_zero (A := .sort .zero) trivial (fun _ => propTy) trueT (isZeroStepT)
 
-theorem isZero_succ' (hn : Tm env Γ n) : env.IsDefEq 0 Γ (isZero (S n)) falseS (.sort .zero) := by
-  have hst := isZeroStepT (Γ := Γ) E.hasNat
-  have hr := isZeroT E.hasNat hn
+theorem isZero_succ' (hn : Tm env Γ n) : env.IsDefEq Γ (isZero (S n)) falseS (.sort .zero) := by
+  have hst := isZeroStepT (env := env) (Γ := Γ)
+  have hr := isZeroT hn
   have h1 := natRec_succ (A := .sort .zero) trivial (fun _ => propTy) trueT hst hn
   have b1 := IsDefEq.beta (HasType.lam propTy (falseT (env := env) (Γ := .sort .zero :: nat :: Γ))) hn
   have b2 := IsDefEq.beta (falseT (env := env) (Γ := .sort .zero :: Γ)) hr
   exact h1.trans ((IsDefEq.appDF b1 hr).trans b2)
 
 theorem predRTy (ha : Tm env Γ a) : Tm env Γ (predR a) :=
-  E.hasNat.natRecT Inert.nat (fun _ => natTy) zeroTy
+  natRecT Inert.nat (fun _ => natTy) zeroTy
     (.lam natTy (.lam natTy (.bvar (.succ .zero)))) ha
 
-theorem predR_succ (ha : Tm env Γ a) : env.IsDefEq 0 Γ (predR (S a)) a nat := by
-  have hst : env.HasType 0 Γ (.lam nat (.lam nat (.bvar 1))) (stepT nat) :=
+theorem predR_succ (ha : Tm env Γ a) : env.IsDefEq Γ (predR (S a)) a nat := by
+  have hst : env.HasType Γ (.lam nat (.lam nat (.bvar 1))) (stepT nat) :=
     .lam natTy (.lam natTy (.bvar (.succ .zero)))
   have h1 := natRec_succ (A := nat) trivial (fun _ => natTy) zeroTy hst ha
-  have b1 := IsDefEq.beta (HasType.lam natTy (HasType.bvar (env := env) (U := 0)
+  have b1 := IsDefEq.beta (HasType.lam natTy (HasType.bvar (env := env)
     (Γ := nat :: nat :: Γ) (.succ .zero))) ha
   have b2 := IsDefEq.beta (weakTy (B := nat) ha) (predRTy ha)
   rw [inst_lift] at b2
   exact h1.trans ((IsDefEq.appDF b1 (predRTy ha)).trans b2)
 
-omit E in
 @[obj_simp] theorem predR_liftN {m k : Nat} : (predR a).liftN m k = predR (a.liftN m k) := rfl
-omit E in
 @[obj_simp] theorem predR_inst {e : VExpr} {k : Nat} : (predR a).inst e k = predR (a.inst e k) := rfl
 
 theorem zero_ne_succ (hn : Tm env Γ n) : Thm env Γ (¬ₒ (zero =ₒ S n)) := by
   ointro h
   have hz : Thm env (EqN zero (S n) :: Γ) (isZero zero) := ⟨_, isZero_zero.symm.defeq trueI_T⟩
-  have := Thm.subst (M := isZero (.bvar 0)) (isZeroT E.hasNat (.bvar .zero)) h zeroTy
+  have := Thm.subst (M := isZero (.bvar 0)) (isZeroT (.bvar .zero)) h zeroTy
     (STy (weakTy hn)) hz
   simp only [isZero_instN, obj_simp] at this
   exact this.conv (isZero_succ' (weakTy hn))

@@ -21,7 +21,7 @@ consistent. -/
 theorem prov_false_ctx_consistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (hC : Consistent env) : ¬Thm env [Prov T falseS] falseS := by
   intro h
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hi : Thm env [] (imp (Prov T falseS) falseS) := Thm.intro (by otype) h
   exact hC (loeb env hwf hext hT falseT hi.provable)
 
@@ -52,7 +52,7 @@ theorem omega_inconsistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {
     ¬Thm env [Prov T falseS] falseS ∧
     Thm env [Prov T falseS] (Prov T falseS) ∧
     ∀ k : Nat, Thm env [Prov T falseS] (neg (prfT T (numT (encExpr falseS)) (lit k) =ₒ zero)) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   exact ⟨prov_false_ctx_consistent env hwf hext hT hC, prov_false_ctx_proves_prov,
     fun k => Thm.weak0 (not_prf_false_lit hT hC k)⟩
 

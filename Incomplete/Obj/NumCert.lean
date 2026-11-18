@@ -13,7 +13,7 @@ internally, `∀ k, Prf(⌜Q⌝[k], σ k)` for a code `σ` (`inst_c`, `internal_
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The certificate of `⊢ lit k : Nat` at `k`, from `z : ⊢ Nat.zero : Nat` and
 `s : ⊢ Nat.succ : Nat → Nat`. -/
@@ -27,7 +27,7 @@ abbrev numCert (z s : Nat) (k : VExpr) : VExpr := ev (numCertC z s) [k]
 theorem bnd_litC : bnd litC ≤ 1 := by unfold litC; obnd
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {z s : Nat} {a k : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {z s : Nat} {a k : VExpr}
 
 theorem numCert_zero : Thm env Γ (numCert z s zero =ₒ numT z) := by
   orw [ev_prec_zero (f := numCertC z s) rfl (by otype)]
@@ -117,10 +117,10 @@ end
 code `σ` with, internally, `∀ k, Prf(⌜Q⌝[k], σ k)`. -/
 theorem internal_inst {envT : VEnv} {T : Tables} (hT : TablesFor envT T) (H : HasNat envT)
     {Q : VExpr} (hQ : Provable envT (all Q)) :
-    ∃ σ : PR, ∀ {env : VEnv} [ObjEnv env],
+    ∃ σ : PR, ∀ {env : Typing} [ObjEnv env],
       Thm env [] (∀ₒ k, prfT T (instT (numT (encExpr Q)) (litT k) zero) (ev σ [k]) =ₒ zero) := by
-  obtain ⟨z, hz⟩ := closed_cert hT (H.zeroT (U := 0) (Γ := []))
-  obtain ⟨s, hs⟩ := closed_cert hT (H.succT (U := 0) (Γ := []))
+  obtain ⟨z, hz⟩ := closed_cert hT (H.zeroT (Γ := []))
+  obtain ⟨s, hs⟩ := closed_cert hT (H.succT (Γ := []))
   obtain ⟨e, c, hc⟩ := provable_cert hT hQ
   exact ⟨instCertC z s Q e c, fun {env} _ =>
     inst_c (hz (env := env)).1 (hz (env := env)).2 (hs (env := env)).1 (hs (env := env)).2

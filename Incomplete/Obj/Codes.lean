@@ -12,7 +12,7 @@ and `x` as variable `1`, so `sub a b` is `fn subC b a`.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `a - 1`. -/
 abbrev pred (a : VExpr) : VExpr := app2 (fn predC) zero a
@@ -43,7 +43,7 @@ end
 attribute [obj_simp] ev_num
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c n : VExpr} {f g h : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c n : VExpr} {f g h : PR}
 
 theorem predTy' (ha : Tm env Γ a) : Tm env Γ (pred a) := app2Ty (fnTy _) zeroTy ha
 theorem subTy (ha : Tm env Γ a) (hb : Tm env Γ b) : Tm env Γ (sub a b) := app2Ty (fnTy _) hb ha
@@ -54,7 +54,7 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine predTy
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine subTy ?_ ?_) <;> otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c n : VExpr} {f g h : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c n : VExpr} {f g h : PR}
 
 /-! ### Multiplication -/
 

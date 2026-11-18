@@ -14,7 +14,7 @@ template of a lifted expression (`instT_tmplH_lift`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The number of `B` with the variable `j + m` replaced by the number `hs[m]`, at depth `j`. -/
 noncomputable def tmplH (hs : List VExpr) : VExpr → Nat → VExpr
@@ -68,7 +68,7 @@ variable {n k : Nat} {e : VExpr}
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {hs : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {hs : List VExpr}
 
 theorem tmplHTy (hh : Tms env Γ hs) : ∀ (B : VExpr) (j : Nat), Tm env Γ (tmplH hs B j)
   | .bvar i, j => by
@@ -235,7 +235,7 @@ theorem tmplH_inst_insert (hs₁ hs₂ : List VExpr) {e : VExpr} (he : e.ClosedN
 /-! ### Templates internally -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {hs : List VExpr} {a : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {hs : List VExpr} {a : VExpr}
 
 theorem getD_mem {l : List VExpr} {i : Nat} (h : i < l.length) : l.getD i zero ∈ l := by
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h, Option.getD_some]

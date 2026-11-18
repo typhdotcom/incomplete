@@ -231,13 +231,13 @@ def orwCore (stx : Term) (symm : Bool) (loc : Option FVarId := none) : TacticM U
   let some a ← occ.get | throwError "orw: no instance of{indentExpr a}\nin{indentExpr G}"
   let b ← instantiateMVars b
   let M ← instantiateMVars M
-  let hM ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``VEnv.HasType
-    #[env, toExpr 0, ← mkAppM ``List.cons #[mkConst ``Incomplete.nat, Γ], M,
+  let hM ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``Typing.HasType
+    #[env, ← mkAppM ``List.cons #[mkConst ``Incomplete.nat, Γ], M,
       mkApp (mkConst ``VExpr.sort) (mkConst ``VLevel.zero)])
-  let ha ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``VEnv.HasType
-    #[env, toExpr 0, Γ, a, mkConst ``Incomplete.nat])
-  let hb ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``VEnv.HasType
-    #[env, toExpr 0, Γ, b, mkConst ``Incomplete.nat])
+  let ha ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``Typing.HasType
+    #[env, Γ, a, mkConst ``Incomplete.nat])
+  let hb ← mkFreshExprSyntheticOpaqueMVar (← mkAppM ``Typing.HasType
+    #[env, Γ, b, mkConst ``Incomplete.nat])
   let hEq ← if symm then
       mkAppM ``Thm.symm #[hb, ha, h]
     else pure h

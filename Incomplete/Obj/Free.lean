@@ -12,10 +12,10 @@ expression with a known head is the tuple of its parts' numbers (`numT_judg`, `n
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 
 theorem numT_judg (Δ : List VExpr) (e1 e2 A : VExpr) :
     Thm env Γ (numT (encJudg ⟨Δ, e1, e2, A⟩) =ₒ judgT (numT (encList encExpr Δ)) (numT (encExpr e1))
@@ -72,7 +72,7 @@ end
 certificate number `c` that the object theory proves to check and to certify it. -/
 theorem closed_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {e1 e2 A : VExpr}
     (h : envT.IsDefEq 0 [] e1 e2 A) :
-    ∃ c : Nat, ∀ {env : VEnv} [ObjEnv env] {Γ : List VExpr},
+    ∃ c : Nat, ∀ {env : Typing} [ObjEnv env] {Γ : List VExpr},
       Thm env Γ (certT T (fun _ => true) (numT c) =ₒ zero) ∧
       Thm env Γ (jT (numT c) =ₒ
         judgT zero (numT (encExpr e1)) (numT (encExpr e2)) (numT (encExpr A))) := by
@@ -97,7 +97,7 @@ theorem closed_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {e1 e2 A 
 `c` that the object theory proves to check and to certify `[] ⊢ e ≡ e : P`. -/
 theorem provable_cert {envT : VEnv} {T : Tables} (hT : TablesFor envT T) {P : VExpr}
     (h : Provable envT P) :
-    ∃ (e : VExpr) (c : Nat), ∀ {env : VEnv} [ObjEnv env] {Γ : List VExpr},
+    ∃ (e : VExpr) (c : Nat), ∀ {env : Typing} [ObjEnv env] {Γ : List VExpr},
       Thm env Γ (certT T (fun _ => true) (numT c) =ₒ zero) ∧
       Thm env Γ (jT (numT c) =ₒ
         judgT zero (numT (encExpr e)) (numT (encExpr e)) (numT (encExpr P))) := by

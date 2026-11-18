@@ -20,10 +20,10 @@ And from a refutation of `Stay a` a proof that `lvC f nx a` halts (`halts_lv`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat}
 
 /-- The walk stays at `a` from `m` on. -/
 theorem stay_add {Γ : List VExpr} {a : Nat} {m l : VExpr} (hm : Tm env Γ m) (hl : Tm env Γ l)
@@ -79,7 +79,7 @@ theorem Ss_disj {Γ : List VExpr} {i j : Nat} (hij : i ≠ j) (hi : Thm env Γ (
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
   {K : SFrame}
   (hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
     Thm env Γ (ev (q b) [r, k, lit d] =ₒ Qt f d T b k))
@@ -217,8 +217,7 @@ theorem stay_core {Γ : List VExpr} {a : Nat} {k : VExpr} (ha : a ≤ K.N) (hk :
       (props_map fun _ => by otype) ?_ g
     · oexfalso
       have hc : (neg (bigOr ((a :: K.succL a).map (Ss f d)))).ClosedN :=
-        (negTy (bigOrTy (env := natEnv) (Γ := []) (props_map fun _ => SsTy _))).closedN
-          natEnv_ordered trivial
+        (negTy (bigOrTy (env := natEnv) (Γ := []) (props_map fun _ => SsTy _))).closedN.1
       have hn := (hnG.weak (A := (hT f d (S k) =ₒ lit b) ∧ₒ (Qt f d T b k =ₒ zero))).cast hc.lift_eq
       exact hn.mp g'
     · intro r hr
@@ -231,19 +230,19 @@ theorem stay_core {Γ : List VExpr} {a : Nat} {k : VExpr} (ha : a ≤ K.N) (hk :
 include hq hs in
 /-- **The walk has a limit above every world it reaches**, given double-negation elimination:
 `Pa a → ⋁_{b ∈ {a} ∪ R(a)} S_b`. -/
-theorem reach_lim (hdne : Provable env dneS) (a : Nat) (ha : a ≤ K.N) :
+theorem reach_lim (hdne : Thm env [] dneS) (a : Nat) (ha : a ≤ K.N) :
     Thm env [] (imp (Pa f d a) (bigOr ((a :: K.succL a).map (Ss f d)))) := by
-  have hG : env.HasType 0 [] (bigOr ((a :: K.succL a).map (Ss f d))) (.sort .zero) := by otype
+  have hG : env.HasType [] (bigOr ((a :: K.succL a).map (Ss f d))) (.sort .zero) := by otype
   have IH : ∀ b ∈ K.succL a, Thm env [] (imp (Pa f d b) (bigOr ((b :: K.succL b).map (Ss f d)))) :=
     fun b hb => reach_lim hdne b (K.le ((K.mem_succL).1 hb)).2
   refine Thm.intro (PaTy a) ?_
-  rw [(hG.closedN E.ordered trivial).lift_eq]
+  rw [(hG.closedN.1).lift_eq]
   have hP : Thm env [Pa f d a] (Pa f d a) := (Thm.hyp .zero).cast Pa_liftN
   refine (imp_dne hG hdne).weak0.mp ?_
   refine Thm.intro (negTy (closedTy hG)) ?_
   have hnG : Thm env [neg (bigOr ((a :: K.succL a).map (Ss f d))), Pa f d a]
       (neg (bigOr ((a :: K.succL a).map (Ss f d)))) :=
-    (Thm.hyp .zero).cast (negTy hG |>.closedN E.ordered trivial).lift_eq
+    (Thm.hyp .zero).cast (negTy hG |>.closedN.1).lift_eq
   show Thm env _ falseS
   have hSt : Thm env [neg (bigOr ((a :: K.succL a).map (Ss f d))), Pa f d a] (Stay f d a) := by
     unfold Stay
@@ -251,7 +250,7 @@ theorem reach_lim (hdne : Provable env dneS) (a : Nat) (ha : a ≤ K.N) :
     have hk : Thm env [hT f d (.bvar 0) =ₒ lit a, nat, neg (bigOr ((a :: K.succL a).map (Ss f d))),
         Pa f d a] (hT f d (.bvar 1) =ₒ lit a) := (Thm.hyp .zero).cast (by simp only [obj_simp])
     have hn := (Thm.weakL [hT f d (.bvar 0) =ₒ lit a, nat] hnG).cast
-      ((negTy hG).closedN E.ordered trivial |>.liftN_eq (Nat.zero_le _))
+      ((negTy hG).closedN.1 |>.liftN_eq (Nat.zero_le _))
     have := stay_core hq hs ha (by otype) hk hn IH
     simpa only [obj_simp] using this
   have hP' : Thm env [neg (bigOr ((a :: K.succL a).map (Ss f d))), Pa f d a] (Pa f d a) :=
@@ -265,7 +264,7 @@ decreasing_by exact succL_lt hb
 omit hq hs in
 /-- **Internal Σ₁-completeness for `Pa`**: a code `σ` turns, provably, every `k` at which the walk
 is at `i` into a certificate `σ k` of `Pa i`. -/
-theorem sigma_Pa (hTb : TablesFor env T) (i : Nat) :
+theorem sigma_Pa (hTb : TablesFor env.env T) (i : Nat) :
     ∃ σ : PR, Thm env [] (∀ₒ k, ev (eqz f (num i)) [k, lit d] =ₒ zero →ₒ
       prfT T (numT (encExpr (Pa f d i))) (ev σ [k]) =ₒ zero) := by
   have hR : (ex (app2 (fn f) (.bvar 2) (.bvar 0) =ₒ lit i)).inst (lit d) 1 = Pa f d i := by
@@ -296,7 +295,7 @@ theorem sigma_Pa (hTb : TablesFor env T) (i : Nat) :
 
 omit hq hs in
 /-- A step at which the walk is at `i` proves that it reaches `i`, provably. -/
-theorem prov_Pa (hTb : TablesFor env T) {Γ : List VExpr} {i : Nat} {k : VExpr}
+theorem prov_Pa (hTb : TablesFor env.env T) {Γ : List VExpr} {i : Nat} {k : VExpr}
     (hk : Tm env Γ k) (h : Thm env Γ (hT f d k =ₒ lit i)) : Thm env Γ (Prov T (Pa f d i)) := by
   obtain ⟨σ, hσ⟩ := sigma_Pa (f := f) (d := d) hTb i
   have hl : Tms env Γ [k, lit d] := by otype
@@ -345,19 +344,19 @@ theorem prov_neg_core {Γ : List VExpr} {i : Nat} {k : VExpr} (hk : Tm env Γ k)
         (Thm.symm (by otype) (by otype) e1) hk2'')) (by otype)
 
 theorem bigOr_Ss_closed (bs : List Nat) : (bigOr (bs.map (Ss f d))).ClosedN :=
-  (bigOrTy (env := natEnv) (Γ := []) (props_map fun _ => SsTy _)).closedN natEnv_ordered trivial
+  (bigOrTy (env := natEnv) (Γ := []) (props_map fun _ => SsTy _)).closedN.1
 
 include hq hs h0 in
 /-- **`S_i → Prov(⋁_{i R j} S_j)` for `i ≠ 0`.** The walk entered `i` along a proof of `¬S_i`,
 and it provably reaches `i`; and `Pa i ∧ ¬S_i → ⋁_{i R j} S_j` (`reach_lim`). -/
-theorem Ss_prov (hTb : TablesFor env T) (hdne : Provable env dneS) {Γ : List VExpr} {i : Nat}
+theorem Ss_prov (hTb : TablesFor env.env T) (hdne : Thm env [] dneS) {Γ : List VExpr} {i : Nat}
     (hi0 : i ≠ 0) (hiN : i ≤ K.N) (h : Thm env Γ (Ss f d i)) :
     Thm env Γ (Prov T (bigOr ((K.succL i).map (Ss f d)))) := by
   have hBc := bigOr_Ss_closed (f := f) (d := d) (K.succL i)
-  have hB : env.HasType 0 [] (bigOr ((K.succL i).map (Ss f d))) (.sort .zero) := by otype
+  have hB : env.HasType [] (bigOr ((K.succL i).map (Ss f d))) (.sort .zero) := by otype
   have hD := reach_lim hq hs hdne i hiN
   have hNB : (imp (neg (Ss f d i)) (bigOr ((K.succL i).map (Ss f d)))).ClosedN :=
-    (impTy (negTy (SsTy (env := env) (Γ := []) i)) hB).closedN E.ordered trivial
+    (impTy (negTy (SsTy (env := env) (Γ := []) i)) hB).closedN.1
   have hDimp : Thm env [] (imp (Pa f d i) (imp (neg (Ss f d i)) (bigOr ((K.succL i).map (Ss f d))))) := by
     refine Thm.intro (PaTy i) ?_
     rw [hNB.lift_eq]
@@ -377,7 +376,7 @@ theorem Ss_prov (hTb : TablesFor env T) (hdne : Provable env dneS) {Γ : List VE
     · exact bigOr_intro (props_map fun _ => by otype) (List.mem_map_of_mem hb) (kp.cast Ss_liftN)
   have hP1 : Thm env [] (Prov T (imp (Pa f d i) (imp (neg (Ss f d i))
       (bigOr ((K.succL i).map (Ss f d)))))) :=
-    prov_of_provable E.hasNat E.ordered hTb hDimp.provable
+    Thm.nec hTb hDimp
   unfold Ss at h
   have hPa := Thm.conjE1 (by otype) (by otype) h
   unfold Pa at hPa
@@ -398,7 +397,7 @@ end
 /-! ### Leaving a world -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {f nx : PR} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {f nx : PR} {d : Nat}
   (hs : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
     Thm env Γ (hT f d (S k) =ₒ ev nx [hT f d k, k, lit d]))
 include hs

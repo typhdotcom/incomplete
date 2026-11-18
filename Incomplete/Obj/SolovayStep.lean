@@ -14,7 +14,7 @@ walk stays at `a` at `k + 1` or moves to a world `b` that `a` sees with `Qt b k 
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-! ### Finite disjunctions -/
 
@@ -34,12 +34,12 @@ def bigOr : List VExpr → VExpr
   | p :: ps => by simp only [bigOr, disj_inst, bigOr_inst ps, List.map_cons]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {R : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {R : VExpr}
 
 /-- Every member of `ps` is a proposition in `Γ`. -/
-def Props (env : VEnv) (Γ ps : List VExpr) : Prop := ∀ p ∈ ps, env.HasType 0 Γ p (.sort .zero)
+def Props (env : Typing) (Γ ps : List VExpr) : Prop := ∀ p ∈ ps, env.HasType Γ p (.sort .zero)
 
-theorem bigOrTy : ∀ {ps : List VExpr}, Props env Γ ps → env.HasType 0 Γ (bigOr ps) (.sort .zero)
+theorem bigOrTy : ∀ {ps : List VExpr}, Props env Γ ps → env.HasType Γ (bigOr ps) (.sort .zero)
   | [], _ => falseTy
   | p :: _, h => disjTy (h p (.head _)) (bigOrTy fun q hq => h q (.tail _ hq))
 
@@ -53,7 +53,7 @@ theorem bigOr_intro : ∀ {ps : List VExpr} {p : VExpr}, Props env Γ ps → p �
     · exact Thm.disjI2 hq hr (bigOr_intro (fun r hr => hps r (.tail _ hr)) hp h)
 
 theorem bigOr_elim_len : ∀ (n : Nat) {ps : List VExpr} {Γ : List VExpr} {R : VExpr},
-    ps.length = n → env.HasType 0 Γ R (.sort .zero) → Props env Γ ps → Thm env Γ (bigOr ps) →
+    ps.length = n → env.HasType Γ R (.sort .zero) → Props env Γ ps → Thm env Γ (bigOr ps) →
       (∀ p ∈ ps, Thm env (p :: Γ) p.lift → Thm env (p :: Γ) R.lift) → Thm env Γ R
   | _, [], _, _, _, hR, _, h, _ => Thm.exfalso h hR
   | n + 1, q :: ps, Γ, R, hn, hR, hps, h, k => by
@@ -74,21 +74,19 @@ theorem bigOr_elim_len : ∀ (n : Nat) {ps : List VExpr} {Γ : List VExpr} {R : 
     exact hi.mp kp
 
 theorem bigOr_elim {ps : List VExpr} {Γ : List VExpr} {R : VExpr}
-    (hR : env.HasType 0 Γ R (.sort .zero)) (hps : Props env Γ ps) (h : Thm env Γ (bigOr ps))
+    (hR : env.HasType Γ R (.sort .zero)) (hps : Props env Γ ps) (h : Thm env Γ (bigOr ps))
     (k : ∀ p ∈ ps, Thm env (p :: Γ) p.lift → Thm env (p :: Γ) R.lift) : Thm env Γ R :=
   bigOr_elim_len _ rfl hR hps h k
 
-omit E in
-theorem props_cons {p : VExpr} {ps : List VExpr} (hp : env.HasType 0 Γ p (.sort .zero))
+theorem props_cons {p : VExpr} {ps : List VExpr} (hp : env.HasType Γ p (.sort .zero))
     (hps : Props env Γ ps) : Props env Γ (p :: ps) := by
   intro r hr
   rcases List.mem_cons.1 hr with rfl | hr
   · exact hp
   · exact hps r hr
 
-omit E in
 theorem props_map {α : Type} {g : α → VExpr} {bs : List α}
-    (h : ∀ b, env.HasType 0 Γ (g b) (.sort .zero)) : Props env Γ (bs.map g) := by
+    (h : ∀ b, env.HasType Γ (g b) (.sort .zero)) : Props env Γ (bs.map g) := by
   intro r hr
   obtain ⟨b, -, rfl⟩ := List.mem_map.1 hr
   exact h b
@@ -113,7 +111,7 @@ macro_rules | `(tactic| otype_rules) => `(tactic|
 /-! ### Numerals -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
 
 /-- Distinct numerals are provably distinct. -/
 theorem lit_ne : ∀ {Γ : List VExpr} {i j : Nat}, i ≠ j → Thm env Γ (¬ₒ (lit i =ₒ lit j))
@@ -176,7 +174,7 @@ variable {f : PR} {d : Nat} {T : Tables} {b n j : Nat} {k e : VExpr}
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {f : PR} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {f : PR} {d : Nat}
 
 theorem hTTy {k : VExpr} (hk : Tm env Γ k) : Tm env Γ (hT f d k) := by unfold hT; otype
 theorem QtTy {T : Tables} {b : Nat} {k : VExpr} (hk : Tm env Γ k) : Tm env Γ (Qt f d T b k) := by
@@ -188,11 +186,11 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine hTTy ?
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine QtTy ?_); otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {f : PR} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {f : PR} {d : Nat}
 
-theorem PaTy (a : Nat) : env.HasType 0 Γ (Pa f d a) (.sort .zero) := by unfold Pa; otype
-theorem StayTy (a : Nat) : env.HasType 0 Γ (Stay f d a) (.sort .zero) := by unfold Stay; otype
-theorem SsTy (a : Nat) : env.HasType 0 Γ (Ss f d a) (.sort .zero) := by
+theorem PaTy (a : Nat) : env.HasType Γ (Pa f d a) (.sort .zero) := by unfold Pa; otype
+theorem StayTy (a : Nat) : env.HasType Γ (Stay f d a) (.sort .zero) := by unfold Stay; otype
+theorem SsTy (a : Nat) : env.HasType Γ (Ss f d a) (.sort .zero) := by
   unfold Ss; exact conjTy (PaTy a) (StayTy a)
 
 end
@@ -205,11 +203,11 @@ section
 variable {f : PR} {d : Nat}
 
 theorem Pa_closed (a : Nat) : (Pa f d a).ClosedN :=
-  (PaTy (env := natEnv) (Γ := []) a).closedN natEnv_ordered trivial
+  (PaTy (env := natEnv) (Γ := []) a).closedN.1
 theorem Stay_closed (a : Nat) : (Stay f d a).ClosedN :=
-  (StayTy (env := natEnv) (Γ := []) a).closedN natEnv_ordered trivial
+  (StayTy (env := natEnv) (Γ := []) a).closedN.1
 theorem Ss_closed (a : Nat) : (Ss f d a).ClosedN :=
-  (SsTy (env := natEnv) (Γ := []) a).closedN natEnv_ordered trivial
+  (SsTy (env := natEnv) (Γ := []) a).closedN.1
 
 @[obj_simp] theorem Pa_liftN {n k a : Nat} : (Pa f d a).liftN n k = Pa f d a :=
   (Pa_closed a).liftN_eq (Nat.zero_le _)
@@ -229,7 +227,7 @@ end
 /-! ### Tests and the step, over codes -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {l : List VExpr}
 
 theorem ev2_congr {f : PR} {x x' y y' : VExpr} (hx : Tm env Γ x) (hx' : Tm env Γ x')
     (hy : Tm env Γ y) (hy' : Tm env Γ y') (h1 : Thm env Γ (x =ₒ x')) (h2 : Thm env Γ (y =ₒ y')) :
@@ -257,7 +255,7 @@ theorem ifz_cases {c a b : PR} (hl : Tms env Γ l) :
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
   (hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
     Thm env Γ (ev (q b) [r, k, lit d] =ₒ Qt f d T b k))
 include hq
@@ -377,7 +375,7 @@ end
 /-! ### Solovay's machine computes its walk -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables} {K : SFrame} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables} {K : SFrame} {d : Nat}
   {k r : VExpr}
 
 theorem hT_prec_zero {nx : PR} : Thm env Γ (hT (prec .zero nx) d zero =ₒ zero) := by

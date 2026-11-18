@@ -15,7 +15,7 @@ nonzero.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `ifz (eqz c (num j)) b₀ (ifz (eqz c (num (j+1))) b₁ (… d))`. -/
 def casc (c : PR) : List PR → PR → Nat → PR
@@ -23,7 +23,7 @@ def casc (c : PR) : List PR → PR → Nat → PR
   | b :: bs, d, j => ifz (eqz c (num j)) b (casc c bs d (j + 1))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {c a b d : PR} {f : PR}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {c a b d : PR} {f : PR}
 
 theorem add_lit (a : Nat) : ∀ b, Thm env Γ (add (lit a) (lit b) =ₒ lit (a + b))
   | 0 => add_zero (litTy a)

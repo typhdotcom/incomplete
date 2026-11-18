@@ -96,41 +96,41 @@ def solσ (f : PR) (d : Nat) {n : Nat} (M : Modal.FinModel (n + 1)) (p : Nat) : 
   bigOr (((List.finRange (n + 1)).filter fun v => M.V v p).map fun v => Ss f d (v.val + 1))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {n : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {n : Nat}
   {M : Modal.FinModel (n + 1)}
 
-theorem solσTy (p : Nat) : env.HasType 0 [] (solσ f d M p) (.sort .zero) := by
+theorem solσTy (p : Nat) : env.HasType [] (solσ f d M p) (.sort .zero) := by
   unfold solσ; exact bigOrTy (props_map fun _ => SsTy _)
 
 /-- A closed implication from a proof in the context of its premise. -/
-theorem cl_intro {X Y : VExpr} (hX : env.HasType 0 [] X (.sort .zero))
-    (hY : env.HasType 0 [] Y (.sort .zero)) (h : Thm env [X] Y) : Thm env [] (imp X Y) :=
+theorem cl_intro {X Y : VExpr} (hX : env.HasType [] X (.sort .zero))
+    (hY : env.HasType [] Y (.sort .zero)) (h : Thm env [X] Y) : Thm env [] (imp X Y) :=
   Thm.intro hX (h.cast (closedN_of_ty hY).lift_eq.symm)
 
-theorem cl_hyp {Γ : List VExpr} {X : VExpr} (hX : env.HasType 0 [] X (.sort .zero)) :
+theorem cl_hyp {Γ : List VExpr} {X : VExpr} (hX : env.HasType [] X (.sort .zero)) :
     Thm env (X :: Γ) X :=
   (Thm.hyp .zero).cast (closedN_of_ty hX).lift_eq
 
-theorem cl_weak {Γ : List VExpr} {X Y : VExpr} (hY : env.HasType 0 [] Y (.sort .zero))
+theorem cl_weak {Γ : List VExpr} {X Y : VExpr} (hY : env.HasType [] Y (.sort .zero))
     (h : Thm env Γ Y) : Thm env (X :: Γ) Y :=
   h.weak.cast (closedN_of_ty hY).lift_eq
 
 /-- `neg X` in the context of `X`'s premise. -/
-theorem cl_neg {Γ : List VExpr} {X : VExpr} (hX : env.HasType 0 [] X (.sort .zero))
+theorem cl_neg {Γ : List VExpr} {X : VExpr} (hX : env.HasType [] X (.sort .zero))
     (h : Thm env (X :: Γ) falseS) : Thm env Γ (neg X) :=
   Thm.intro (closedTy hX) h
 
 theorem cl_app {Γ : List VExpr} {X Y : VExpr} (h : Thm env [] (imp X Y)) (hx : Thm env Γ X) :
     Thm env Γ Y := h.weak0.mp hx
 
-theorem cl_swap {X Y : VExpr} (hX : env.HasType 0 [] X (.sort .zero))
-    (hY : env.HasType 0 [] Y (.sort .zero)) (h : Thm env [] (imp X (neg Y))) :
+theorem cl_swap {X Y : VExpr} (hX : env.HasType [] X (.sort .zero))
+    (hY : env.HasType [] Y (.sort .zero)) (h : Thm env [] (imp X (neg Y))) :
     Thm env [] (imp Y (neg X)) :=
   cl_intro hY (negTy hX) (cl_neg hX ((cl_app h (cl_hyp hX)).mp
     (cl_weak hY (cl_hyp (Γ := []) hY))))
 
 theorem bigOr_cl_elim {ps : List VExpr} {Y : VExpr} (hps : Props env [] ps)
-    (hY : env.HasType 0 [] Y (.sort .zero)) (h : ∀ p ∈ ps, Thm env [] (imp p Y)) :
+    (hY : env.HasType [] Y (.sort .zero)) (h : ∀ p ∈ ps, Thm env [] (imp p Y)) :
     Thm env [] (imp (bigOr ps) Y) := by
   refine cl_intro (bigOrTy hps) hY ?_
   refine bigOr_elim (closedTy hY) (fun p hp => closedTy (hps p hp)) (cl_hyp (bigOrTy hps))
@@ -144,7 +144,7 @@ variable {q : Nat → PR}
   (hs : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
     Thm env Γ (hT f d (S k) =ₒ ev (nextC M.solFrame q) [hT f d k, k, lit d]))
   (h0 : ∀ {Γ : List VExpr}, Thm env Γ (hT f d zero =ₒ zero))
-  (hTb : TablesFor env T) (hdne : Provable env dneS)
+  (hTb : TablesFor env.env T) (hdne : Thm env [] dneS)
 include hq hs h0 hTb hdne
 
 /-- **The truth lemma**: `S_(w+1)` proves `B*` when `w ⊩ B`, and `¬B*` otherwise. -/
@@ -168,7 +168,7 @@ theorem truth : ∀ (B : Modal) (w : Fin (n + 1)),
     refine ⟨fun h => h.elim, fun _ => cl_intro (SsTy _) (negTy falseTy) ?_⟩
     exact cl_neg falseTy (Thm.hyp .zero)
   | .imp B C, w => by
-    have hσ : ∀ p, env.HasType 0 [] (solσ f d M p) (.sort .zero) := solσTy
+    have hσ : ∀ p, env.HasType [] (solσ f d M p) (.sort .zero) := solσTy
     have hB := Modal.realTy (T := T) hσ B
     have hC := Modal.realTy (T := T) hσ C
     have ihB := truth B w
@@ -190,7 +190,7 @@ theorem truth : ∀ (B : Modal) (w : Fin (n + 1)),
           (Ss f d (w.val + 1)) := cl_weak (SsTy _) (cl_hyp (SsTy _))
       exact (cl_app (ihC.2 hc) hS).mp (hi.mp (cl_app (ihB.1 hb) hS))
   | .box B, w => by
-    have hσ : ∀ p, env.HasType 0 [] (solσ f d M p) (.sort .zero) := solσTy
+    have hσ : ∀ p, env.HasType [] (solσ f d M p) (.sort .zero) := solσTy
     have hB := Modal.realTy (T := T) hσ B
     have hBc := closedN_of_ty hB
     rw [Modal.real_box]
@@ -223,7 +223,7 @@ end
 /-! ### The walk never climbs forever -/
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {K : SFrame} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {K : SFrame} {d : Nat}
 
 /-- The walk's true value at `m`, provably. -/
 theorem hN_lit {Γ : List VExpr} {m a : Nat} (h : hN T K d m = a) :
@@ -234,6 +234,11 @@ theorem hN_lit {Γ : List VExpr} {m a : Nat} (h : hN T K d m = a) :
   rw [ee, h] at e
   unfold hT
   exact Thm.trans (by otype) (by otype) (by otype) (fn_ev (litTy d) (litTy m)) e
+
+end
+
+section
+variable {env : VEnv} [E : ObjEnv env] {T : Tables} {K : SFrame} {d : Nat}
 
 /-- **No reached world is refuted**, in a `halts`-sound theory: a refutation of `S_a` for a world
 `a` the walk reaches makes it leave `a` (`halts_lv`), along a refutation of the next world's
@@ -277,11 +282,11 @@ theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T
     (h : ¬Modal.GL A) :
     ∃ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) ∧
       ¬Provable env (A.real T σ) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   obtain ⟨n, M, -, -, hM0⟩ := Modal.GL_complete h
-  refine ⟨solσ (hM T M.solFrame) (hM T M.solFrame).code M, fun p => solσTy p, fun hA => ?_⟩
+  refine ⟨solσ (hM T M.solFrame) (hM T M.solFrame).code M, fun p => solσTy (env := env) p, fun hA => ?_⟩
   generalize hd : (hM T M.solFrame).code = d at hA
-  have hσ : ∀ p, env.HasType 0 [] (solσ (hM T M.solFrame) d M p) (.sort .zero) := solσTy
+  have hσ : ∀ p, Typing.HasType env [] (solσ (hM T M.solFrame) d M p) (.sort .zero) := solσTy
   have hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
       Thm env Γ (ev (qC T b) [r, k, lit d] =ₒ Qt (hM T M.solFrame) d T b k) :=
     fun {_} b {_ _} hr hk => hM_test hd.symm b hr hk
@@ -289,7 +294,7 @@ theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T
   have hAT := Modal.realTy (T := T) hσ A
   have hn1 : Thm env [] (neg (Ss (hM T M.solFrame) d ((0 : Fin (n + 1)).val + 1))) :=
     cl_neg (SsTy _) ((cl_app htr (cl_hyp (SsTy _))).mp (cl_weak hAT (hA : Thm env [] _)))
-  have hp1 := prov_of_provable this.hasNat this.ordered hT hn1.provable
+  have hp1 : Thm env [] _ := Thm.nec (env := env) hT hn1
   have hn0 : Thm env [] (neg (Ss (hM T M.solFrame) d 0)) :=
     cl_neg (SsTy 0) (Ss_not_prov hq (fun hk => hM_succ hk) (i := 0)
       (j := (0 : Fin (n + 1)).val + 1)

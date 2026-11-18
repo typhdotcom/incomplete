@@ -12,7 +12,7 @@ with the numerals of `ev f xs` and `xs` as holes (`okF`). By induction on the fi
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The variables `s, s + 1, …, s + n - 1`. -/
 def args (s : Nat) : Nat → List VExpr
@@ -100,29 +100,27 @@ theorem map_litT_inst (l : List VExpr) (e : VExpr) (k : Nat) :
   simp only [okF, obj_simp, map_litT_inst, List.map_cons]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 
 theorem okFTy {T : Tables} {f τ : PR} {n : Nat} {xs : List VExpr} (h : Tms env Γ xs) :
-    env.HasType 0 Γ (okF T f τ n xs) (.sort .zero) := by
+    env.HasType Γ (okF T f τ n xs) (.sort .zero) := by
   unfold okF; otype
 
 /-- `τ` proves the graph of `f` at arity `n`, internally. -/
-def Ok (env : VEnv) (T : Tables) (f : PR) (n : Nat) (τ : PR) : Prop :=
+def Ok (env : Typing) (T : Tables) (f : PR) (n : Nat) (τ : PR) : Prop :=
   ∀ {Γ : List VExpr} {xs : List VExpr}, Tms env Γ xs → xs.length = n → Thm env Γ (okF T f τ n xs)
 
 theorem lookup_rep : ∀ (m : Nat) {i : Nat}, i < m → Lookup (List.replicate m nat ++ Γ) i nat
   | 0, _, h => absurd h (Nat.not_lt_zero _)
   | m + 1, 0, _ => by
-    simp only [List.replicate_succ, List.cons_append]; exact Lookup.zero' rfl
+    simp only [List.replicate_succ, List.cons_append]; exact VEnv.Lookup.zero' rfl
   | m + 1, i + 1, h => by
     simp only [List.replicate_succ, List.cons_append]
-    exact Lookup.succ' (lookup_rep m (by omega)) rfl
+    exact VEnv.Lookup.succ' (lookup_rep m (by omega)) rfl
 
-omit E in
 theorem bvar_rep {m i : Nat} (h : i < m) : Tm env (List.replicate m nat ++ Γ) (.bvar i) :=
   .bvar (lookup_rep m h)
 
-omit E in
 theorem argsTy : ∀ {s n m : Nat}, s + n ≤ m → Tms env (List.replicate m nat ++ Γ) (args s n)
   | _, 0, _, _ => .nil
   | s, n + 1, m, h => .cons (bvar_rep (by omega)) (argsTy (s := s + 1) (by omega))

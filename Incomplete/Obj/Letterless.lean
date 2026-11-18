@@ -47,10 +47,10 @@ end Modal
 theorem HaltsSound.consistent {env : VEnv} (hwf : env.WF) (hext : natEnv ≤ env)
     (hS : HaltsSound env) : Consistent env := by
   intro hF
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
-  have hty : env.HasType 0 [] (halts (.succ .zero) 0) (.sort .zero) := by
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
+  have hty : Typing.HasType env [] (halts (.succ .zero) 0) (.sort .zero) := by
     rw [halts_eq]; exact impTy (notHalts_prop this.hasNat this.ordered _ _) falseT
-  obtain ⟨k, hk⟩ := hS _ _ (Thm.exfalso (hF : Thm env [] falseS) hty).provable
+  obtain ⟨k, hk⟩ := hS _ _ (Thm.exfalso (Thm.ofProvable hF) hty).provable
   exact Nat.succ_ne_zero _ hk
 
 /-- **Levels give provability.** If the theory proves `dneS`, a letterless formula that holds
@@ -58,7 +58,7 @@ at every level has a provable realization. -/
 theorem provable_of_lvl (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (hdne : Provable env dneS) {A : Modal} (hA : A.Letterless)
     (h : ∀ n, Modal.lvl n A = true) (σ : Nat → VExpr) : Provable env (A.real T σ) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   rw [Modal.real_letterless hA (σ' := fun _ => falseS)]
   exact GL_sound env hwf hext hT hdne (fun _ => falseT) ((Modal.GL_iff_lvl hA).2 h)
 
@@ -114,11 +114,11 @@ theorem boxBot_succ_imp_unprovable_of (env : VEnv) (hwf : env.WF) (hext : natEnv
     {T : Tables} (hT : TablesFor env T) {σ : Nat → VExpr} {n : Nat}
     (hn : ¬Provable env ((Modal.boxBot n).real T σ)) :
     ¬Provable env ((Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).real T σ) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   rw [Modal.real_letterless (Modal.boxBot_letterless n) (σ' := fun _ => falseS)] at hn
   rw [Modal.real_letterless (A := .imp _ _)
     ⟨Modal.boxBot_letterless (n + 1), Modal.boxBot_letterless n⟩ (σ' := fun _ => falseS)]
-  exact fun h => hn (loeb env hwf hext hT (Modal.realTy (fun _ => falseT) _) h)
+  exact fun h => hn (loeb env hwf hext hT (Modal.realTy (env := env) (fun _ => falseTy) _) h)
 
 /-- In a `halts`-sound theory, `□ⁿ⁺¹⊥ → □ⁿ⊥` is unprovable. -/
 theorem boxBot_succ_imp_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
@@ -143,10 +143,10 @@ theorem con_iff_real_neg_box (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
 `Con T`, since it does not prove `¬□⊥`. -/
 theorem con_unprovable_letterless (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
     {T : Tables} (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hty := Modal.realTy (env := env) (T := T) (fun _ => falseT)
     (Modal.imp (Modal.boxBot 1) (Modal.boxBot 0))
-  have hi := Thm.iffE1 (ConT this.hasNat this.ordered) hty
+  have hi := Thm.iffE1 (env := env) (ConT this.hasNat this.ordered) hty
     (con_iff_real_neg_box env hwf hext T fun _ => falseS)
   exact fun h => boxBot_succ_imp_unprovable_of env hwf hext hT (σ := fun _ => falseS) (n := 0) hC
     (hi.mp h).provable

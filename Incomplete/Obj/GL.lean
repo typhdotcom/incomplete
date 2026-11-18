@@ -35,10 +35,10 @@ end Modal
 
 namespace Obj
 section
-variable {env : VEnv} [E : ObjEnv env] {X Y Z : VExpr}
+variable {env : Typing} [E : ObjEnv env] {X Y Z : VExpr}
 
 /-- `dneS` is a closed proposition. -/
-theorem dneTy {Γ : List VExpr} : env.HasType 0 Γ dneS (.sort .zero) := by
+theorem dneTy {Γ : List VExpr} : env.HasType Γ dneS (.sort .zero) := by
   unfold dneS; exact forallE_prop propTy (by otype)
 
 theorem lookup_closed (hX : X.ClosedN) :
@@ -51,11 +51,11 @@ theorem lookup_closed (hX : X.ClosedN) :
     have : Lookup (Y :: Γ) (i + 1) X.lift := .succ (lookup_closed hX (Γ := Γ) (i := i) h)
     rwa [hX.lift_eq] at this
 
-theorem closedN_of_ty (h : env.HasType 0 [] X (.sort .zero)) : X.ClosedN :=
-  h.closedN E.ordered trivial
+theorem closedN_of_ty (h : env.HasType [] X (.sort .zero)) : X.ClosedN :=
+  h.closedN.1
 
-variable (hX : env.HasType 0 [] X (.sort .zero)) (hY : env.HasType 0 [] Y (.sort .zero))
-  (hZ : env.HasType 0 [] Z (.sort .zero))
+variable (hX : env.HasType [] X (.sort .zero)) (hY : env.HasType [] Y (.sort .zero))
+  (hZ : env.HasType [] Z (.sort .zero))
 
 include hX hY in
 theorem imp_k1 : Thm env [] (imp X (imp Y X)) := by
@@ -90,10 +90,9 @@ theorem imp_efq : Thm env [] (imp falseS X) := by
   refine Thm.intro falseTy ?_
   exact Thm.exfalso ((Thm.hyp .zero).cast rfl) (weakTy hX)
 
-omit E in
 include hX in
-theorem imp_dne (h : Provable env dneS) : Thm env [] (imp (neg (neg X)) X) := by
-  have := Thm.pallE (h : Thm env [] dneS) hX
+theorem imp_dne (h : Thm env [] dneS) : Thm env [] (imp (neg (neg X)) X) := by
+  have := Thm.pallE h hX
   simp only [obj_simp] at this
   exact this
 
@@ -106,9 +105,9 @@ theorem imp_trans (h1 : Thm env [] (imp X Y)) (h2 : Thm env [] (imp Y Z)) :
 
 /-- D1 and D2: a provable implication between closed propositions is one between their
 provability sentences. -/
-theorem prov_imp {T : Tables} (hT : TablesFor env T) (hYc : Y.ClosedN)
+theorem prov_imp {T : Tables} (hT : TablesFor env.env T) (hYc : Y.ClosedN)
     (h : Thm env [] (imp X Y)) : Thm env [] (imp (Prov T X) (Prov T Y)) :=
-  (prov_mp hYc).mp (prov_of_provable E.hasNat E.ordered hT h.provable)
+  (prov_mp hYc).mp (Thm.nec hT h)
 
 end
 end Obj
@@ -117,10 +116,10 @@ namespace Modal
 open Obj
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {σ : Nat → VExpr}
+variable {env : Typing} [E : ObjEnv env] {T : Tables} {σ : Nat → VExpr}
 
-theorem realTy (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) :
-    ∀ A : Modal, env.HasType 0 [] (A.real T σ) (.sort .zero)
+theorem realTy (hσ : ∀ n, env.HasType [] (σ n) (.sort .zero)) :
+    ∀ A : Modal, env.HasType [] (A.real T σ) (.sort .zero)
   | var n => hσ n
   | bot => falseTy
   | imp A B => by
@@ -128,7 +127,7 @@ theorem realTy (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) :
     rwa [imp_eq_forallE (closedN_of_ty (realTy hσ B))] at h
   | box A => ProvTy T _
 
-theorem real_imp (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) (A B : Modal) :
+theorem real_imp (hσ : ∀ n, env.HasType [] (σ n) (.sort .zero)) (A B : Modal) :
     (imp A B).real T σ = Obj.imp (A.real T σ) (B.real T σ) :=
   (imp_eq_forallE (closedN_of_ty (realTy hσ B))).symm
 
@@ -137,8 +136,8 @@ theorem real_bot : bot.real T σ = falseS := rfl
 
 /-- **Soundness**, internally: `Deriv cl A` gives a proof of `A`'s realization, given
 double-negation elimination when `cl` holds. -/
-theorem deriv_sound (hT : TablesFor env T) (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero))
-    {cl : Bool} (hcl : cl = true → Provable env dneS) {A : Modal} (h : Deriv cl A) :
+theorem deriv_sound (hT : TablesFor env.env T) (hσ : ∀ n, env.HasType [] (σ n) (.sort .zero))
+    {cl : Bool} (hcl : cl = true → Thm env [] dneS) {A : Modal} (h : Deriv cl A) :
     Thm env [] (A.real T σ) := by
   have ty := realTy (T := T) hσ
   induction h with
@@ -157,7 +156,7 @@ theorem deriv_sound (hT : TablesFor env T) (hσ : ∀ n, env.HasType 0 [] (σ n)
   | mp _ _ ih1 ih2 =>
     rw [real_imp hσ] at ih1; exact ih1.mp ih2
   | nec _ ih =>
-    exact prov_of_provable E.hasNat E.ordered hT ih.provable
+    exact Thm.nec hT ih
 
 end
 
@@ -170,16 +169,16 @@ theorem GL_sound (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables
     (hT : TablesFor env T) (hdne : Provable env dneS) {σ : Nat → VExpr}
     (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) {A : Modal} (h : Modal.GL A) :
     Provable env (A.real T σ) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
-  exact (Modal.deriv_sound hT hσ (fun _ => hdne) h).provable
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
+  exact (Modal.deriv_sound (env := env) hT hσ (fun _ => hdne) h).provable
 
 /-- **Arithmetical soundness of iGL**: every theorem of `GL` derived without double-negation
 elimination is provable under every realization, in any well-formed extension of `natEnv`. -/
 theorem iGL_sound (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {σ : Nat → VExpr} (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero))
     {A : Modal} (h : Modal.iGL A) : Provable env (A.real T σ) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
-  exact (Modal.deriv_sound (cl := false) hT hσ (fun h => Bool.noConfusion h) h).provable
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
+  exact (Modal.deriv_sound (env := env) (cl := false) hT hσ (fun h => Bool.noConfusion h) h).provable
 
 /-- **FairBot.** Closed propositions `A` and `B` with `A ↔ Prov T B` and `B ↔ Prov T A` are both
 provable: `Prov T A → B → … → Prov T B → A`, so Löb's theorem gives `A`, and then `B`. -/
@@ -187,15 +186,15 @@ theorem fairbot (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {A B : VExpr} (hA : env.HasType 0 [] A (.sort .zero))
     (hB : env.HasType 0 [] B (.sort .zero)) (hAB : Provable env (A ↔ₒ Prov T B))
     (hBA : Provable env (B ↔ₒ Prov T A)) : Provable env A ∧ Provable env B := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   have hPA := ProvTy (env := env) (Γ := []) T A
   have hPB := ProvTy (env := env) (Γ := []) T B
-  have a1 : Thm env [] (imp (Prov T B) A) := Thm.iffE2 hA hPB hAB
-  have b1 : Thm env [] (imp (Prov T A) B) := Thm.iffE2 hB hPA hBA
+  have a1 : Thm env [] (imp (Prov T B) A) := Thm.iffE2 (env := env) hA hPB hAB
+  have b1 : Thm env [] (imp (Prov T A) B) := Thm.iffE2 (env := env) hB hPA hBA
   have h1 : Thm env [] (imp (Prov T A) (Prov T B)) :=
-    imp_trans hPA hPB (prov_prov hT A) (prov_imp hT (closedN_of_ty hB) b1)
-  have h2 : Thm env [] (imp (Prov T A) A) := imp_trans hPA hA h1 a1
-  rw [imp_eq_forallE (closedN_of_ty hA)] at h2
+    imp_trans hPA hPB (prov_prov (env := env) hT A) (prov_imp (env := env) hT (closedN_of_ty (env := env) hB) b1)
+  have h2 : Thm env [] (imp (Prov T A) A) := imp_trans (env := env) hPA hA h1 a1
+  rw [imp_eq_forallE (closedN_of_ty (env := env) hA)] at h2
   have pA := loeb env hwf hext hT hA h2
   exact ⟨pA, (b1.mp (prov_of_provable this.hasNat this.ordered hT pA)).provable⟩
 

@@ -10,7 +10,7 @@ context, by instantiating it.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv
+open VExpr Typing
 
 def addF : VExpr := rec2 (.bvar 0) (S (.bvar 0))
 def add (a b : VExpr) : VExpr := app2 addF a b
@@ -18,19 +18,19 @@ def mulF : VExpr := rec2 zero (add (.bvar 0) (.bvar 2))
 def mul (a b : VExpr) : VExpr := app2 mulF a b
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b c : VExpr}
 
-theorem addFTy : env.HasType 0 Γ addF (.forallE nat (.forallE nat nat)) :=
+theorem addFTy : env.HasType Γ addF (.forallE nat (.forallE nat nat)) :=
   rec2Ty (.bvar .zero) (STy (.bvar .zero))
 theorem addTy (ha : Tm env Γ a) (hb : Tm env Γ b) : Tm env Γ (add a b) := app2Ty addFTy ha hb
-theorem mulFTy : env.HasType 0 Γ mulF (.forallE nat (.forallE nat nat)) :=
+theorem mulFTy : env.HasType Γ mulF (.forallE nat (.forallE nat nat)) :=
   rec2Ty zeroTy (addTy (.bvar .zero) (.bvar (.succ (.succ .zero))))
 theorem mulTy (ha : Tm env Γ a) (hb : Tm env Γ b) : Tm env Γ (mul a b) := app2Ty mulFTy ha hb
 
 end
 
-theorem addF_closed : addF.ClosedN := (addFTy (env := natEnv) (Γ := [])).closedN natEnv_ordered trivial
-theorem mulF_closed : mulF.ClosedN := (mulFTy (env := natEnv) (Γ := [])).closedN natEnv_ordered trivial
+theorem addF_closed : addF.ClosedN := (addFTy (env := natEnv) (Γ := [])).closedN.1
+theorem mulF_closed : mulF.ClosedN := (mulFTy (env := natEnv) (Γ := [])).closedN.1
 
 section
 variable {a b e : VExpr} {n k : Nat}
@@ -48,19 +48,19 @@ macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine addTy 
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine mulTy ?_ ?_) <;> otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b c : VExpr}
 
 /-! ### Defining equations -/
 
 theorem add_zero_c : Thm env [] (∀ₒ a, add a zero =ₒ a) := by
   ointro
-  have := Thm.ofDefEq (rec2_zero (onCtx_nats 1) (.bvar .zero) (STy (.bvar .zero)) (.bvar .zero)
+  have := Thm.ofDefEq (rec2_zero (Γ := [nat]) (.bvar .zero) (STy (.bvar .zero)) (.bvar .zero)
     (env := env))
   onorm at this; exact this
 
 theorem add_succ_c : Thm env [] (∀ₒ a b, add a (S b) =ₒ S (add a b)) := by
   ointro; ointro
-  have := Thm.ofDefEq (rec2_succ (onCtx_nats 2) (.bvar .zero) (STy (.bvar .zero))
+  have := Thm.ofDefEq (rec2_succ (Γ := [nat, nat]) (.bvar .zero) (STy (.bvar .zero))
     (.bvar (.succ .zero)) (.bvar .zero) (env := env))
   onorm at this; exact this
 
@@ -70,13 +70,13 @@ theorem add_succ (ha : Tm env Γ a) (hb : Tm env Γ b) :
 
 theorem mul_zero_c : Thm env [] (∀ₒ a, mul a zero =ₒ zero) := by
   ointro
-  have := Thm.ofDefEq (rec2_zero (onCtx_nats 1) zeroTy
+  have := Thm.ofDefEq (rec2_zero (Γ := [nat]) zeroTy
     (addTy (.bvar .zero) (.bvar (.succ (.succ .zero)))) (.bvar .zero) (env := env))
   onorm at this; exact this
 
 theorem mul_succ_c : Thm env [] (∀ₒ a b, mul a (S b) =ₒ add (mul a b) a) := by
   ointro; ointro
-  have := Thm.ofDefEq (rec2_succ (onCtx_nats 2) zeroTy
+  have := Thm.ofDefEq (rec2_succ (Γ := [nat, nat]) zeroTy
     (addTy (.bvar .zero) (.bvar (.succ (.succ .zero)))) (.bvar (.succ .zero)) (.bvar .zero) (env := env))
   onorm at this; exact this
 
@@ -148,16 +148,16 @@ end
 
 /-! ### In `natEnv`, and at arbitrary terms -/
 
-theorem add_comm_provable : Provable natEnv (∀ₒ a b, add a b =ₒ add b a) := add_comm_c
+theorem add_comm_provable : Provable natEnv (∀ₒ a b, add a b =ₒ add b a) := Thm.provable add_comm_c
 theorem add_assoc_provable :
-    Provable natEnv (∀ₒ a b c, add (add a b) c =ₒ add a (add b c)) := add_assoc_c
-theorem mul_comm_provable : Provable natEnv (∀ₒ a b, mul a b =ₒ mul b a) := mul_comm_c
+    Provable natEnv (∀ₒ a b c, add (add a b) c =ₒ add a (add b c)) := Thm.provable add_assoc_c
+theorem mul_comm_provable : Provable natEnv (∀ₒ a b, mul a b =ₒ mul b a) := Thm.provable mul_comm_c
 
 /-- Commutativity at any terms `s t : Nat` in any context, over any environment with `Nat`. -/
 theorem add_comm_schematic {env : VEnv} (H : HasNat env) (henv : env.Ordered) {Γ : List VExpr}
     {s t : VExpr} (hs : env.HasType 0 Γ s nat) (ht : env.HasType 0 Γ t nat) :
     ∃ p, env.HasType 0 Γ p (EqN (add s t) (add t s)) :=
-  have : ObjEnv env := ⟨H, henv⟩
-  add_comm hs ht
+  have : ObjEnv env := .full H henv
+  add_comm (env := env) hs ht
 
 end Incomplete.Obj

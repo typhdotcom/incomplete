@@ -13,7 +13,7 @@ it unchanged, by induction on `v` (`liftT_litT_c`, `instT_litT_c`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The value of the binary numeral code `numC n`. -/
 abbrev numT (n : Nat) : VExpr := ev (numC n) []
@@ -24,7 +24,7 @@ theorem ev_numC_ctx (n : Nat) (l : List VExpr) : ev (numC n) l = numT n := by
 theorem numC_zero : numC 0 = .zero := by rw [numC]; rfl
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 
 theorem numT_step {n : Nat} (hn : n ≠ 0) :
     Thm env Γ (numT n =ₒ add (add (numT (n / 2)) (numT (n / 2))) (lit (n % 2))) := by
@@ -134,9 +134,9 @@ theorem instT_litT {a k v : VExpr} (ha : Tm env Γ a) (hk : Tm env Γ k) (hv : T
 end
 
 theorem liftT_litT_provable : Provable natEnv (∀ₒ n k v, liftT n (litT v) k =ₒ litT v) :=
-  liftT_litT_c
+  Thm.provable liftT_litT_c
 
 theorem instT_litT_provable : Provable natEnv (∀ₒ a k v, instT (litT v) a k =ₒ litT v) :=
-  instT_litT_c
+  Thm.provable instT_litT_c
 
 end Incomplete.Obj

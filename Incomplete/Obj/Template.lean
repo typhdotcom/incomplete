@@ -16,7 +16,7 @@ give one of `B` (`certT_mp`, `jT_mp`).
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- The number of `B` with the variable `j` replaced by the number `h j`, where `j` counts the
 binders passed. -/
@@ -31,7 +31,7 @@ noncomputable def tmplT (h : Nat → VExpr) : VExpr → Nat → VExpr
   | .proj s i e, j => tagT 7 6 (pair (numT (encName s)) (pair (numT i) (tmplT h e j)))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a : VExpr} {h : Nat → VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a : VExpr} {h : Nat → VExpr}
 
 theorem tmplTTy (hh : ∀ j, Tm env Γ (h j)) : ∀ (B : VExpr) (j : Nat), Tm env Γ (tmplT h B j)
   | .bvar i, j => by
@@ -54,7 +54,7 @@ end
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine tmplTTy ?_ _ _); assumption))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a : VExpr} {h : Nat → VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a : VExpr} {h : Nat → VExpr}
 
 theorem lit_eq_succ (j : Nat) : lit (j + 1) = S (lit j) := rfl
 
@@ -156,7 +156,7 @@ noncomputable def mpT (A B p q c₁ c₂ : VExpr) : VExpr :=
   simp only [mpT, obj_simp]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {A B p q c₁ c₂ : VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {A B p q c₁ c₂ : VExpr} {T : Tables}
   {R : Nat → Bool}
 
 theorem mpTTy (hp : Tm env Γ p) (hq : Tm env Γ q) (hc₁ : Tm env Γ c₁) (hc₂ : Tm env Γ c₂) :
@@ -168,7 +168,7 @@ end
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine mpTTy ?_ ?_ ?_ ?_) <;> otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {A B p q c₁ c₂ : VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {A B p q c₁ c₂ : VExpr} {T : Tables}
   {R : Nat → Bool}
 
 /-- **Internal modus ponens**, for fixed `A` and closed `B`: certificates of `⊢ p : A → B` and of
@@ -197,7 +197,7 @@ end
 provable `∀ x : Nat, Q` there is a code `σ` with, internally, `∀ k, Prf(⌜Q[lit k]⌝, σ k)`. -/
 theorem internal_inst_tmpl {envT : VEnv} {T : Tables} (hT : TablesFor envT T) (H : HasNat envT)
     {Q : VExpr} (hQ : Provable envT (all Q)) :
-    ∃ σ : PR, ∀ {env : VEnv} [ObjEnv env],
+    ∃ σ : PR, ∀ {env : Typing} [ObjEnv env],
       Thm env [] (all (prfT T (tmplT (fun _ => litT (.bvar 0)) Q 0) (ev σ [.bvar 0]) =ₒ zero)) := by
   obtain ⟨σ, hσ⟩ := internal_inst hT H hQ
   refine ⟨σ, fun {env} _ => Thm.allI ?_⟩

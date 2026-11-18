@@ -14,7 +14,7 @@ into a proof of `halts (dg T) ⌜dg T⌝`, that is of `G0 T → ⊥`: internally
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- Exchanging variables `0` and `1`. -/
 def swap01 : Nat → Nat
@@ -33,7 +33,7 @@ theorem haltsV_lit (f : PR) (d : Nat) : haltsV f (lit d) = halts f d := by
   simp only [haltsV, halts, notHalts, imp, all, app2, obj_simp]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 theorem gp_fin {f : PR} {k x : VExpr} (hk : Tm env Γ k) (hx : Tm env Γ x) :
     Thm env Γ (imp (ev f [k, x] =ₒ zero) (haltsV f x)) := by
@@ -56,11 +56,9 @@ theorem litT_lit (d : Nat) : Thm env Γ (litT (lit d) =ₒ numT (encExpr (lit d)
   simp only [List.map_cons, List.map_nil, List.getD_cons_zero] at h
   orw [h, numT_lit]
 
-omit E in
 theorem lit_closed (d : Nat) : (lit d).ClosedN :=
   (hasNat_natEnv.litT d (Γ := []) (U := 0)).closedN natEnv_ordered trivial
 
-omit E in
 theorem halts_closed (f : PR) (d : Nat) : (halts f d).ClosedN :=
   ⟨(notHalts_prop hasNat_natEnv natEnv_ordered f d).closedN natEnv_ordered trivial,
     falseS_closed.mono (Nat.zero_le _)⟩
@@ -132,7 +130,7 @@ end
 /-- **Internal Σ₁-completeness for a machine reading proofs**, for a closed graph lemma
 `∀ k x, f(k, x) = 0 → R` with `R[lit d]` the closed `B`: if `f` at `d` and `k` is `Prf(⌜A⌝, k)`,
 then for some code `σ` the theory proves `∀ k, Prf(⌜A⌝, k) → Prf(⌜B⌝, σ k)`. -/
-theorem sigma_of_fin {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env T) {f : PR}
+theorem sigma_of_fin {env : Typing} [E : ObjEnv env] {T : Tables} (hT : TablesFor env.env T) {f : PR}
     {d : Nat} {A R B : VExpr} (hR : R.inst (lit d) 1 = B) (hB : B.ClosedN)
     (hG : Thm env [] (allN 2 (imp ((valF f 2).inst zero 0) R)))
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
@@ -161,7 +159,7 @@ theorem sigma_of_fin {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor 
 /-- **Internal Σ₁-completeness for a machine reading proofs.** If `f` at `d` and `k` is
 `Prf(⌜A⌝, k)`, then for some code `σ` the theory proves
 `∀ k, Prf(⌜A⌝, k) → Prf(⌜halts f d⌝, σ k)`. -/
-theorem sigma_of {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env T) {f : PR}
+theorem sigma_of {env : Typing} [E : ObjEnv env] {T : Tables} (hT : TablesFor env.env T) {f : PR}
     {d : Nat} {A : VExpr}
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
       Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr A)) k)) :
@@ -189,7 +187,7 @@ theorem sigma_dg [ObjEnv env] (hT : TablesFor env T) :
 /-- **`Con T → G0 T` inside the theory.** -/
 theorem con_imp_G0_provable (hwf : env.WF) (hext : natEnv ≤ env) (hT : TablesFor env T) :
     Provable env (.forallE (Con T) (G0 T)) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   obtain ⟨σ, hσ⟩ := sigma_dg hT
   have h := (con_imp_G0 hσ).provable
   have e : imp (Con T) (G0 T) = .forallE (Con T) (G0 T) := by
@@ -203,7 +201,7 @@ end
 not prove its consistency sentence `Con T`, for any tables `T` of the environment. -/
 theorem con_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T) := by
-  have : ObjEnv env := ⟨hasNat_natEnv.mono hext, hwf.ordered⟩
+  have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
   obtain ⟨σ, hσ⟩ := sigma_dg hT
   exact second_of_sigma hT hσ hC
 

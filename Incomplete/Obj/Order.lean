@@ -10,13 +10,13 @@ identifies `mulC` with `mul`.
 
 namespace Incomplete.Obj
 open Lean4Lean
-open VExpr VEnv PR
+open VExpr Typing PR
 
 /-- `a ≤ b`, as `a - b = 0`. -/
 scoped notation:50 a:51 " ≤ₒ " b:51 => EqN (sub a b) zero
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b c x y : VExpr}
+variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c x y : VExpr}
 
 /-! ### Multiplication -/
 
