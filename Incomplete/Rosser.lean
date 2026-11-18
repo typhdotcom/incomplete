@@ -347,9 +347,9 @@ end
 theorem encExpr_halts (f : PR) (n : Nat) :
     encExpr (halts f n) = 7 * pair (encExpr (notHalts f n)) (encExpr falseS) + 5 := rfl
 
-/-- **Rosser's theorem**, from consistency and the checkability of proofs: the halting sentence
-of the Rosser machine on its own number is a proposition, false of the machine, and neither
-provable nor refutable. -/
+/-- **Rosser's theorem**, from consistency and the checkability of proofs: the non-halting
+sentence `notHalts d ⌜d⌝` of the Rosser machine `d` on its own number is a closed proposition,
+true of the machine, and neither provable nor refutable. -/
 theorem rosser_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)
     (hG : CheckDecidable env) (hC : Consistent env) :
     ∃ d : PR, env.HasType 0 [] (notHalts d d.code) (.sort .zero) ∧ ¬d.Halts d.code ∧
@@ -427,7 +427,7 @@ theorem rosser_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)
     | succ => simp [recNat]
 
 /-- **Rosser's incompleteness theorem.** A consistent well-formed extension of `natEnv` neither
-proves nor refutes the halting sentence of some machine on its own number. -/
+proves nor refutes the true non-halting sentence of some machine on its own number. -/
 theorem incomplete_rosser (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
     ∃ d : PR, env.HasType 0 [] (notHalts d d.code) (.sort .zero) ∧ ¬d.Halts d.code ∧
       ¬Provable env (notHalts d d.code) ∧ ¬Provable env (halts d d.code) := by

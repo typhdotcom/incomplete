@@ -2,13 +2,14 @@ import Incomplete.Final
 import Incomplete.Rosser
 
 /-!
-# Toward the second incompleteness theorem
+# The second incompleteness theorem, reduced to its internal step
 
-`Con T` is the halting sentence "no certificate checks as a proof of `False`" for the checker
-`chkT T`, and it is true exactly when the theory is consistent (`con_true_iff`). `G0 T` is the
-first theorem's sentence for the explicit diagonal machine `dg T`, unprovable from consistency
-(`G0_unprovable`). So a proof of `Con T → G0 T` inside the theory gives the second theorem
-(`second_of_internal`); that internal proof is not given here.
+`Con T` is the non-halting sentence `notHalts (conM T) 0`, "no certificate checks as a proof of
+`False`" for the checker `chkT T`, and it is true exactly when the theory is consistent
+(`con_true_iff`). `G0 T` is the first theorem's sentence for the explicit diagonal machine
+`dg T`, unprovable from consistency (`G0_unprovable`). So a proof of `Con T → G0 T` inside the
+theory gives the second theorem (`second_of_internal`). `Obj/Second.lean` proves that internal
+step (`con_imp_G0_provable`) and the theorem (`con_unprovable`, `second_incompleteness`).
 -/
 
 namespace Incomplete
@@ -21,7 +22,7 @@ noncomputable def chkT (T : Tables) : PR := chkC T (fun _ => true)
 /-- Halts exactly when some certificate checks as a proof of `False`. -/
 noncomputable def conM (T : Tables) : PR := push (numC (encExpr falseS)) (chkT T)
 
-/-- **Consistency**, as a halting sentence: no certificate proves `False`. -/
+/-- **Consistency**, as a non-halting sentence: no certificate proves `False`. -/
 noncomputable def Con (T : Tables) : VExpr := notHalts (conM T) 0
 
 /-- The diagonal machine of `checkDecidable_of_tables` and `diagEnumerable_of`. -/

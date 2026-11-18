@@ -7,7 +7,8 @@ import Lean4Lean.Theory.Typing.EnvLemmas
 
 For every environment extending `natEnv` that is `Checkable` — its constants and
 definitional-equality rules and inductive types are listed by finite tables, and it is
-ordered — consistency gives a true, unprovable halting sentence.
+ordered — consistency gives a true, unprovable non-halting sentence `notHalts d ⌜d⌝`, which
+is also irrefutable if the theory's proofs of `halts` sentences are sound (`HaltsSound`).
 -/
 
 namespace Incomplete
@@ -21,9 +22,9 @@ structure Checkable (env : VEnv) : Prop where
   tables : ∃ T : Tables, TablesFor env T
   ordered : env.Ordered
 
-/-- **Incompleteness.** A consistent checkable extension of `natEnv` leaves the halting sentence of
-some machine on its own number undecided: it is true and unprovable, and it is irrefutable if the
-theory's proofs of halting sentences are sound. -/
+/-- **Incompleteness.** A consistent checkable extension of `natEnv` does not prove the true
+non-halting sentence `notHalts d ⌜d⌝` of some machine `d` on its own number; if the theory's
+proofs of `halts` sentences are sound (`HaltsSound`), it does not refute it either. -/
 theorem incomplete_of_consistent (env : VEnv) (hext : natEnv ≤ env) (hchk : Checkable env)
     (hC : Consistent env) :
     ∃ d : PR, ¬d.Halts d.code ∧ ¬Provable env (notHalts d d.code) ∧

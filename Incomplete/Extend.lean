@@ -211,9 +211,9 @@ theorem _root_.Lean4Lean.VEnv.WF.checkable {env : VEnv} (h : env.WF) : Checkable
   | empty => exact ⟨_, .empty⟩
   | decl hd _ ih => obtain ⟨T, hT⟩ := ih; exact hT.decl hd
 
-/-- **Incompleteness.** A consistent well-formed extension of `natEnv` leaves the halting sentence
-of some machine on its own number undecided: it is true and unprovable, and it is irrefutable if
-the theory's proofs of halting sentences are sound. -/
+/-- **Incompleteness.** A consistent well-formed extension of `natEnv` does not prove the true
+non-halting sentence `notHalts d ⌜d⌝` of some machine `d` on its own number; if the theory's
+proofs of `halts` sentences are sound (`HaltsSound`), it does not refute it either. -/
 theorem incomplete_of_wf (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
     ∃ d : PR, ¬d.Halts d.code ∧ ¬Provable env (notHalts d d.code) ∧
       (HaltsSound env → ¬Provable env (halts d d.code)) :=
