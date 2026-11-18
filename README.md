@@ -1,7 +1,8 @@
 # incomplete
 
-A Lean 4 proof of Gödel–Kleene incompleteness for the formal type theory of
-[lean4lean](https://github.com/typhdotcom/lean4lean): the typing judgment
+A Lean 4 proof of Gödel–Kleene incompleteness for the formal type theory in
+[the author's lean4lean fork](https://github.com/typhdotcom/lean4lean), based on
+[digama0/lean4lean](https://github.com/digama0/lean4lean): the typing judgment
 `VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`, taken as a proof
 system for sentences about `Nat`. It is about that formal judgment, not about
 the kernel implementation in lean4lean or Lean's own kernel.
@@ -83,8 +84,10 @@ and irrefutability on `HaltsSound`, neither of which is proved here.
 
 ## Dependency
 
-`lakefile.toml` requires lean4lean from `github.com/typhdotcom/lean4lean` at a
-fixed commit of its `main`, and imports only
+`lakefile.toml` pins the author's fork at commit
+[`979fe59306db`](https://github.com/typhdotcom/lean4lean/commit/979fe59306db077bc2c681319a53b4f521791603).
+The results concern this revision of the fork's formal judgment. The library
+imports only
 `Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`.
 Batteries comes transitively at lean4lean's pin; `lean-toolchain` matches
 lean4lean's.
