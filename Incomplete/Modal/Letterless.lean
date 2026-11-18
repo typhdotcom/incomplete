@@ -256,6 +256,15 @@ theorem bd_boxBot : ∀ n, bd (boxBot n) = n
 theorem lim_boxBot (n : Nat) : lim (boxBot n) = false := by
   rw [lim, lvl_boxBot, bd_boxBot]; simp
 
+/-- `□ⁿ⁺¹⊥ → □ⁿ⊥` is eventually true but fails at level `n`, so `GL` does not prove it. -/
+theorem boxBot_succ_imp (n : Nat) : lim (imp (boxBot (n + 1)) (boxBot n)) = true ∧
+    ¬GL (imp (boxBot (n + 1)) (boxBot n)) := by
+  refine ⟨by rw [lim_imp, lim_boxBot, lim_boxBot]; rfl, fun h => ?_⟩
+  have := (GL_iff_lvl (A := imp (boxBot (n + 1)) (boxBot n))
+    ⟨boxBot_letterless (n + 1), boxBot_letterless n⟩).1 h n
+  rw [lvl_imp, lvl_boxBot, lvl_boxBot] at this
+  simp at this
+
 /-- Implication of the three-element chain `0 < 1 < 2`. -/
 def himp (a b : Fin 3) : Fin 3 := if a ≤ b then 2 else b
 /-- `□0 = 1`, `□1 = □2 = 2`. -/
