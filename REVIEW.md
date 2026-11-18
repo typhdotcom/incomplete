@@ -1,15 +1,13 @@
-State: READY FOR REVIEW
-Turn: reviewer
+State: COMPLETE
+Turn: none
 Candidate: yvnpokxyustvvsttkxvlmvwnspyllrwz / 7e6276a9902567f6f02fbd55586212322cfbe4d6
 
 # Rosser and second incompleteness review
 
 ## Objective and meaning
 
-Review the changes since the previous candidate `68cb58bf0c4d`: Rosser's
-incompleteness theorem from consistency alone, internal arithmetic and proof
-manipulation in `Incomplete/Obj`, the second incompleteness theorem for the
-actual certificate checker, and their public documentation and tactics.
+Review the Rosser and second incompleteness developments and their object-level
+proof toolkit, including the correction to hypothesis search returned as D1.
 
 ## Accepted foundation
 
@@ -27,75 +25,47 @@ actual certificate checker, and their public documentation and tactics.
   `Consistent env` for `TablesFor env T`.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
-## Submission
+## Verdict
 
-This candidate is the returned candidate `a9192d26a3bd` plus one commit that
-changes only the `ohyp` elaborator in `Incomplete/Obj/Tactic.lean` (11
-insertions, 4 deletions). No theorem statement, definition or other tactic
-changed.
+Accepted. D1 is closed, and the review is complete. No worker action remains.
 
-## Current drawers
+The headline theorems and their documented hypotheses passed the preceding
+mathematical review at `a9192d26a3bd`. The current candidate changes only the
+`ohyp` elaborator; it corrects the returned failure without changing the
+formal definitions or theorem statements. The existing proof evidence remains
+applicable, and the corrected tactic passed independent regression checks.
 
-### D1 — P2: `ohyp` stops before reaching a matching hypothesis
+## Closed drawers
 
-Status: resolved, awaiting review
+### D1 — `ohyp` stops before reaching a matching hypothesis
 
-Cause: each candidate was tried as `exact Thm.hyp (i := i) (by olookup)`. A
-failing nested `by` block is recovered by the term elaborator, which logs the
-error and admits the goal instead of throwing, so the first index whose lookup
-got as far as a leftover equation was accepted and the search stopped there.
+Status: closed
 
-Change:
+The original context `[nat, nat, falseS]` now succeeds with `ohyp`. Candidate
+lookup is performed as a tactic sequence under `withoutRecover`, with `done`
+requiring completion and saved-state restoration on failure. Search traverses
+the explicit context prefix up to reducible unfolding, replacing the fixed
+16-entry limit. An open tail is searched through its explicit prefix.
 
-- Each candidate now runs as the tactic sequence
-  `refine Thm.hyp (i := i) ?_; olookup; done` under `withoutRecover`, so any
-  failure is an exception; the saved state is restored before the next index.
-- The search covers every explicit entry of the goal's context: the number of
-  `List.cons` cells of `Γ` (up to reducible unfolding), with no fixed limit.
-  With an open tail (`A :: B :: Γ`) it covers the explicit prefix.
-- A goal that is not `Thm env Γ P` is reported as such.
-
-Closure evidence. The following file, checked with
-`nix develop -c lake env lean`, elaborates with no errors or warnings. Every
-check runs `ohyp` itself.
-
-```lean
-import Incomplete
-open Incomplete Incomplete.Obj
-
-example : Thm natEnv [falseS] falseS := by ohyp
-example : Thm natEnv [nat, falseS] falseS := by ohyp
-example : Thm natEnv [nat, nat, falseS] falseS := by ohyp
-example : Thm natEnv (List.replicate 16 nat ++ [falseS]) falseS := by
-  simp only [List.replicate, List.cons_append, List.nil_append]; ohyp
-example : Thm natEnv [nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, falseS] falseS := by ohyp
-example : Thm natEnv [nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, nat, falseS] falseS := by ohyp
-example (Γ : List Lean4Lean.VExpr) : Thm natEnv (nat :: falseS :: Γ) falseS := by ohyp
-example (h : Thm natEnv [nat, nat] falseS) : Thm natEnv [nat, nat] falseS := by
-  fail_if_success ohyp
-  first | ohyp | exact h
-example (h : Thm natEnv [] falseS) : Thm natEnv [] falseS := by
-  fail_if_success ohyp
-  exact h
-```
-
-- Indices 0, 1, 2 (the reproducer), 16 (twice: literal and via
-  `List.replicate`) and 20 succeed.
-- The two no-match cases fail; the goal is then closed by `exact h` with no
-  error logged, so the failed search leaves neither a partial proof nor
-  deferred obligations.
-- Before the change the same file reported `unsolved goals …
-  ⊢ nat.lift.lift = ⊥ₒ` at the index-16 and index-20 lines, and
-  `fail_if_success ohyp` reported that `ohyp` succeeded.
+Independent checks passed for indices 0, 1, 2, 3, 7, 15, 16, 17, 20, 31 and
+32, an explicit prefix over a variable context tail, and the submitted
+normalized `List.replicate` case. Empty and nonempty no-match contexts failed
+as expected, then allowed a fallback proof with no logged elaboration errors.
+An additional two-goal probe confirmed that a failed search preserves the
+remaining goals. Every success case exercised `ohyp` itself.
 
 ## Verification
 
-- `nix develop -c lake build` passed (131 jobs) with the change; every module
-  importing `Obj/Tactic` was rebuilt, so all existing uses of `ohyp` still
-  elaborate.
-- `nix develop -c lake env lean --trust=0` on an audit importing `Incomplete`:
+- `nix develop -c lake build` passed (131 jobs). The fresh project build and
+  mathematical inspection from the preceding review are reused for the
+  unchanged formal development.
+- An independent temporary probe, run with
+  `nix develop -c lake env lean --trust=0`, passed the submitted regression
+  cases and the additional cases above.
+- The same audit checked all ten README theorems:
   `incomplete_unconditional`, `incomplete_rosser`, `incomplete_rosser'`,
   `incomplete_of_wf`, `incomplete_of_wf'`, `second_incompleteness`,
-  `second_incompleteness'`, `con_unprovable`, `bconsistent` and `bhaltsSound`
-  each report exactly `[propext, Classical.choice, Quot.sound]`.
-- `nix flake check` passed.
+  `second_incompleteness'`, `con_unprovable`, `bconsistent` and `bhaltsSound`.
+  Each reports exactly `[propext, Classical.choice, Quot.sound]`.
+- `nix flake check` passed for the review submission. Existing unused-variable
+  and unused-simp-argument warnings remain nonblocking.
