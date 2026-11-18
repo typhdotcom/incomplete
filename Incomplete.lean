@@ -61,3 +61,5 @@ import Incomplete.Obj.Template
 import Incomplete.Obj.Reduce
 import Incomplete.Obj.Holes
 import Incomplete.Obj.Chain
+import Incomplete.Obj.Graph
+import Incomplete.Obj.Sigma
