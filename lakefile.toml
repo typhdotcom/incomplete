@@ -1,11 +1,16 @@
 name = "incomplete"
-version = "0.11.0"
+version = "0.12.0"
 defaultTargets = ["Incomplete"]
+
+[[require]]
+name = "batteries"
+git = "https://github.com/leanprover-community/batteries"
+rev = "v4.34.0"
 
 [[require]]
 name = "lean4lean"
 git = "https://github.com/typhdotcom/lean4lean"
-rev = "979fe59306db077bc2c681319a53b4f521791603"
+rev = "b158604d712c00c8d6df22472b7b870c6b340073"
 
 [[lean_lib]]
 name = "Incomplete"

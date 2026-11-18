@@ -489,7 +489,7 @@ inside the object theory (`Incomplete/Obj/`).
 
 `lakefile.toml` pins [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean)
 (a fork of [digama0/lean4lean](https://github.com/digama0/lean4lean)) at
-[`979fe59306db`](https://github.com/typhdotcom/lean4lean/commit/979fe59306db077bc2c681319a53b4f521791603).
+[`b158604d712c`](https://github.com/typhdotcom/lean4lean/commit/b158604d712c00c8d6df22472b7b870c6b340073).
 Core typing and definitional equality come from upstream; this repository uses
 three additions from the fork:
 
@@ -513,8 +513,9 @@ Thus the full-theory statements use the judgment including the fork's
 projection rules and its definition of well-formed environments. The proofs do
 not depend on the fork's kernel verification, runtime-model axioms, or open
 injectivity assumptions. Direct imports are limited to
-`Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`, with
-`lean-toolchain` and transitive `batteries` matching lean4lean.
+`Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`. The
+toolchain is Lean `v4.34.1` with `batteries` `v4.34.0`; lean4lean itself pins
+`v4.33.0-rc2` for its kernel replica and regression tests.
 
 ## Build and audit
 
