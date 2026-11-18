@@ -60,9 +60,12 @@ def appC (g A B f f' a a' c₁ c₂ : PR) : PR :=
   tagC 16 5 (cpair (judgC g (tagC 7 3 (cpair f a)) (tagC 7 3 (cpair f' a')) (instP B a (num 0)))
     (cpair A (cpair B (cpair f (cpair f' (cpair a (cpair a' (cpair c₁ c₂))))))))
 
+/-- `Prf(s, c)` for a checking code `T`: `T` at the sentence number `s` and the certificate `c`. -/
+noncomputable abbrev prf (T : PR) (s c : VExpr) : VExpr := ev T [s, c]
+
 /-- `chkT T` at the sentence number `s` and the certificate number `c`: `0` when `c` proves the
 sentence numbered `s`. -/
-noncomputable abbrev prfT (T : Tables) (s c : VExpr) : VExpr := ev (chkT T) [s, c]
+noncomputable abbrev prfT (T : Tables) (s c : VExpr) : VExpr := prf (chkT T) s c
 
 section
 variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {a b c d e g A B f f' a' c₁ c₂ x : VExpr}

@@ -1,4 +1,5 @@
 import Incomplete.Obj.Graph
+import Incomplete.Obj.Checker
 
 /-!
 # Internal Σ₁-completeness
@@ -156,7 +157,8 @@ theorem prf_instC {Γ l : List VExpr} {c : Nat} {P : VExpr} (as : List PR) (hl :
     (hc : Thm env Γ (prfT T (tmplH [] (allN as.length P) 0) (numT c) =ₒ zero)) :
     Thm env Γ (prfT T (tmplH ((as.map (ev · l)).reverse.map litT) P 0) (ev (instC z s c as) l)
       =ₒ zero) := by
-  have := prf_instL hz jz hs js as (ys := []) (c := numC c) hl .nil (by rw [ev_numC_ctx]; exact hc)
+  have := prf_instL (fun hys hc ha h => prf_allH hz jz hs js hys hc ha h) as (ys := [])
+    (c := numC c) hl .nil (by rw [ev_numC_ctx]; exact hc)
   unfold instC
   simpa only [List.append_nil] using this
 

@@ -96,19 +96,19 @@ section
 variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {T : Tables}
 
 /-- Rewriting the sentence of a proof. -/
-theorem prf_congr {s s' c : VExpr} (hs : Tm env Γ s) (hs' : Tm env Γ s') (hc : Tm env Γ c)
-    (e : Thm env Γ (s =ₒ s')) (h : Thm env Γ (prfT T s c =ₒ zero)) :
-    Thm env Γ (prfT T s' c =ₒ zero) := by
-  have := Thm.subst (M := prfT T (.bvar 0) c.lift =ₒ zero) (by otype) e hs hs'
+theorem prf_congr {T : PR} {s s' c : VExpr} (hs : Tm env Γ s) (hs' : Tm env Γ s') (hc : Tm env Γ c)
+    (e : Thm env Γ (s =ₒ s')) (h : Thm env Γ (prf T s c =ₒ zero)) :
+    Thm env Γ (prf T s' c =ₒ zero) := by
+  have := Thm.subst (M := prf T (.bvar 0) c.lift =ₒ zero) (by otype) e hs hs'
     (by simp only [obj_simp]; exact h)
   simp only [obj_simp] at this
   exact this
 
 /-- Rewriting the certificate of a proof. -/
-theorem prf_congr_c {s c c' : VExpr} (hs : Tm env Γ s) (hc : Tm env Γ c) (hc' : Tm env Γ c')
-    (e : Thm env Γ (c =ₒ c')) (h : Thm env Γ (prfT T s c =ₒ zero)) :
-    Thm env Γ (prfT T s c' =ₒ zero) := by
-  have := Thm.subst (M := prfT T s.lift (.bvar 0) =ₒ zero) (by otype) e hc hc'
+theorem prf_congr_c {T : PR} {s c c' : VExpr} (hs : Tm env Γ s) (hc : Tm env Γ c) (hc' : Tm env Γ c')
+    (e : Thm env Γ (c =ₒ c')) (h : Thm env Γ (prf T s c =ₒ zero)) :
+    Thm env Γ (prf T s c' =ₒ zero) := by
+  have := Thm.subst (M := prf T s.lift (.bvar 0) =ₒ zero) (by otype) e hc hc'
     (by simp only [obj_simp]; exact h)
   simp only [obj_simp] at this
   exact this
@@ -204,30 +204,6 @@ theorem prf_allH {ys : List VExpr} {P c a : VExpr} (hys : Tms env Γ ys) (hc : T
   refine prf_congr (by otype) (by otype) (by otype) ?_ hm
   orw [hq]
   exact i
-
-/-- **Instantiating a closed `∀ x₁ … xₘ, P`** at the values of the codes `as`, outermost first:
-the holes are the values in reverse, then those of the template it started from. -/
-theorem prf_instL (as : List PR) {ys : List VExpr} {c : PR} {P : VExpr} (hl : Tms env Γ l)
-    (hys : Tms env Γ ys)
-    (h : Thm env Γ (prfT T (tmplH (ys.map litT) (allN as.length P) 0) (ev c l) =ₒ zero)) :
-    Thm env Γ (prfT T (tmplH (((as.map (ev · l)).reverse ++ ys).map litT) P 0)
-      (ev (as.foldl (fun c a => mpP c (push a (numCertC z s))) c) l) =ₒ zero) := by
-  induction as generalizing ys c with
-  | nil =>
-    simp only [List.length_nil, allN, List.map_nil, List.reverse_nil, List.nil_append,
-      List.foldl_nil] at h ⊢
-    exact h
-  | cons a as ih =>
-    simp only [List.length_cons, allN] at h
-    have h1 := prf_allH hz jz hs js hys (evTy hl) (evTy (f := a) hl) h
-    have h2 : Thm env Γ (prfT T (tmplH ((ev a l :: ys).map litT) (allN as.length P) 0)
-        (ev (mpP c (push a (numCertC z s))) l) =ₒ zero) := by
-      refine prf_congr_c (by otype) (by otype) (by otype) ?_ h1
-      orw [ev_mpP hl, ev_push_numCert hl]
-    have := ih (.cons (evTy hl) hys) h2
-    simp only [List.map_cons, List.reverse_cons, List.append_assoc, List.cons_append,
-      List.nil_append, List.foldl_cons] at this ⊢
-    exact this
 
 end
 
