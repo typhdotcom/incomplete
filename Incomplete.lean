@@ -63,3 +63,4 @@ import Incomplete.Obj.Holes
 import Incomplete.Obj.Chain
 import Incomplete.Obj.Graph
 import Incomplete.Obj.Sigma
+import Incomplete.Obj.Second

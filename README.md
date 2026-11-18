@@ -1,7 +1,7 @@
 # incomplete
 
-A Lean 4 proof of Gödel–Kleene and Rosser incompleteness for the formal type
-theory of [lean4lean](https://github.com/digama0/lean4lean), with the inductive
+A Lean 4 proof of Gödel–Kleene and Rosser incompleteness, and of the second
+incompleteness theorem, for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean), with the inductive
 and primitive projection extensions from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean) described below.
 The proof system is the typing judgment `VEnv.HasType` / `VEnv.IsDefEq` of
@@ -64,6 +64,40 @@ The same for any consistent environment built from well-formed declarations,
 one of which is `Nat`. (`Incomplete/Extend.lean`)
 
 ```lean
+theorem second_incompleteness (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
+    (hC : Consistent env) :
+    ∃ T, TablesFor env T ∧ env.HasType 0 [] (Con T) (.sort .zero) ∧
+      (¬(conM T).Halts 0 ↔ Consistent env) ∧ ¬Provable env (Con T)
+```
+
+**The second incompleteness theorem.** Every consistent well-formed extension of
+`natEnv` has tables `T` listing its constants, rules and inductive types, for
+which `Con T` is a closed proposition, true exactly when the theory is
+consistent (`con_true_iff`), and unprovable. `Con T` is `notHalts (conM T) 0`:
+no number `k` is accepted by the proof checker `chkT T` as a proof of
+`falseS`. (`Incomplete/Obj/Second.lean`)
+
+```lean
+theorem con_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
+    {T : Tables} (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T)
+```
+
+The same for every choice of tables `T`. Both rest on the theory proving
+`Con T → G0 T` (`con_imp_G0_provable`), with `G0 T` the first theorem's
+sentence for the diagonal machine `dg T`, which reads proofs through the same
+checker. (`Incomplete/Obj/Second.lean`)
+
+```lean
+theorem second_incompleteness' {ds : List VDecl} {env : VEnv} (H : env.WF' ds)
+    (hm : .induct natDecl ∈ ds) (hC : Consistent env) :
+    ∃ T, TablesFor env T ∧ env.HasType 0 [] (Con T) (.sort .zero) ∧
+      (¬(conM T).Halts 0 ↔ Consistent env) ∧ ¬Provable env (Con T)
+```
+
+The same for any consistent environment built from well-formed declarations,
+one of which is `Nat`. (`Incomplete/Obj/Second.lean`)
+
+```lean
 theorem bconsistent : ¬BProvable natEnv falseS
 ```
 
@@ -93,6 +127,14 @@ The fragment proves `halts f n` only when `f` halts on `n`.
 - `Consistent env`: `¬Provable env falseS`.
 - `HaltsSound env`: every provable `halts f n` is true (1-consistency for these
   sentences). Only the Gödel–Kleene form uses it.
+- `TablesFor env T`: the finite lists of `T` give `env`'s constants,
+  definitional-equality rules and inductive types. `chkT T` is the proof
+  checker for these tables as a machine: at the number of a sentence `P` and a
+  number `k` it is `0` when `k` numbers a certificate, checked against `T`, of
+  a closed proof of `P`; some `k` gives `0` exactly when `P` is provable
+  (`chkNum_eq_zero`). `conM T` runs it at the number of `falseS`, and `Con T` is
+  `notHalts (conM T) 0`. `dg T` runs it at the number of the diagonal sentence
+  of its argument, and `G0 T` is `notHalts (dg T) ⌜dg T⌝`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's well-formedness of an
   environment built from the declarations `ds`, and environment extension.
 
@@ -101,14 +143,19 @@ The fragment proves `halts f n` only when `f` halts on `n`.
 The unconditional result is for the Prop/Type, projection-free fragment of
 `natEnv`; its consistency and soundness for `halts` come from a set model
 (`Incomplete/Model.lean`, `Incomplete/ModelSound.lean`). For the full theory
-and its well-formed extensions, the Rosser form is conditional on `Consistent`
-alone, and the Gödel–Kleene form's irrefutability also on `HaltsSound`;
-neither hypothesis is proved here.
+and its well-formed extensions, the Rosser form and the second theorem are
+conditional on `Consistent` alone, and the Gödel–Kleene form's irrefutability
+also on `HaltsSound`; neither hypothesis is proved here.
 
 The Rosser machine races certificates for `notHalts d ⌜d⌝` against
 certificates for `halts d ⌜d⌝`. Refuting a proof of `halts` takes reasoning
 inside the object theory about every number: `Incomplete/Induct.lean` builds
 those proofs with `Nat.rec` into `Prop`.
+
+The second theorem needs the object theory to reason about its own proofs:
+`Incomplete/Obj` develops natural deduction, arithmetic, and the proof checker
+at symbolic arguments inside the theory, and proves there that every primitive
+recursive code computes its values on numerals (internal Σ₁-completeness).
 
 ## Dependency
 
@@ -165,6 +212,9 @@ open Incomplete
 #print axioms incomplete_rosser'
 #print axioms incomplete_of_wf
 #print axioms incomplete_of_wf'
+#print axioms second_incompleteness
+#print axioms second_incompleteness'
+#print axioms con_unprovable
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -181,8 +231,8 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   consistency.
 - `Induct`, `Rosser`: induction in the object theory, the Rosser machine, and
   Rosser's theorem.
-- `Second`: the consistency sentence `Con`, and the second theorem reduced to
-  proving `Con → G0` in the object theory.
+- `Second`: the consistency sentence `Con`, and the second theorem from a proof
+  of `Con → G0` in the object theory (`Obj/Second` gives it).
 - `PR`, `PRLib`: the machine model. `Sentences`, `Arith`, `Adequacy`: halting
   sentences and Σ₁-completeness.
 - `Cert*`, `Check*`, `Encode`, `*PR`, `Rules*`, `ProjRules`: the proof checker as
@@ -274,6 +324,22 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   from a code `σ` with `∀ k, Prf(⌜G0 T⌝, k) → Prf(⌜halts (dg T) ⌜dg T⌝⌝, σ k)`
   provable (`con_imp_G0`, over arbitrary codes `con_imp_of_prf`); so the second
   theorem from that internal Σ₁-completeness (`second_of_sigma`).
+  `Obj/Holes`: `tmplH hs B j`, the number of `B` with its free variables
+  replaced by the numbers `hs`; lifting `B` erases a hole and instantiating it
+  inserts one, and internally instantiating a template at a numeral adds a hole
+  (`instT_tmplH_num`). `Obj/Chain`: the modus ponens certificate `mpX c₁ c₂`,
+  with its parts read off the children's judgments, and its code `mpP`; modus
+  ponens and instantiation at numerals for templates whose holes are numerals
+  (`prf_mpH`, `prf_allH`), and instantiating a closed `∀ x₁ … xₘ, P` at the
+  values of codes (`prf_instL`). `Obj/Graph`: the formula `valF f n`,
+  `ev f [x₁, …, xₙ] = v`, and `Ok`: a code proving it internally at the
+  numerals of any arguments and of the value; induction on the first argument
+  (`okF_ind`). `Obj/Sigma`: internal Σ₁-completeness, `Ok` for every code at
+  every arity (`ok_exists`), from closed graph lemmas for each constructor
+  chained by modus ponens. `Obj/Second`: from it the code `σ` for the
+  diagonal machine (`sigma_dg`), `Con T → G0 T` in the theory
+  (`con_imp_G0_provable`), and the second incompleteness theorem
+  (`con_unprovable`, `second_incompleteness`).
 
 ## License
 

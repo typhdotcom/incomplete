@@ -69,7 +69,8 @@ theorem argC_ev : ∀ (s n : Nat) (l : List VExpr), l.length = s + n →
 
 theorem length_argC : ∀ (s n : Nat), (argC s n).length = n
   | _, 0 => rfl
-  | s, n + 1 => by simp only [argC, List.length_append, length_argC (s + 1) n, List.length_singleton]
+  | s, n + 1 => by
+    simp only [argC, List.length_append, length_argC (s + 1) n, List.length_singleton]
 
 @[obj_simp] theorem map_liftN_lift_succ (l : List VExpr) (n k : Nat) :
     (l.map (·.liftN 1 0)).map (·.liftN n (k + 1)) = (l.map (·.liftN n k)).map (·.liftN 1 0) := by

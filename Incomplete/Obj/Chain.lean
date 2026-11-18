@@ -76,6 +76,7 @@ theorem Tms.append {l l' : List VExpr} (hl : Tms env Γ l) (hl' : Tms env Γ l')
   | nil => exact hl'
   | cons ha _ ih => exact .cons ha ih
 
+omit E in
 theorem Tms.reverse {l : List VExpr} (hl : Tms env Γ l) : Tms env Γ l.reverse := by
   induction hl with
   | nil => exact .nil
@@ -89,7 +90,8 @@ theorem Tms.map_ev {as : List PR} (hl : Tms env Γ l) : Tms env Γ (as.map (ev �
 end
 
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.map_litT ?_); otype))
-macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.append ?_ ?_) <;> otype))
+macro_rules
+  | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.append ?_ ?_) <;> otype))
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.reverse ?_); otype))
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.map_ev ?_); otype))
 

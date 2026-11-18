@@ -163,7 +163,8 @@ theorem tmplH_liftN_holes (hs₁ hs₂ : List VExpr) (j : Nat) : ∀ (e : VExpr)
       simp only [tmplH, if_pos h, if_pos (by omega : i < j + d)]
     · rw [liftVar_le h]
       simp only [tmplH, List.length_append]
-      simp only [if_neg (show ¬ j + hs₁.length + i < j + d by omega), if_neg (show ¬ i < d by omega),
+      simp only [if_neg (show ¬ j + hs₁.length + i < j + d by omega),
+        if_neg (show ¬ i < d by omega),
         if_pos (show j + hs₁.length + i - (j + d) < hs₁.length + hs₂.length by omega),
         if_pos (show i - d < hs₂.length by omega),
         getD_app_ge (show hs₁.length ≤ j + hs₁.length + i - (j + d) by omega),
@@ -390,7 +391,8 @@ theorem instT_tmplH_num (hh : Tms env Γ hs)
     orw [instT_forallE (by otype) (by otype) ha (by otype), instT_tmplH_num hh hin ha hl A j, ihb]
   | .proj s i e, j => by
     simp only [tmplH]
-    orw [instT_proj (by otype) (by otype) (by otype) ha (by otype), instT_tmplH_num hh hin ha hl e j]
+    orw [instT_proj (by otype) (by otype) (by otype) ha (by otype),
+      instT_tmplH_num hh hin ha hl e j]
 
 end
 

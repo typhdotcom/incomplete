@@ -18,7 +18,8 @@ def instC (z s c : Nat) (as : List PR) : PR :=
   as.foldl (fun c a => mpP c (push a (numCertC z s))) (numC c)
 
 theorem valF_succ_eq (f : PR) (n : Nat) :
-    ((valF (.succ f) n).liftN 1 1).inst (S (.bvar 0)) 0 = (ev (.succ f) (args 1 n) =ₒ S (.bvar 0)) := by
+    ((valF (.succ f) n).liftN 1 1).inst (S (.bvar 0)) 0 =
+      (ev (.succ f) (args 1 n) =ₒ S (.bvar 0)) := by
   simp only [valF, obj_simp, args_map_liftN 1 n (k := 1) (by omega),
     args_map_inst 1 n (k := 0) _ (by omega)]
 
@@ -50,26 +51,11 @@ theorem valS_skip1 (a b : VExpr) (l : List VExpr) (i : Nat) :
     valS (a :: b :: l) (skip1 i) = valS (a :: l) i := by
   cases i <;> simp [skip1, valS]
 
-theorem valS_succ (a : VExpr) (l : List VExpr) (i : Nat) : valS (a :: l) (Nat.succ i) = valS l i := by
+theorem valS_succ (a : VExpr) (l : List VExpr) (i : Nat) :
+    valS (a :: l) (Nat.succ i) = valS l i := by
   simp [valS]
 
 theorem tmplH_zero (hs : List VExpr) : tmplH hs zero 0 = numT (encExpr zero) := rfl
-
-/-- Exchanging variables `0` and `1`. -/
-def swap01 : Nat → Nat
-  | 0 => 1
-  | 1 => 0
-  | i + 2 => i + 2
-
-theorem valS_swap01 (a b : VExpr) (i : Nat) : valS [a, b] (swap01 i) = valS [b, a] i := by
-  rcases i with _ | _ | i <;> simp [swap01, valS]
-
-/-- `halts f x`, with the machine's argument `x` a term. -/
-def haltsV (f : PR) (x : VExpr) : VExpr :=
-  imp (all (imp (isZero (app2 (fn f) x.lift (.bvar 0))) falseS)) falseS
-
-theorem haltsV_lit (f : PR) (d : Nat) : haltsV f (lit d) = halts f d := by
-  simp only [haltsV, halts, notHalts, imp, all, app2, obj_simp]
 
 theorem valF_prec0_eq (g h : PR) (n : Nat) :
     (valF (.prec g h) (n + 1)).inst zero 1 = (ev (.prec g h) (zero :: args 1 n) =ₒ .bvar 0) := by
@@ -87,7 +73,7 @@ theorem getD_map_litT {xs : List VExpr} {i : Nat} (h : i < xs.length) :
     Option.map_some, Option.getD_some]
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables}
+variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
 
 /-- A closed theorem has a certificate proving it, internally. -/
 theorem closed_prf (hT : TablesFor env T) {P : VExpr} (h : Thm env [] P) :
@@ -177,6 +163,7 @@ theorem prf_instC {Γ l : List VExpr} {c : Nat} {P : VExpr} (as : List PR) (hl :
 variable (hT : TablesFor env T)
 include hT
 
+omit hz jz hs js in
 /-- A code that is `0` at arity `n`. -/
 theorem ok_zeroLike {f : PR} {n : Nat} (hf : ∀ xs : List VExpr, xs.length = n → ev f xs = zero)
     (hA : valF f n = (zero =ₒ .bvar 0)) : ∃ τ, Ok env T f n τ := by
@@ -218,7 +205,8 @@ theorem ok_var {i n : Nat} (hi : i < n) : ∃ τ, Ok env T (var i) n τ := by
 
 theorem ok_succ {f τf : PR} {n : Nat} (hf : Ok env T f n τf) : ∃ τ, Ok env T (.succ f) n τ := by
   obtain ⟨c, hc⟩ := closed_prf hT (P := allN (n + 1) (imp (valF f n) (ev (.succ f) (args 1 n) =ₒ
-    S (.bvar 0)))) (allN_intro (env := env) (n + 1) (Γ := []) (gp_succ (argsTy (by omega)) (bvar_rep (by omega))))
+    S (.bvar 0)))) (allN_intro (env := env) (n + 1) (Γ := [])
+      (gp_succ (argsTy (by omega)) (bvar_rep (by omega))))
   refine ⟨mpP (instC z s c (argC 0 n ++ [f])) τf, fun {Γ xs} hxs hlen => ?_⟩
   have h1 := prf_instC hz jz hs js (argC 0 n ++ [f]) hxs
     (by rw [List.length_append, length_argC]; exact hc)
@@ -301,13 +289,132 @@ theorem ok_push {h g τh τg : PR} {n : Nat} (hh : Ok env T h n τh) (hg : Ok en
   refine prf_congr_c (by otype) (by otype) (by otype) ?_ h4
   orw [ev_mpP hxs, ev_mpP hxs, ev_push (f := .push h τg) rfl hxs]
 
+omit hT in
+/-- The step of `prec g h`: from a proof `cp` of its graph at `t`, `precS` proves it at `S t`. -/
+theorem prec_step {g h τh : PR} {n cₛ : Nat} (hh : Ok env T h (n + 2) τh)
+    (hcₛ : ∀ {Γ : List VExpr}, Thm env Γ (prfT T (tmplH [] (allN (n + 3)
+      (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1)
+        (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0)))) 0)
+      (numT cₛ) =ₒ zero))
+    {cp t : VExpr} {xs : List VExpr} (hcp : Tm env Γ cp) (ht : Tm env Γ t) (hxs : Tms env Γ xs)
+    (hlen : xs.length = n)
+    (ih : Thm env Γ (prfT T (tmplH (litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT)
+      (valF (.prec g h) (n + 1)) 0) cp =ₒ zero)) :
+    Thm env Γ (prfT T (tmplH (litT (ev (.prec g h) (S t :: xs)) :: litT (S t) :: xs.map litT)
+      (valF (.prec g h) (n + 1)) 0) (ev (precS z s cₛ n g h τh) (cp :: t :: xs)) =ₒ zero) := by
+  have hr : Tm env Γ (ev (.prec g h) (t :: xs)) := evTy (.cons ht hxs)
+  have hr' : Tm env Γ (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :=
+    evTy (.cons hr (.cons ht hxs))
+  have hL : Tms env Γ (cp :: t :: xs) := .cons hcp (.cons ht hxs)
+  -- the step lemma at `[r', r, t, xs]`, with `r` and `r'` the values of `prec g h` and `h`
+  have h1 := prf_instC hz jz hs js (argC 2 n ++ [var 1, precR g h,
+      .push (precR g h) (ren skip1 h)]) hL
+    (by rw [List.length_append, length_argC]; exact hcₛ)
+  have e0 : ((argC 2 n ++ [var 1, precR g h, .push (precR g h) (ren skip1 h)]).map
+      (ev · (cp :: t :: xs))).reverse = ev (.push (precR g h) (ren skip1 h)) (cp :: t :: xs) ::
+      ev (precR g h) (cp :: t :: xs) :: t :: xs := by
+    simp only [List.map_append, List.reverse_append, List.map_cons, List.map_nil,
+      List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append,
+      argC_ev 2 n _ (show (cp :: t :: xs).length = 2 + n by simp only [List.length_cons]; omega),
+      List.drop_succ_cons, List.drop_zero, ev_var, List.getD_cons_succ, List.getD_cons_zero]
+  rw [e0] at h1
+  simp only [List.map_cons] at h1
+  have hRL : Tm env Γ (ev (precR g h) (cp :: t :: xs)) := evTy hL
+  have eR : Thm env Γ (ev (precR g h) (cp :: t :: xs) =ₒ ev (.prec g h) (t :: xs)) :=
+    ev_ren_eq Nat.succ hL (valS_succ _ _)
+  have eRh : Thm env Γ (ev (.push (precR g h) (ren skip1 h)) (cp :: t :: xs) =ₒ
+      ev h (ev (.prec g h) (t :: xs) :: t :: xs)) := by
+    orw [ev_push (f := .push (precR g h) (ren skip1 h)) rfl hL,
+      ev_ren_eq (f := h) skip1 (.cons hRL hL) (l' := ev (precR g h) (cp :: t :: xs) :: t :: xs)
+        (valS_skip1 _ _ _), eR]
+  generalize hP : (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1)
+    (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))) = P at h1
+  have E1 : Thm env Γ (tmplH (litT (ev (.push (precR g h) (ren skip1 h)) (cp :: t :: xs)) ::
+      litT (ev (precR g h) (cp :: t :: xs)) :: litT t :: xs.map litT) P 0 =ₒ
+      tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) ::
+        litT (ev (precR g h) (cp :: t :: xs)) :: litT t :: xs.map litT) P 0) :=
+    tmplH_congr1 (hs₁ := []) .nil (.cons (by otype) (.cons (by otype) hxs.map_litT))
+      (by otype) (by otype) (litT_congr (by otype) hr' eRh) _ 0
+  have E2 : Thm env Γ (tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) ::
+      litT (ev (precR g h) (cp :: t :: xs)) :: litT t :: xs.map litT) P 0 =ₒ
+      tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) ::
+        litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT) P 0) :=
+    tmplH_congr1 (hs₁ := [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs))])
+      (.cons (by otype) .nil) (.cons (by otype) hxs.map_litT) (by otype) (by otype)
+      (litT_congr hRL hr eR) _ 0
+  have h1 := prf_congr (by otype) (by otype) (by otype) E2
+    (prf_congr (by otype) (by otype) (by otype) E1 h1)
+  subst hP
+  generalize hr'e : ev h (ev (.prec g h) (t :: xs) :: t :: xs) = r' at h1 hr'
+  generalize hre : ev (.prec g h) (t :: xs) = r at h1 hr ih hr'e
+  -- modus ponens with the proof at `t`, then with `h`'s at `[r, t, xs]`
+  have e5 : tmplH (litT r' :: litT r :: litT t :: xs.map litT)
+      (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) 0 =
+      tmplH (litT r :: litT t :: xs.map litT) (valF (.prec g h) (n + 1)) 0 := by
+    rw [← valF_lift0]
+    exact tmplH_liftN_erase [] _ _ _ 0
+  rw [← e5] at ih
+  have h2 := prf_mpH (ys := r' :: r :: t :: xs) (.cons hr' (.cons hr (.cons ht hxs)))
+    (by otype) (by otype) h1 ih
+  have p2 := hh (.cons hr (.cons ht hxs)) (by simp only [List.length_cons]; omega)
+  unfold okF at p2
+  simp only [List.map_cons] at p2
+  rw [hr'e] at p2
+  have h3 := prf_mpH (ys := r' :: r :: t :: xs) (.cons hr' (.cons hr (.cons ht hxs)))
+    (by otype) (by otype) h2 p2
+  simp only [List.map_cons] at h3
+  -- the conclusion at `S t`
+  have e6 : tmplH (litT r' :: litT r :: litT t :: xs.map litT)
+      (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0) 0 =
+      tmplH (litT r' :: tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 :: xs.map litT)
+        (valF (.prec g h) (n + 1)) 0 := by
+    rw [← valF_precS_eq]
+    rw [show ∀ B, tmplH (litT r' :: litT r :: litT t :: xs.map litT) (B.liftN 1 1) 0 =
+      tmplH (litT r' :: litT t :: xs.map litT) B 0 from
+        fun B => tmplH_liftN_erase [litT r'] _ _ B 0]
+    rw [show tmplH (litT r' :: litT t :: xs.map litT)
+        (((valF (.prec g h) (n + 1)).liftN 1 2).inst (S (.bvar 0)) 1) 0 =
+      tmplH (litT r' :: tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 :: litT t ::
+        xs.map litT) ((valF (.prec g h) (n + 1)).liftN 1 2) 0 from
+        tmplH_inst_insert [litT r'] (litT t :: xs.map litT) (e := S (.bvar 0))
+          ⟨trivial, Nat.succ_pos _⟩ _ 0]
+    exact tmplH_liftN_erase [litT r', _] _ _ _ 0
+  rw [e6] at h3
+  have ew : tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 =
+      tagT 7 3 (pair (numT (encExpr succ)) (litT t)) := by
+    simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, if_false, Nat.sub_self,
+      Nat.zero_lt_succ, if_true, List.getD_cons_zero]
+    rfl
+  rw [ew] at h3
+  have E8 : Thm env Γ (tmplH (litT r' :: tagT 7 3 (pair (numT (encExpr succ)) (litT t)) ::
+      xs.map litT) (valF (.prec g h) (n + 1)) 0 =ₒ
+      tmplH (litT r' :: litT (S t) :: xs.map litT) (valF (.prec g h) (n + 1)) 0) :=
+    tmplH_congr1 (hs₁ := [litT r']) (.cons (by otype) .nil) hxs.map_litT (by otype)
+      (by otype) (Thm.symm (by otype) (by otype) (litT_succ ht)) _ 0
+  have hS : Tm env Γ (ev (.prec g h) (S t :: xs)) := evTy (.cons (STy ht) hxs)
+  have eS : Thm env Γ (ev (.prec g h) (S t :: xs) =ₒ r') := by
+    rw [← hr'e, ← hre]; exact ev_prec_succ (f := .prec g h) rfl hxs ht
+  have E9 : Thm env Γ (tmplH (litT r' :: litT (S t) :: xs.map litT) (valF (.prec g h) (n + 1)) 0 =ₒ
+      tmplH (litT (ev (.prec g h) (S t :: xs)) :: litT (S t) :: xs.map litT)
+        (valF (.prec g h) (n + 1)) 0) :=
+    tmplH_congr1 (hs₁ := []) .nil (.cons (by otype) hxs.map_litT) (by otype) (by otype)
+      (litT_congr hr' hS (Thm.symm hS hr' eS)) _ 0
+  have h4 := prf_congr (by otype) (by otype) (by otype) E9
+    (prf_congr (by otype) (by otype) (by otype) E8 h3)
+  refine prf_congr_c (by otype) (by otype) (by otype) ?_ h4
+  rw [← hre]
+  orw [ev_precS hL, ev_push (f := .push (precR g h) (ren skip1 τh)) rfl hL,
+    ev_ren_eq (f := τh) skip1 (.cons hRL hL) (l' := ev (precR g h) (cp :: t :: xs) :: t :: xs)
+      (valS_skip1 _ _ _), eR]
+
 theorem ok_prec {g h τg τh : PR} {n : Nat} (hg : Ok env T g n τg) (hh : Ok env T h (n + 2) τh) :
     ∃ τ, Ok env T (.prec g h) (n + 1) τ := by
   obtain ⟨c₀, hc₀⟩ := closed_prf hT (P := allN (n + 1) (imp (valF g n)
       (ev (.prec g h) (zero :: args 1 n) =ₒ .bvar 0)))
     (allN_intro (env := env) (n + 1) (Γ := []) (gp_prec0 (argsTy (by omega)) (bvar_rep (by omega))))
-  obtain ⟨cₛ, hcₛ⟩ := closed_prf hT (P := allN (n + 3) (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1)
-      (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))))
+  obtain ⟨cₛ, hcₛ⟩ := closed_prf hT (P := allN (n + 3)
+      (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1)
+        (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))))
     (allN_intro (env := env) (n + 3) (Γ := []) (gp_precS (argsTy (by omega)) (bvar_rep (by omega))
       (bvar_rep (by omega)) (bvar_rep (by omega))))
   refine ⟨.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh), okF_ind ?_ ?_⟩
@@ -350,100 +457,11 @@ theorem ok_prec {g h τg τh : PR} {n : Nat} (hg : Ok env T g n τg) (hh : Ok en
     rw [precZ]
     orw [ev_mpP hxs]
   · intro Γ t xs ht hxs hlen ih
-    unfold okF at ih
-    simp only [List.map_cons] at ih
-    have hr : Tm env Γ (ev (.prec g h) (t :: xs)) := evTy (.cons ht hxs)
-    have hr' : Tm env Γ (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :=
-      evTy (.cons hr (.cons ht hxs))
-    have hcp : Tm env Γ (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs)) :=
-      evTy (.cons ht hxs)
-    have hL : Tms env Γ (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) ::
-      t :: xs) := .cons hcp (.cons ht hxs)
-    have h1 := prf_instC hz jz hs js (argC 2 n ++ [var 1, precR g h,
-        .push (precR g h) (ren skip1 h)]) hL
-      (by rw [List.length_append, length_argC]; exact hcₛ)
-    have e0 : ((argC 2 n ++ [var 1, precR g h, .push (precR g h) (ren skip1 h)]).map
-        (ev · (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs))).reverse =
-        ev (.push (precR g h) (ren skip1 h))
-          (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) ::
-        ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) ::
-        t :: xs := by
-      simp only [List.map_append, List.reverse_append, List.map_cons, List.map_nil,
-        List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append,
-        argC_ev 2 n _ (show (_ :: t :: xs).length = 2 + n by simp only [List.length_cons]; omega),
-        List.drop_succ_cons, List.drop_zero, ev_var, List.getD_cons_succ, List.getD_cons_zero]
-    rw [e0] at h1
-    simp only [List.map_cons] at h1
-    have eR : Thm env Γ (ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) =ₒ ev (.prec g h) (t :: xs)) := ev_ren_eq Nat.succ hL (valS_succ _ _)
-    have hRL : Tm env Γ (ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs)) := evTy hL
-    have eRh : Thm env Γ (ev (.push (precR g h) (ren skip1 h)) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) =ₒ ev h (ev (.prec g h) (t :: xs) :: t :: xs)) := by
-      orw [ev_push (f := .push (precR g h) (ren skip1 h)) rfl hL,
-        ev_ren_eq (f := h) skip1 (.cons hRL hL) (l' := ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) :: t :: xs)
-          (valS_skip1 _ _ _), eR]
-    have E1 : Thm env Γ (tmplH (litT (ev (.push (precR g h) (ren skip1 h)) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs)) ::
-        litT (ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs)) :: litT t :: xs.map litT) (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))) 0 =ₒ
-        tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs)) :: litT t :: xs.map litT) (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))) 0) :=
-      tmplH_congr1 (hs₁ := []) .nil (.cons (by otype) (.cons (by otype) hxs.map_litT))
-        (by otype) (by otype) (litT_congr (by otype) hr' eRh) _ 0
-    have E2 : Thm env Γ (tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs)) :: litT t :: xs.map litT)
-        (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))) 0 =ₒ tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT) (imp (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) (imp (valF h (n + 2)) (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0))) 0) :=
-      tmplH_congr1 (hs₁ := [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs))]) (.cons (by otype) .nil) (.cons (by otype) hxs.map_litT)
-        (by otype) (by otype) (litT_congr hRL hr eR) _ 0
-    have h1 := prf_congr (by otype) (by otype) (by otype) E2
-      (prf_congr (by otype) (by otype) (by otype) E1 h1)
-    have e5 : tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT)
-        (ev (.prec g h) (args 2 (n + 1)) =ₒ .bvar 1) 0 =
-        tmplH (litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT) (valF (.prec g h) (n + 1)) 0 := by
-      rw [← valF_lift0]
-      exact tmplH_liftN_erase [] _ _ _ 0
-    rw [← e5] at ih
-    have h2 := prf_mpH (ys := ev h (ev (.prec g h) (t :: xs) :: t :: xs) :: ev (.prec g h) (t :: xs) :: t :: xs) (.cons hr' (.cons hr (.cons ht hxs)))
-      (by otype) (by otype) h1 ih
-    have p2 := hh (.cons hr (.cons ht hxs)) (by simp only [List.length_cons]; omega)
-    unfold okF at p2
-    simp only [List.map_cons] at p2
-    have h3 := prf_mpH (ys := ev h (ev (.prec g h) (t :: xs) :: t :: xs) :: ev (.prec g h) (t :: xs) :: t :: xs) (.cons hr' (.cons hr (.cons ht hxs)))
-      (by otype) (by otype) h2 p2
-    simp only [List.map_cons] at h3
-    have e6 : tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT)
-        (ev (.prec g h) (S (.bvar 2) :: args 3 n) =ₒ .bvar 0) 0 =
-        tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 :: xs.map litT)
-          (valF (.prec g h) (n + 1)) 0 := by
-      rw [← valF_precS_eq]
-      rw [show ∀ B, tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (ev (.prec g h) (t :: xs)) :: litT t :: xs.map litT) (B.liftN 1 1) 0 =
-        tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT t :: xs.map litT) B 0 from
-          fun B => tmplH_liftN_erase [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs))] _ _ B 0]
-      rw [show tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT t :: xs.map litT)
-          (((valF (.prec g h) (n + 1)).liftN 1 2).inst (S (.bvar 0)) 1) 0 =
-        tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 :: litT t ::
-          xs.map litT) ((valF (.prec g h) (n + 1)).liftN 1 2) 0 from
-          tmplH_inst_insert [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs))] (litT t :: xs.map litT) (e := S (.bvar 0))
-            ⟨trivial, Nat.succ_pos _⟩ _ 0]
-      exact tmplH_liftN_erase [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)), _] _ _ _ 0
-    rw [e6] at h3
-    have ew : tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 =
-        tagT 7 3 (pair (numT (encExpr succ)) (litT t)) := by
-      simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, if_false, Nat.sub_self,
-        Nat.zero_lt_succ, if_true, List.getD_cons_zero]
-      rfl
-    rw [ew] at h3
-    have E8 : Thm env Γ (tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: tagT 7 3 (pair (numT (encExpr succ)) (litT t)) ::
-        xs.map litT) (valF (.prec g h) (n + 1)) 0 =ₒ tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (S t) :: xs.map litT) (valF (.prec g h) (n + 1)) 0) :=
-      tmplH_congr1 (hs₁ := [litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs))]) (.cons (by otype) .nil) hxs.map_litT (by otype)
-        (by otype) (Thm.symm (by otype) (by otype) (litT_succ ht)) _ 0
-    have hS : Tm env Γ (ev (.prec g h) (S t :: xs)) := evTy (.cons (STy ht) hxs)
-    have E9 : Thm env Γ (tmplH (litT (ev h (ev (.prec g h) (t :: xs) :: t :: xs)) :: litT (S t) :: xs.map litT) (valF (.prec g h) (n + 1)) 0 =ₒ
-        tmplH (litT (ev (.prec g h) (S t :: xs)) :: litT (S t) :: xs.map litT) (valF (.prec g h) (n + 1)) 0) :=
-      tmplH_congr1 (hs₁ := []) .nil (.cons (by otype) hxs.map_litT) (by otype) (by otype)
-        (litT_congr hr' hS (Thm.symm hS hr' (ev_prec_succ (f := .prec g h) rfl hxs ht))) _ 0
-    have h4 := prf_congr (by otype) (by otype) (by otype) E9
-      (prf_congr (by otype) (by otype) (by otype) E8 h3)
-    unfold okF
-    simp only [List.map_cons]
-    refine prf_congr_c (by otype) (by otype) (by otype) ?_ h4
-    orw [ev_prec_succ rfl hxs ht, ev_precS hL, ev_push (f := .push (precR g h) (ren skip1 τh)) rfl hL,
-      ev_ren_eq (f := τh) skip1 (.cons hRL hL) (l' := ev (precR g h) (ev (.prec (precZ z s c₀ n g τg) (precS z s cₛ n g h τh)) (t :: xs) :: t :: xs) :: t :: xs)
-        (valS_skip1 _ _ _), eR]
+    unfold okF at ih ⊢
+    simp only [List.map_cons] at ih ⊢
+    have h := prec_step hz jz hs js hh hcₛ (evTy (.cons ht hxs)) ht hxs hlen ih
+    refine prf_congr_c (by otype) (by otype) (by otype) ?_ h
+    orw [ev_prec_succ rfl hxs ht]
 
 omit hz jz hs js hT in
 theorem ok_prec_nil {g h τ : PR} (h1 : Ok env T (.prec g h) 1 τ) : Ok env T (.prec g h) 0 τ := by
@@ -471,16 +489,17 @@ internally. -/
 theorem ok_exists : ∀ (f : PR) (n : Nat), ∃ τ, Ok env T f n τ := by
   intro f
   induction f with
-  | zero => intro n; exact ok_zeroLike hz jz hs js hT (fun _ _ => rfl) rfl
+  | zero => intro n; exact ok_zeroLike hT (fun _ _ => rfl) rfl
   | var i =>
     intro n
     by_cases hi : i < n
     · exact ok_var hz jz hs js hT hi
-    · refine ok_zeroLike hz jz hs js hT (fun xs hl => ?_) ?_
+    · refine ok_zeroLike hT (fun xs hl => ?_) ?_
       · rw [ev_var, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega), Option.getD_none]
       · simp only [valF, ev_var, args_getD, if_neg hi]
   | succ f ih => intro n; exact ok_succ hz jz hs js hT (ih n).choose_spec
-  | push h g ihh ihg => intro n; exact ok_push hz jz hs js hT (ihh n).choose_spec (ihg (n + 1)).choose_spec
+  | push h g ihh ihg =>
+    intro n; exact ok_push hz jz hs js hT (ihh n).choose_spec (ihg (n + 1)).choose_spec
   | prec g h ihg ihh =>
     intro n
     cases n with
