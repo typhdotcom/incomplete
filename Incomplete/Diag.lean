@@ -34,10 +34,11 @@ def diagC : PR :=
         (numC (encExpr (.bvar 0)))))))
     (numC (encExpr falseS)))))
 
-theorem diagComputable : DiagComputable :=
-  ⟨diagC, fun ρ => by
-    simp only [diagC, eval_tagC, eval_cpair, eval_numC, eval_var, eval_push litC_computes]
-    rfl⟩
+theorem eval_diagC (ρ : Val) : diagC.eval ρ = diagNum (ρ 1) (ρ 1) := by
+  simp only [diagC, eval_tagC, eval_cpair, eval_numC, eval_var, eval_push litC_computes]
+  rfl
+
+theorem diagComputable : DiagComputable := ⟨diagC, eval_diagC⟩
 
 /-- **Incompleteness**, from consistency and the checkability of proofs. -/
 theorem incomplete_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)

@@ -1,8 +1,8 @@
 # incomplete
 
-A Lean 4 proof of Gödel–Kleene incompleteness for the formal type theory of
-[lean4lean](https://github.com/digama0/lean4lean), with the inductive and
-primitive projection extensions from
+A Lean 4 proof of Gödel–Kleene and Rosser incompleteness for the formal type
+theory of [lean4lean](https://github.com/digama0/lean4lean), with the inductive
+and primitive projection extensions from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean) described below.
 The proof system is the typing judgment `VEnv.HasType` / `VEnv.IsDefEq` of
 `Lean4Lean.Theory.Typing`, for sentences about `Nat`. It is about that formal
@@ -24,14 +24,34 @@ Some machine does not halt on its own code, and the Prop/Type fragment of
 (`Incomplete/Unconditional.lean`)
 
 ```lean
+theorem incomplete_rosser (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
+    ∃ d : PR, env.HasType 0 [] (notHalts d d.code) (.sort .zero) ∧ ¬d.Halts d.code ∧
+      ¬Provable env (notHalts d d.code) ∧ ¬Provable env (halts d d.code)
+```
+
+Every consistent well-formed extension of `natEnv` neither proves nor refutes
+some closed proposition: the true non-halting sentence of the Rosser machine on
+its own code. `halts d n` is `notHalts d n → False`. (`Incomplete/Rosser.lean`)
+
+```lean
+theorem incomplete_rosser' {ds : List VDecl} {env : VEnv} (H : env.WF' ds)
+    (hm : .induct natDecl ∈ ds) (hC : Consistent env) :
+    ∃ d : PR, env.HasType 0 [] (notHalts d d.code) (.sort .zero) ∧ ¬d.Halts d.code ∧
+      ¬Provable env (notHalts d d.code) ∧ ¬Provable env (halts d d.code)
+```
+
+The same for any consistent environment built from well-formed declarations,
+one of which is `Nat`. (`Incomplete/Rosser.lean`)
+
+```lean
 theorem incomplete_of_wf (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
     ∃ d : PR, ¬d.Halts d.code ∧ ¬Provable env (notHalts d d.code) ∧
       (HaltsSound env → ¬Provable env (halts d d.code))
 ```
 
-Every consistent well-formed extension of `natEnv` leaves some true
-non-halting sentence unprovable, and, if its halting proofs are sound, also
-irrefutable. (`Incomplete/Extend.lean`)
+The Gödel–Kleene form, for the diagonal machine: its true non-halting sentence
+is unprovable, and, if halting proofs are sound, irrefutable.
+(`Incomplete/Extend.lean`)
 
 ```lean
 theorem incomplete_of_wf' {ds : List VDecl} {env : VEnv} (H : env.WF' ds)
@@ -72,7 +92,7 @@ The fragment proves `halts f n` only when `f` halts on `n`.
   and that uses no projection rule (`BDefEq`, `Incomplete/Bounded.lean`).
 - `Consistent env`: `¬Provable env falseS`.
 - `HaltsSound env`: every provable `halts f n` is true (1-consistency for these
-  sentences).
+  sentences). Only the Gödel–Kleene form uses it.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's well-formedness of an
   environment built from the declarations `ds`, and environment extension.
 
@@ -81,8 +101,14 @@ The fragment proves `halts f n` only when `f` halts on `n`.
 The unconditional result is for the Prop/Type, projection-free fragment of
 `natEnv`; its consistency and soundness for `halts` come from a set model
 (`Incomplete/Model.lean`, `Incomplete/ModelSound.lean`). For the full theory
-and its well-formed extensions, unprovability is conditional on `Consistent`
-and irrefutability on `HaltsSound`, neither of which is proved here.
+and its well-formed extensions, the Rosser form is conditional on `Consistent`
+alone, and the Gödel–Kleene form's irrefutability also on `HaltsSound`;
+neither hypothesis is proved here.
+
+The Rosser machine races certificates for `notHalts d ⌜d⌝` against
+certificates for `halts d ⌜d⌝`. Refuting a proof of `halts` takes reasoning
+inside the object theory about every number: `Incomplete/Induct.lean` builds
+those proofs with `Nat.rec` into `Prop`.
 
 ## Dependency
 
@@ -135,6 +161,8 @@ To audit, check the axioms of each theorem in a file importing the library:
 import Incomplete
 open Incomplete
 #print axioms incomplete_unconditional
+#print axioms incomplete_rosser
+#print axioms incomplete_rosser'
 #print axioms incomplete_of_wf
 #print axioms incomplete_of_wf'
 #print axioms bconsistent
@@ -151,6 +179,8 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
 
 - `Kleene`: the abstract argument. `Main`, `Final`: its instance, from
   consistency.
+- `Induct`, `Rosser`: induction in the object theory, the Rosser machine, and
+  Rosser's theorem.
 - `PR`, `PRLib`: the machine model. `Sentences`, `Arith`, `Adequacy`: halting
   sentences and Σ₁-completeness.
 - `Cert*`, `Check*`, `Encode`, `*PR`, `Rules*`, `ProjRules`: the proof checker as

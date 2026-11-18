@@ -135,8 +135,8 @@ def motiveTy1 : VExpr := .forallE nat (.sort (.succ .zero))
 /-- The arguments `motive A, z, s` for the binders of `Nat.rec.{1}`. -/
 theorem HasNat.recArgs (H : HasNat env) (hI : Inert A)
     (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
-    (hz : env.HasType 0 [] z A) (hs : env.HasType 0 [] s (.forallE nat (.forallE A A))) :
-    Ctx.SubstEq env 0 [] (Subst.id.consList [motive A, z, s]) (Subst.id.consList [motive A, z, s])
+    (hz : env.HasType 0 Γ z A) (hs : env.HasType 0 Γ s (.forallE nat (.forallE A A))) :
+    Ctx.SubstEq env 0 Γ (Subst.id.consList [motive A, z, s]) (Subst.id.consList [motive A, z, s])
       [succTy, zeroTy, motiveTy1] := by
   have N := H.toNatConsts
   have := H.hNat; have := H.hZero; have := H.hSucc
@@ -148,7 +148,7 @@ theorem HasNat.recArgs (H : HasNat env) (hI : Inert A)
   · exact HasType.lam N.natT (hA _)
   · exact (motive_app hI hA N.zeroT).defeq' hz
   · have := (succMinor_conv N hI hA).defeq hs
-    show env.HasType 0 [] s _
+    show env.HasType 0 Γ s _
     simpa [succTy, Subst.consList, Subst.cons, Subst.tail, VExpr.subst, Subst.lift, Subst.id,
       (Inert.motive hI).liftN, VExpr.liftN] using this
 
@@ -160,13 +160,13 @@ theorem HasNat.recTele (H : HasNat env) : env.IsTele 0 [] [motiveTy1, zeroTy, su
     ⟨_, by unfold succTy zeroTy motiveTy1; type_tac⟩
   exact .cons ⟨_, t1⟩ (.cons ⟨_, t2⟩ (.cons ⟨_, t3⟩ .nil))
 
-/-- `Nat.rec (fun _ => A) z s Nat.zero ≡ z`. -/
-theorem HasNat.iota_zero (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
-    (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
-    (hz : env.HasType 0 [] z A) (hs : env.HasType 0 [] s (.forallE nat (.forallE A A))) :
-    env.IsDefEq 0 [] (natRec A z s zero) z A := by
+/-- `Nat.rec (fun _ => A) z s Nat.zero ≡ z`, in any well-formed context. -/
+theorem HasNat.iota_zero' (H : HasNat env) (henv : env.Ordered) (hΓ : OnCtx Γ (env.IsType 0))
+    (hI : Inert A) (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
+    (hz : env.HasType 0 Γ z A) (hs : env.HasType 0 Γ s (.forallE nat (.forallE A A))) :
+    env.IsDefEq 0 Γ (natRec A z s zero) z A := by
   have := H.hNat; have := H.hZero; have := H.hSucc; have := H.hRec
-  have hx : env.IsDefEq 0 []
+  have hx : env.IsDefEq 0 Γ
       ((VExpr.lams [motiveTy1, zeroTy, succTy]
         (.appN (.const ``Nat.rec [.succ .zero]) [.bvar 2, .bvar 1, .bvar 0, zero])).subst .id)
       (.lams [motiveTy1, zeroTy, succTy] (.bvar 1))
@@ -185,23 +185,24 @@ theorem HasNat.iota_zero (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
     simp only [List.reverse_cons, List.reverse_nil, List.nil_append, List.cons_append]
     unfold succTy zeroTy motiveTy1; type_tac
   have h1 := IsDefEq.appN_substT (Δ := []) (as := [motive A, z, s]) hx rfl W
-  have h2 := IsDefEq.lams_beta henv (Γ₀ := []) trivial (Δ := []) (as := [motive A, z, s])
+  have h2 := IsDefEq.lams_beta henv (Γ₀ := Γ) hΓ (Δ := []) (as := [motive A, z, s])
     .nil H.recTele hL rfl W
-  have h3 := IsDefEq.lams_beta henv (Γ₀ := []) trivial (Δ := []) (as := [motive A, z, s])
+  have h3 := IsDefEq.lams_beta henv (Γ₀ := Γ) hΓ (Δ := []) (as := [motive A, z, s])
     .nil H.recTele hR rfl W
   rw [subst_id] at h1 h2 h3
   have h := h2.symm.trans (h1.trans h3)
   simp [VExpr.subst, Subst.consList, Subst.cons, Subst.id] at h
   exact .defeqDF (motive_app hI hA H.zeroT) h
 
-/-- `Nat.rec (fun _ => A) z s (Nat.succ n) ≡ s n (Nat.rec (fun _ => A) z s n)`. -/
-theorem HasNat.iota_succ (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
-    (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
-    (hz : env.HasType 0 [] z A) (hs : env.HasType 0 [] s (.forallE nat (.forallE A A)))
-    (hn : env.HasType 0 [] n nat) :
-    env.IsDefEq 0 [] (natRec A z s (.app succ n)) (.app (.app s n) (natRec A z s n)) A := by
+/-- `Nat.rec (fun _ => A) z s (Nat.succ n) ≡ s n (Nat.rec (fun _ => A) z s n)`, in any
+well-formed context. -/
+theorem HasNat.iota_succ' (H : HasNat env) (henv : env.Ordered) (hΓ : OnCtx Γ (env.IsType 0))
+    (hI : Inert A) (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
+    (hz : env.HasType 0 Γ z A) (hs : env.HasType 0 Γ s (.forallE nat (.forallE A A)))
+    (hn : env.HasType 0 Γ n nat) :
+    env.IsDefEq 0 Γ (natRec A z s (.app succ n)) (.app (.app s n) (natRec A z s n)) A := by
   have := H.hNat; have := H.hZero; have := H.hSucc; have := H.hRec
-  have hx : env.IsDefEq 0 []
+  have hx : env.IsDefEq 0 Γ
       ((VExpr.lams [motiveTy1, zeroTy, succTy, nat]
         (.appN (.const ``Nat.rec [.succ .zero]) [.bvar 3, .bvar 2, .bvar 1, .app succ (.bvar 0)])).subst .id)
       (.lams [motiveTy1, zeroTy, succTy, nat]
@@ -209,7 +210,7 @@ theorem HasNat.iota_succ (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
       ((VExpr.foralls [motiveTy1, zeroTy, succTy, nat] (.app (.bvar 3) (.app succ (.bvar 0)))).subst .id) := by
     rw [subst_id, subst_id]
     exact IsDefEq.extra H.hIotaSucc (ls := [.succ .zero]) (by simp [VLevel.WF]) rfl
-  have W : Ctx.SubstEq env 0 [] (Subst.id.consList [motive A, z, s, n])
+  have W : Ctx.SubstEq env 0 Γ (Subst.id.consList [motive A, z, s, n])
       (Subst.id.consList [motive A, z, s, n]) ([motiveTy1, zeroTy, succTy, nat].reverse ++ []) :=
     .cons (H.recArgs hI hA hz hs) H.natT hn
   have tele : env.IsTele 0 [] [motiveTy1, zeroTy, succTy, nat] := by
@@ -231,14 +232,29 @@ theorem HasNat.iota_succ (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
       VExpr.appN]
     unfold succTy zeroTy motiveTy1; type_tac
   have h1 := IsDefEq.appN_substT (Δ := []) (as := [motive A, z, s, n]) hx rfl W
-  have h2 := IsDefEq.lams_beta henv (Γ₀ := []) trivial (Δ := []) (as := [motive A, z, s, n])
+  have h2 := IsDefEq.lams_beta henv (Γ₀ := Γ) hΓ (Δ := []) (as := [motive A, z, s, n])
     .nil tele hL rfl W
-  have h3 := IsDefEq.lams_beta henv (Γ₀ := []) trivial (Δ := []) (as := [motive A, z, s, n])
+  have h3 := IsDefEq.lams_beta henv (Γ₀ := Γ) hΓ (Δ := []) (as := [motive A, z, s, n])
     .nil tele hR rfl W
   rw [subst_id] at h1 h2 h3
   have h := h2.symm.trans (h1.trans h3)
   simp [VExpr.subst, Subst.consList, Subst.cons, Subst.id] at h
   exact .defeqDF (motive_app hI hA (.app' H.succT hn rfl)) h
+
+/-- `Nat.rec (fun _ => A) z s Nat.zero ≡ z`. -/
+theorem HasNat.iota_zero (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
+    (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
+    (hz : env.HasType 0 [] z A) (hs : env.HasType 0 [] s (.forallE nat (.forallE A A))) :
+    env.IsDefEq 0 [] (natRec A z s zero) z A :=
+  H.iota_zero' henv trivial hI hA hz hs
+
+/-- `Nat.rec (fun _ => A) z s (Nat.succ n) ≡ s n (Nat.rec (fun _ => A) z s n)`. -/
+theorem HasNat.iota_succ (H : HasNat env) (henv : env.Ordered) (hI : Inert A)
+    (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
+    (hz : env.HasType 0 [] z A) (hs : env.HasType 0 [] s (.forallE nat (.forallE A A)))
+    (hn : env.HasType 0 [] n nat) :
+    env.IsDefEq 0 [] (natRec A z s (.app succ n)) (.app (.app s n) (natRec A z s n)) A :=
+  H.iota_succ' henv trivial hI hA hz hs hn
 
 end
 
