@@ -1,35 +1,35 @@
 State: COMPLETE
 Turn: none
-Candidate: lxooslookymonlxxvnszqkrtovltqyvz / c329860a229a0adbdd215b767bd7035bb1ada0c4
+Candidate: rvpolkrnqyyyquwsznxyopkmuksuxlkl / 74c2107e89835d9c76795abb0fec7c68f7e948ca
 
-# Löb review
+# Consistent, ω-inconsistent context review
 
 ## Objective and meaning
 
-Review Löb's theorem for the actual arithmetized certificate checker: every
-closed proposition `P` of a well-formed extension of `natEnv` is provable if
-the theory proves `Prov T P → P`, for every `TablesFor env T`. Review the
-supporting generalizations of internal completeness and modus ponens, the
-halting-form variant, and the consistency corollary.
+Review the construction, over every consistent well-formed extension of
+`natEnv`, of a consistent context that proves an existential statement while
+refuting every numeral instance of its body. The context is `[Prov T falseS]`
+for the actual arithmetized certificate checker, for every `TablesFor env T`.
 
-The implementation under review is the two commits after `dc449884`, including
-`Incomplete/Obj/Loeb.lean`, changes in `Obj/Second.lean` and `Obj/Reduce.lean`,
-the library import, version `0.4.0`, and the README additions.
+The candidate adds `Incomplete/Obj/Omega.lean`, its library import, README
+statements and definitions, and package version `0.5.0`, after the accepted
+Löb development (`5853cb17`).
 
 ## Accepted foundation
 
 - The formal judgment and upstream/fork dependencies remain as documented in
   `README.md`. These are results about that specification; they establish no
   kernel implementation correctness.
-- Preserve the accepted Gödel–Kleene, Rosser, second incompleteness and bounded
-  unconditional results. Their statements and axiom constraints are unchanged.
+- Preserve the accepted Gödel–Kleene, Rosser, second incompleteness, Löb and
+  bounded unconditional results. Their statements and axiom constraints are
+  unchanged.
 - `Prov T P` is the object proposition asserting an impredicatively encoded
   existential witness for `chkT T` accepting a certificate of `P`. It is
   distinct from the host predicate `Provable env P` and from the
   double-negation halting sentence.
-- Löb's theorem assumes neither `Consistent env` nor `HaltsSound env`.
-  `prov_lit_iff` has its documented consistency assumption; `prov_sound` has
-  its documented halting-soundness assumption.
+- Löb assumes neither consistency nor halting soundness. This construction
+  explicitly assumes `Consistent env`; it asserts a context over `env`, whose
+  checker is unchanged, rather than constructing a new environment.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
@@ -37,46 +37,43 @@ the library import, version `0.4.0`, and the README additions.
 Accepted. No blocking finding was identified. The review is complete, and no
 worker action remains.
 
-The proof establishes the advertised Löb rule for every closed proposition,
-with all machine and internal-completeness hypotheses discharged. Inspection
-followed the positive halting sentence, its syntax encoding, the self-reference
-identity `fn_loebM_code`, the proved graph lemma in `sigma_E`, internal
-certificate modus ponens, and `loeb_core`. The final step obtains an actual
-closed certificate of the internally proved implication and constructs its
-positive halting witness. It does not extract an external witness from an
-arbitrary proof of an existential sentence.
+Context consistency follows by discharging a hypothetical derivation of
+`falseS` from `Prov T falseS`, applying Löb at `falseS`, and contradicting
+base consistency. The existential statement is precisely the context's
+hypothesis, a closed well-typed proposition.
 
-The generalized `sigma_of_fin` retains its graph and closed-conclusion
-premises; `sigma_E` discharges them for positive halting. The original
-`sigma_of` remains a specialization, and the existing second theorem builds
-and retains its previous axiom dependencies. The halting-form Löb variant
-uses the proved implication from positive provability, and the consistency
-corollary specializes Löb to `falseS`.
+For each host natural number `k`, base consistency and checker adequacy imply
+that the checker returns a nonzero number on that certificate of `falseS`.
+The internal numeral computation and successor disequality then prove the
+negation of that numeral instance already in the empty context. Weakening
+supplies it in the singleton context. The family of separate proofs is a
+host quantification, not a proof of an object universal negation; no internal
+witness extraction or soundness assumption is smuggled into the argument.
 
-The accompanying README correction removes a stale claim that `HaltsSound`
-is used only by the Gödel–Kleene form: `prov_sound` now uses it too.
+`omega_inconsistent_exists` discharges the table-existence obligation using
+well-formedness. The README accurately describes the assumptions, the
+context/environment distinction, and the checker predicate. The version and
+library import match the new public results.
 
 ## Current drawers
 
-None. D1, closed in the preceding review, remains closed; hypothesis-search
-implementation was not changed in this candidate.
+None. D1 remains closed; the accepted hypothesis-search fix is unchanged.
 
 ## Verification
 
-- `nix develop -c lake build` passed (132 jobs).
-- A fresh temporary package containing all project sources and the pinned
-  package configuration built successfully (132 jobs), recompiling every
-  project module and reusing installed dependency artifacts.
-- An independent `lake env lean --trust=0` audit passed for all thirteen
-  README theorems, including `loeb`, `loeb_halts` and
-  `con_unprovable_of_loeb`. Additional audits covered `prov_of_provable`,
-  `prov_lit_iff`, `prov_sound`, `con_iff_not_prov`, `Obj.sigma_E`,
-  `Obj.sigma_of_fin` and `Obj.prf_mpT`. Every audited result reports exactly
+- `nix develop -c lake build` passed (133 jobs).
+- Independently re-elaborated `Incomplete/Obj/Omega.lean` with
+  `lake env lean --trust=0`; it passed without warnings.
+- A separate `lake env lean --trust=0` audit passed for all fifteen README
+  headline theorems and the three new supporting theorems
+  `prov_false_ctx_consistent`, `prov_false_ctx_proves_prov`, and
+  `not_prf_false_lit`. Each reports exactly
   `[propext, Classical.choice, Quot.sound]`.
-- Inspected the fully explicit types of the headline and internal theorems.
-  Disposable specializations checked reflection at `falseS` and the
-  unprovability of reflection for an unprovable proposition.
-- Source inspection found no new proof holes, native decision proofs, custom
-  axiom declarations, or unsafe definitions in the changed Lean files.
-- `nix flake check` passed. Existing unused-variable and unused-simp-argument
-  warnings remain nonblocking.
+- Disposable probes checked the explicit hypotheses, closed proposition
+  typing, the existential body's exact syntax, and substitution at every
+  numeral against the refuted predicate. The combined theorem also checked
+  in that explicit existential-and-instances formulation.
+- Source inspection found no proof holes, native decision proofs, custom
+  axiom declarations, or unsafe definitions in the new module.
+- `nix flake check` passed. Existing warnings in unchanged modules remain
+  nonblocking.
