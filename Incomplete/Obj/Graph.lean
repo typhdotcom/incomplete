@@ -83,13 +83,21 @@ theorem length_argC : ∀ (s n : Nat), (argC s n).length = n
 noncomputable def okF (T : PR) (f τ : PR) (n : Nat) (xs : List VExpr) : VExpr :=
   prf T (tmplH ((ev f xs :: xs).map litT) (valF f n) 0) (ev τ xs) =ₒ zero
 
+theorem map_ev_single_liftN (f : PR) (l : List VExpr) (n k : Nat) :
+    (l.map fun v => ev f [v]).map (·.liftN n k) = (l.map (·.liftN n k)).map fun v => ev f [v] := by
+  simp only [List.map_map]; congr 1; funext x; exact ev_liftN f [x] n k
+
+theorem map_ev_single_inst (f : PR) (l : List VExpr) (e : VExpr) (k : Nat) :
+    (l.map fun v => ev f [v]).map (·.inst e k) = (l.map (·.inst e k)).map fun v => ev f [v] := by
+  simp only [List.map_map]; congr 1; funext x; exact ev_inst f [x] e k
+
 theorem map_litT_liftN (l : List VExpr) (n k : Nat) :
-    (l.map litT).map (·.liftN n k) = (l.map (·.liftN n k)).map litT := by
-  simp only [List.map_map]; congr 1; funext x; simp only [Function.comp, obj_simp]
+    (l.map litT).map (·.liftN n k) = (l.map (·.liftN n k)).map litT :=
+  map_ev_single_liftN litC l n k
 
 theorem map_litT_inst (l : List VExpr) (e : VExpr) (k : Nat) :
-    (l.map litT).map (·.inst e k) = (l.map (·.inst e k)).map litT := by
-  simp only [List.map_map]; congr 1; funext x; simp only [Function.comp, obj_simp]
+    (l.map litT).map (·.inst e k) = (l.map (·.inst e k)).map litT :=
+  map_ev_single_inst litC l e k
 
 @[obj_simp] theorem okF_liftN {T : PR} {f τ : PR} {n m k : Nat} (xs : List VExpr) :
     (okF T f τ n xs).liftN m k = okF T f τ n (xs.map (·.liftN m k)) := by

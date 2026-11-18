@@ -198,9 +198,15 @@ theorem eval_comp2' (g a b : PR) (ν : Val) :
   simp only [comp2, eval, eval_ren]
   refine ⟨_, ?_, ?_, rfl⟩ <;> rfl
 
+theorem eval_prec_comp2_zero (F h : PR) (ν : Val) :
+    ∃ ν' : Val, ν' 0 = 0 ∧ ν' 1 = ν 0 ∧
+      (prec (comp2 F zero (var 0)) h).eval (vcons 0 ν) = F.eval ν' :=
+  eval_comp2' F zero (var 0) ν
+
 theorem eval_stateC_zero (G : PR) (ν : Val) :
-    ∃ ν' : Val, ν' 0 = 0 ∧ ν' 1 = ν 0 ∧ (stateC G).eval (vcons 0 ν) = (foundC G).eval ν' :=
-  eval_comp2' (foundC G) zero (var 0) ν
+    ∃ ν' : Val, ν' 0 = 0 ∧ ν' 1 = ν 0 ∧ (stateC G).eval (vcons 0 ν) = (foundC G).eval ν' := by
+  unfold stateC
+  exact eval_prec_comp2_zero (foundC G) _ ν
 
 theorem eval_stateC_succ (G : PR) (ν : Val) (k : Nat) :
     ∃ ν' : Val, ν' 0 = k + 1 ∧ ν' 1 = ν 0 ∧ (stateC G).eval (vcons (k + 1) ν) =
