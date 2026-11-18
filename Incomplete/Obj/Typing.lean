@@ -1,5 +1,6 @@
 import Incomplete.Induct
 import Incomplete.Adequacy
+import Incomplete.BSigma
 
 /-!
 # The judgment of the object-level development
@@ -32,6 +33,9 @@ def full (env : VEnv) : Typing := ⟨env, env.IsDefEq 0⟩
 
 instance : Coe VEnv Typing := ⟨full⟩
 
+/-- The fragment of `env` with sorts `Prop` and `Type` and no projection rules (`BDefEq`). -/
+def bounded (env : VEnv) : Typing := ⟨env, BDefEq env⟩
+
 /-- A judgment closed under the rules the object-level development uses. -/
 class Obj.ObjEnv (env : Typing) : Prop where
   hasNat : HasNat env.env
@@ -61,13 +65,10 @@ class Obj.ObjEnv (env : Typing) : Prop where
     env.IsDefEq Γ h h' p
   weakN : Ctx.LiftN n k Γ Γ' → env.IsDefEq Γ e₁ e₂ A →
     env.IsDefEq Γ' (e₁.liftN n k) (e₂.liftN n k) (A.liftN n k)
+  extra : env.env.defeqs df → (∀ l ∈ ls, l.WF 0) → ls.length = df.uvars →
+    (∀ l ∈ ls, l.eval [] ≤ 1) → env.IsDefEq Γ (df.lhs.instL ls) (df.rhs.instL ls) (df.type.instL ls)
   instN : env.HasType Γ₀ e₀ A₀ → Ctx.InstN Γ₀ e₀ A₀ k Γ₁ Γ → env.IsDefEq Γ₁ e₁ e₂ A →
     env.IsDefEq Γ (e₁.inst e₀ k) (e₂.inst e₀ k) (A.inst e₀ k)
-  natRec_zero : A.ClosedN → (∀ Γ, env.HasType Γ A (.sort (.succ .zero))) → env.HasType Γ z A →
-    env.HasType Γ s (.forallE nat (.forallE A A)) → env.IsDefEq Γ (natRec A z s zero) z A
-  natRec_succ : A.ClosedN → (∀ Γ, env.HasType Γ A (.sort (.succ .zero))) → env.HasType Γ z A →
-    env.HasType Γ s (.forallE nat (.forallE A A)) → env.HasType Γ n nat →
-    env.IsDefEq Γ (natRec A z s (.app succ n)) (.app (.app s n) (natRec A z s n)) A
   adequate : ∀ (f : PR) (ρ : Val), env.IsDefEq [] (f.tr.subst (litS ρ)) (lit (f.eval ρ)) nat
 
 namespace Typing
@@ -297,64 +298,8 @@ theorem stepT_inert {A : VExpr} (hI : Inert A) : Inert (stepT A) :=
    fun _ => by simp [VExpr.subst, hI.subst]⟩
 
 section
-variable {env : VEnv} (H : HasNat env) (henv : env.Ordered) {Γ : List VExpr} {A z s n : VExpr}
+variable {env : VEnv} (H : HasNat env) (henv : env.Ordered)
 include H henv
-
-omit henv in
-theorem full_stepT_T (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero))) :
-    env.HasType 0 Γ (stepT A) (.sort (.imax (.succ .zero) (.imax (.succ .zero) (.succ .zero)))) :=
-  .forallE H.natT (.forallE (hA _) (hA _))
-
-theorem full_natRec_zero (hc : A.ClosedN) (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
-    (hz : env.HasType 0 Γ z A) (hs : env.HasType 0 Γ s (stepT A)) :
-    env.IsDefEq 0 Γ (natRec A z s zero) z A := by
-  have hI := Inert.ofClosed hc
-  have hΔ : OnCtx [stepT A, A] (env.IsType 0) :=
-    ⟨⟨trivial, _, hA _⟩, _, full_stepT_T H hA⟩
-  have hz0 : env.HasType 0 [stepT A, A] (.bvar 1) A := by
-    have := HasType.bvar (env := env) (U := 0) (Lookup.succ (A := stepT A) (Lookup.zero (Γ := [])
-      (ty := A))); simpa only [hI.liftN] using this
-  have hs0 : env.HasType 0 [stepT A, A] (.bvar 0) (stepT A) := by
-    have := HasType.bvar (env := env) (U := 0) (Lookup.zero (Γ := [A]) (ty := stepT A))
-    simpa only [(stepT_inert hI).liftN] using this
-  have h := H.iota_zero' henv hΔ hI hA hz0 hs0
-  have hcl : CtxClosed [stepT A, A] :=
-    ⟨⟨trivial, hc⟩, ⟨trivial, hc.mono (Nat.zero_le _), hc.mono (Nat.zero_le _)⟩⟩
-  have h := h.weakR henv hcl Γ
-  have hs' : env.HasType 0 (A :: Γ) s.lift (stepT A) := by
-    have : env.HasType 0 (A :: Γ) s.lift (stepT A).lift := IsDefEq.weak henv hs
-    simpa only [(stepT_inert hI).liftN] using this
-  have h := h.instN henv hs' .zero
-  have h := h.instN henv hz .zero
-  simpa [natRec, motive, VExpr.inst, hI.inst, inst_lift] using h
-
-theorem full_natRec_succ (hc : A.ClosedN) (hA : ∀ Γ, env.HasType 0 Γ A (.sort (.succ .zero)))
-    (hz : env.HasType 0 Γ z A) (hs : env.HasType 0 Γ s (stepT A)) (hn : env.HasType 0 Γ n nat) :
-    env.IsDefEq 0 Γ (natRec A z s (.app succ n)) (.app (.app s n) (natRec A z s n)) A := by
-  have hI := Inert.ofClosed hc
-  have hΔ : OnCtx [nat, stepT A, A] (env.IsType 0) :=
-    ⟨⟨⟨trivial, _, hA _⟩, _, full_stepT_T H hA⟩, _, H.natT⟩
-  have hz0 : env.HasType 0 [nat, stepT A, A] (.bvar 2) A := by
-    have := HasType.bvar (env := env) (U := 0) (Lookup.succ (A := nat) (Lookup.succ (A := stepT A)
-      (Lookup.zero (Γ := []) (ty := A)))); simpa only [hI.liftN] using this
-  have hs0 : env.HasType 0 [nat, stepT A, A] (.bvar 1) (stepT A) := by
-    have := HasType.bvar (env := env) (U := 0) (Lookup.succ (A := nat)
-      (Lookup.zero (Γ := [A]) (ty := stepT A)))
-    simpa only [(stepT_inert hI).liftN] using this
-  have h := H.iota_succ' henv hΔ hI hA hz0 hs0 (.bvar .zero)
-  have hcl : CtxClosed [nat, stepT A, A] :=
-    ⟨⟨⟨trivial, hc⟩, ⟨trivial, hc.mono (Nat.zero_le _), hc.mono (Nat.zero_le _)⟩⟩,
-      trivial⟩
-  have h := h.weakR henv hcl Γ
-  have hn' : env.HasType 0 (stepT A :: A :: Γ) n.lift.lift nat :=
-    IsDefEq.weak henv (IsDefEq.weak henv hn)
-  have hs' : env.HasType 0 (A :: Γ) s.lift (stepT A) := by
-    have : env.HasType 0 (A :: Γ) s.lift (stepT A).lift := IsDefEq.weak henv hs
-    simpa only [(stepT_inert hI).liftN] using this
-  have h := h.instN henv hn' .zero
-  have h := h.instN henv hs' .zero
-  have h := h.instN henv hz .zero
-  simpa [natRec, motive, VExpr.inst, hI.inst, inst_lift] using h
 
 /-- Full typing has the rules of the object-level development. -/
 theorem ObjEnv.full : ObjEnv (full env) where
@@ -375,13 +320,38 @@ theorem ObjEnv.full : ObjEnv (full env) where
   proofIrrel h₁ h₂ h₃ := VEnv.IsDefEq.proofIrrel h₁ h₂ h₃
   weakN W h := VEnv.IsDefEq.weakN henv W h
   instN h₀ W h := VEnv.IsDefEq.instN henv h₀ W h
-  natRec_zero hc hA hz hs := full_natRec_zero H henv hc hA hz hs
-  natRec_succ hc hA hz hs hn := full_natRec_succ H henv hc hA hz hs hn
+  extra h₁ h₂ h₃ _ := VEnv.IsDefEq.extra h₁ h₂ h₃
   adequate f ρ := f.adequate H henv ρ
 
 end
 
 instance : ObjEnv (full natEnv) := .full hasNat_natEnv natEnv_ordered
+
+/-! ### The fragment with sorts `Prop` and `Type` -/
+
+/-- The fragment `BDefEq env` has the rules of the object-level development. -/
+theorem ObjEnv.bounded {env : VEnv} (H : HasNat env) (henv : env.Ordered) : ObjEnv (bounded env) where
+  hasNat := H
+  ordered := henv
+  toFull h := BDefEq.toIsDefEq h
+  bvar h := BDefEq.bvar h
+  symm h := BDefEq.symm h
+  trans h₁ h₂ := BDefEq.trans h₁ h₂
+  sortDF h₁ h₂ h₃ h₄ := BDefEq.sortDF h₁ h₂ h₃ h₄
+  constDF h₁ h₂ h₃ h₄ h₅ h₆ := BDefEq.constDF h₁ h₂ h₃ h₄ h₅ h₆
+  appDF h₁ h₂ := BDefEq.appDF h₁ h₂
+  lamDF h₁ h₂ := BDefEq.lamDF h₁ h₂
+  forallEDF h₁ h₂ h₃ h₄ h₅ h₆ := BDefEq.forallEDF h₁ h₂ h₃ h₄ h₅ h₆
+  defeqDF h₁ h₂ := BDefEq.defeqDF h₁ h₂
+  beta h₁ h₂ := BDefEq.beta h₁ h₂
+  eta h := BDefEq.eta h
+  proofIrrel h₁ h₂ h₃ := BDefEq.proofIrrel h₁ h₂ h₃
+  weakN W h := BDefEq.weakN henv W h
+  instN h₀ W h := BDefEq.instN henv h₀ W h
+  extra h₁ h₂ h₃ h₄ := BDefEq.extra h₁ h₂ h₃ h₄
+  adequate f ρ := f.badequate H henv ρ
+
+instance : ObjEnv (bounded natEnv) := .bounded hasNat_natEnv natEnv_ordered
 
 end Obj
 

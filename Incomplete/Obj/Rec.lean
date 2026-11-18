@@ -1,4 +1,5 @@
 import Incomplete.Obj.Tactic
+import Incomplete.Obj.Iota
 
 /-!
 # Binary functions by primitive recursion
@@ -55,7 +56,7 @@ theorem rec2_beta (hz : env.HasType (nat :: Γ) z nat)
 theorem rec2_zero (hz : env.HasType (nat :: Γ) z nat)
     (hs : env.HasType (nat :: nat :: nat :: Γ) s nat) (ha : env.HasType Γ a nat) :
     env.IsDefEq Γ (app2 (rec2 z s) a zero) (z.inst a) nat :=
-  (rec2_beta hz hs ha zeroTy).trans (E.natRec_zero (A := nat) trivial (fun _ => natTy)
+  (rec2_beta hz hs ha zeroTy).trans (natRec_zero' (A := nat) Inert.nat (fun _ => natTy)
     (instTy hz ha) (rec2StepTy hs ha))
 
 theorem rec2_succ (hz : env.HasType (nat :: Γ) z nat)
@@ -67,7 +68,7 @@ theorem rec2_succ (hz : env.HasType (nat :: Γ) z nat)
   have hX : env.HasType (nat :: nat :: Γ) (s.inst a 2) nat := hs.instN (.succ (.succ .zero)) ha
   have hX' : env.HasType (nat :: Γ) ((s.inst a 2).inst y 1) nat := hX.instN (.succ .zero) hy
   have hSt := rec2StepTy hs ha
-  have i := E.natRec_succ (A := nat) trivial (fun _ => natTy) (instTy hz ha) hSt hy
+  have i := natRec_succ' (A := nat) Inert.nat (fun _ => natTy) (instTy hz ha) hSt hy
   have c := IsDefEq.appDF (HasType.app hSt hy) (rec2_beta hz hs ha hy).symm
   have b1 := IsDefEq.appDF (IsDefEq.beta (HasType.lam natTy hX) hy) hF
   have b2 := IsDefEq.beta hX' hF

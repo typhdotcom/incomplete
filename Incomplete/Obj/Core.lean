@@ -46,6 +46,9 @@ theorem Thm.provable {env : VEnv} {P : VExpr} (h : Thm env [] P) : Provable env 
 
 theorem Thm.ofProvable {env : VEnv} {P : VExpr} (h : Provable env P) : Thm env [] P := h
 
+theorem Thm.bprovable_iff {env : VEnv} {P : VExpr} : Thm (bounded env) [] P ↔ BProvable env P :=
+  Iff.rfl
+
 /-- A theorem of the judgment is a theorem of full typing. -/
 theorem Thm.toFull {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {P : VExpr} (h : Thm env Γ P) :
     Thm env.env Γ P :=
