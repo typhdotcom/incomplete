@@ -170,24 +170,23 @@ def lvC (f nx : PR) (a : Nat) : PR :=
 
 /-- At `[r, y, x]`: `0` when the first component of `y` checks as a proof of `¬S_b` about the
 code numbered `x`. -/
-noncomputable def qC (T : Tables) (b : Nat) : PR :=
-  comp2 (chkT T) (ren (· + 2) (negSC b)) (fstC (var 1))
+noncomputable def qC (T : PR) (b : Nat) : PR :=
+  comp2 T (ren (· + 2) (negSC b)) (fstC (var 1))
 
 /-- **Solovay's machine**: at `[k, x]`, the world `h k` of the walk for the code numbered `x`. -/
-noncomputable def hM (T : Tables) (K : SFrame) : PR := prec .zero (nextC K (qC T))
+noncomputable def hM (T : PR) (K : SFrame) : PR := prec .zero (nextC K (qC T))
 
 /-- At `[k, x]`: `0` when the walk is at `a` at `k` and leaves it at `k + 1`. -/
-noncomputable def lvM (T : Tables) (K : SFrame) (a : Nat) : PR := lvC (hM T K) (nextC K (qC T)) a
+noncomputable def lvM (T : PR) (K : SFrame) (a : Nat) : PR := lvC (hM T K) (nextC K (qC T)) a
 
 /-! ### The walk, externally -/
 
 section
-variable {T : Tables} {K : SFrame}
+variable {T : PR} {K : SFrame}
 
-theorem eval_qC (b : Nat) (ρ : Val) :
-    (qC T b).eval ρ =
-      chkNumFor T (fun _ => true) ((negSC b).eval fun i => ρ (i + 2)) (unpair1 (ρ 1)) := by
-  rw [qC, eval_comp2 (fun ρ => eval_chkT ρ), eval_ren, eval_fstC, eval_var]; rfl
+theorem eval_qC {F : Nat → Nat → Nat} (hF : Computes2 T F) (b : Nat) (ρ : Val) :
+    (qC T b).eval ρ = F ((negSC b).eval fun i => ρ (i + 2)) (unpair1 (ρ 1)) := by
+  rw [qC, eval_comp2 hF, eval_ren, eval_fstC, eval_var]; rfl
 
 theorem eval_scC (ρ : Val) (a : Nat) : ∀ bs : List Nat, (scC (qC T) bs a).eval ρ = a ∨
     ∃ b ∈ bs, (scC (qC T) bs a).eval ρ = b ∧ (qC T b).eval ρ = 0
@@ -238,7 +237,7 @@ theorem eval_nextC (ρ : Val) : (nextC K (qC T)).eval ρ = ρ 0 ∨
     rfl
 
 /-- The walk of the code numbered `d`. -/
-noncomputable def hN (T : Tables) (K : SFrame) (d k : Nat) : Nat := (hM T K).eval (val2 k d)
+noncomputable def hN (T : PR) (K : SFrame) (d k : Nat) : Nat := (hM T K).eval (val2 k d)
 
 theorem hN_zero (d : Nat) : hN T K d 0 = 0 := rfl
 
@@ -257,16 +256,16 @@ theorem hN_le (d : Nat) : ∀ k, hN T K d k ≤ K.N
 
 /-- **A move of the walk** goes up `R`, along a proof of `¬S_b` checked at the first component
 of the step. -/
-theorem hN_move {d k : Nat} (h : hN T K d (k + 1) ≠ hN T K d k) :
+theorem hN_move {F : Nat → Nat → Nat} (hF : Computes2 T F) {d k : Nat}
+    (h : hN T K d (k + 1) ≠ hN T K d k) :
     K.R (hN T K d k) (hN T K d (k + 1)) = true ∧
-      chkNumFor T (fun _ => true) ((negSC (hN T K d (k + 1))).eval (vcons d fun _ => 0))
-        (unpair1 k) = 0 := by
+      F ((negSC (hN T K d (k + 1))).eval (vcons d fun _ => 0)) (unpair1 k) = 0 := by
   rw [hN_succ] at h ⊢
   rcases eval_nextC (T := T) (K := K) (vcons (hN T K d k) (val2 k d)) with e | e
   · exact absurd e h
   · obtain ⟨h1, h2⟩ := e h
     refine ⟨h1, ?_⟩
-    rw [eval_qC] at h2
+    rw [eval_qC hF] at h2
     exact h2
 
 theorem lvM_eval {a d k : Nat} (h : (lvM T K a).eval (val2 k d) = 0) :

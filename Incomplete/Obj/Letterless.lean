@@ -24,16 +24,20 @@ open Lean4Lean Obj
 
 namespace Modal
 
-theorem real_letterless {T : Tables} {σ σ' : Nat → VExpr} :
-    ∀ {A : Modal}, Letterless A → A.real T σ = A.real T σ'
+theorem realC_letterless {T : PR} {σ σ' : Nat → VExpr} :
+    ∀ {A : Modal}, Letterless A → A.realC T σ = A.realC T σ'
   | var _, h => h.elim
   | bot, _ => rfl
   | imp A B, h => by
-    show VExpr.forallE (A.real T σ) (B.real T σ) = .forallE (A.real T σ') (B.real T σ')
-    rw [real_letterless (σ' := σ') h.1, real_letterless (σ' := σ') h.2]
+    show VExpr.forallE (A.realC T σ) (B.realC T σ) = .forallE (A.realC T σ') (B.realC T σ')
+    rw [realC_letterless (σ' := σ') h.1, realC_letterless (σ' := σ') h.2]
   | box A, h => by
-    show Prov T (A.real T σ) = Prov T (A.real T σ')
-    rw [real_letterless (A := A) (σ' := σ') h]
+    show ProvC T (A.realC T σ) = ProvC T (A.realC T σ')
+    rw [realC_letterless (A := A) (σ' := σ') h]
+
+theorem real_letterless {T : Tables} {σ σ' : Nat → VExpr} {A : Modal} (h : Letterless A) :
+    A.real T σ = A.real T σ' := by
+  rw [real_eq, real_eq, realC_letterless h]
 
 /-- Truth of a letterless formula, with `□B` true when the theory proves `B`'s realization. -/
 def tr (env : VEnv) (T : Tables) : Modal → Prop
@@ -118,7 +122,7 @@ theorem boxBot_succ_imp_unprovable_of (env : VEnv) (hwf : env.WF) (hext : natEnv
   rw [Modal.real_letterless (Modal.boxBot_letterless n) (σ' := fun _ => falseS)] at hn
   rw [Modal.real_letterless (A := .imp _ _)
     ⟨Modal.boxBot_letterless (n + 1), Modal.boxBot_letterless n⟩ (σ' := fun _ => falseS)]
-  exact fun h => hn (loeb env hwf hext hT (Modal.realTy (env := env) (fun _ => falseTy) _) h)
+  exact fun h => hn (loeb env hwf hext hT (Modal.realTy' (env := env) (fun _ => falseTy) _) h)
 
 /-- In a `halts`-sound theory, `□ⁿ⁺¹⊥ → □ⁿ⊥` is unprovable. -/
 theorem boxBot_succ_imp_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
@@ -144,7 +148,7 @@ theorem con_iff_real_neg_box (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
 theorem con_unprovable_letterless (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
     {T : Tables} (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T) := by
   have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
-  have hty := Modal.realTy (env := env) (T := T) (fun _ => falseT)
+  have hty := Modal.realTy' (env := env) (T := T) (fun _ => falseTy)
     (Modal.imp (Modal.boxBot 1) (Modal.boxBot 0))
   have hi := Thm.iffE1 (env := env) (ConT this.hasNat this.ordered) hty
     (con_iff_real_neg_box env hwf hext T fun _ => falseS)

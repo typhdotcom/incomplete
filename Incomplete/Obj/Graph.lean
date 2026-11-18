@@ -80,8 +80,8 @@ theorem length_argC : ∀ (s n : Nat), (argC s n).length = n
     (l.map (·.liftN 1 0)).map (·.inst e 0) = l := map_liftN_inst l e 0
 
 /-- `τ` at `xs` proves that `f` at the numerals `xs` is the numeral of its value. -/
-noncomputable def okF (T : Tables) (f τ : PR) (n : Nat) (xs : List VExpr) : VExpr :=
-  prfT T (tmplH ((ev f xs :: xs).map litT) (valF f n) 0) (ev τ xs) =ₒ zero
+noncomputable def okF (T : PR) (f τ : PR) (n : Nat) (xs : List VExpr) : VExpr :=
+  prf T (tmplH ((ev f xs :: xs).map litT) (valF f n) 0) (ev τ xs) =ₒ zero
 
 theorem map_litT_liftN (l : List VExpr) (n k : Nat) :
     (l.map litT).map (·.liftN n k) = (l.map (·.liftN n k)).map litT := by
@@ -91,23 +91,23 @@ theorem map_litT_inst (l : List VExpr) (e : VExpr) (k : Nat) :
     (l.map litT).map (·.inst e k) = (l.map (·.inst e k)).map litT := by
   simp only [List.map_map]; congr 1; funext x; simp only [Function.comp, obj_simp]
 
-@[obj_simp] theorem okF_liftN {T : Tables} {f τ : PR} {n m k : Nat} (xs : List VExpr) :
+@[obj_simp] theorem okF_liftN {T : PR} {f τ : PR} {n m k : Nat} (xs : List VExpr) :
     (okF T f τ n xs).liftN m k = okF T f τ n (xs.map (·.liftN m k)) := by
   simp only [okF, obj_simp, map_litT_liftN, List.map_cons]
 
-@[obj_simp] theorem okF_inst {T : Tables} {f τ : PR} {n k : Nat} {e : VExpr} (xs : List VExpr) :
+@[obj_simp] theorem okF_inst {T : PR} {f τ : PR} {n k : Nat} {e : VExpr} (xs : List VExpr) :
     (okF T f τ n xs).inst e k = okF T f τ n (xs.map (·.inst e k)) := by
   simp only [okF, obj_simp, map_litT_inst, List.map_cons]
 
 section
 variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 
-theorem okFTy {T : Tables} {f τ : PR} {n : Nat} {xs : List VExpr} (h : Tms env Γ xs) :
+theorem okFTy {T : PR} {f τ : PR} {n : Nat} {xs : List VExpr} (h : Tms env Γ xs) :
     env.HasType Γ (okF T f τ n xs) (.sort .zero) := by
   unfold okF; otype
 
 /-- `τ` proves the graph of `f` at arity `n`, internally. -/
-def Ok (env : Typing) (T : Tables) (f : PR) (n : Nat) (τ : PR) : Prop :=
+def Ok (env : Typing) (T : PR) (f : PR) (n : Nat) (τ : PR) : Prop :=
   ∀ {Γ : List VExpr} {xs : List VExpr}, Tms env Γ xs → xs.length = n → Thm env Γ (okF T f τ n xs)
 
 theorem lookup_rep : ∀ (m : Nat) {i : Nat}, i < m → Lookup (List.replicate m nat ++ Γ) i nat
@@ -137,7 +137,7 @@ theorem Tms.lift_lift {xs : List VExpr} {A B : VExpr} (h : Tms env Γ xs) :
     Tms env (A :: B :: Γ) ((xs.map (·.liftN 1 0)).map (·.liftN 1 0)) := h.weak.weak
 
 /-- **Induction on the first argument.** -/
-theorem okF_ind {T : Tables} {f τ : PR} {n : Nat}
+theorem okF_ind {T : PR} {f τ : PR} {n : Nat}
     (h0 : ∀ {Γ : List VExpr} {xs : List VExpr}, Tms env Γ xs → xs.length = n →
       Thm env Γ (okF T f τ (n + 1) (zero :: xs)))
     (hS : ∀ {Γ : List VExpr} {t : VExpr} {xs : List VExpr}, Tm env Γ t → Tms env Γ xs →

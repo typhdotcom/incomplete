@@ -154,13 +154,13 @@ def Ss (a : Nat) : VExpr := conj (Pa f d a) (Stay f d a)
 theorem Ss_eq (a : Nat) : Ss f d a = Sb (fn f) (lit d) a := rfl
 
 /-- The certificate check of `¬S_b` at the first component of `k`. -/
-noncomputable def Qt (T : Tables) (b : Nat) (k : VExpr) : VExpr :=
-  prfT T (numT (encExpr (neg (Ss f d b)))) (fst k)
+noncomputable def Qt (T : PR) (b : Nat) (k : VExpr) : VExpr :=
+  prf T (numT (encExpr (neg (Ss f d b)))) (fst k)
 
 end
 
 section
-variable {f : PR} {d : Nat} {T : Tables} {b n j : Nat} {k e : VExpr}
+variable {f : PR} {d : Nat} {T : PR} {b n j : Nat} {k e : VExpr}
 
 @[obj_simp] theorem hT_liftN : (hT f d k).liftN n j = hT f d (k.liftN n j) := by
   simp only [hT, obj_simp]
@@ -177,7 +177,7 @@ section
 variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {f : PR} {d : Nat}
 
 theorem hTTy {k : VExpr} (hk : Tm env Γ k) : Tm env Γ (hT f d k) := by unfold hT; otype
-theorem QtTy {T : Tables} {b : Nat} {k : VExpr} (hk : Tm env Γ k) : Tm env Γ (Qt f d T b k) := by
+theorem QtTy {T : PR} {b : Nat} {k : VExpr} (hk : Tm env Γ k) : Tm env Γ (Qt f d T b k) := by
   unfold Qt; otype
 
 end
@@ -255,7 +255,7 @@ theorem ifz_cases {c a b : PR} (hl : Tms env Γ l) :
 end
 
 section
-variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {f : PR} {d : Nat} {q : Nat → PR}
   (hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
     Thm env Γ (ev (q b) [r, k, lit d] =ₒ Qt f d T b k))
 include hq
@@ -375,7 +375,7 @@ end
 /-! ### Solovay's machine computes its walk -/
 
 section
-variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : Tables} {K : SFrame} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {T : PR} {K : SFrame} {d : Nat}
   {k r : VExpr}
 
 theorem hT_prec_zero {nx : PR} : Thm env Γ (hT (prec .zero nx) d zero =ₒ zero) := by
@@ -388,10 +388,10 @@ theorem hT_prec_succ {nx : PR} (hk : Tm env Γ k) :
   orw [fn_ev (litTy d) (STy hk), ev_prec_succ (f := prec .zero nx) rfl (.cons (litTy d) .nil) hk,
     ← fn_ev (f := prec .zero nx) (litTy d) hk]
 
-theorem ev_test {c : PR} {f : PR} {b : Nat}
+theorem ev_test (hb : bnd T ≤ 2) {c : PR} {f : PR} {b : Nat}
     (hc : c.eval (fun i => [d].getD i 0) = encExpr (neg (Ss f d b))) (hr : Tm env Γ r)
     (hk : Tm env Γ k) :
-    Thm env Γ (ev (comp2 (chkT T) (ren (· + 2) c) (fstC (var 1))) [r, k, lit d] =ₒ
+    Thm env Γ (ev (comp2 T (ren (· + 2) c) (fstC (var 1))) [r, k, lit d] =ₒ
       Qt f d T b k) := by
   have hl : Tms env Γ [r, k, lit d] := by otype
   have h1 : Thm env Γ (ev (ren (· + 2) c) [r, k, lit d] =ₒ numT (encExpr (neg (Ss f d b)))) := by
@@ -403,8 +403,8 @@ theorem ev_test {c : PR} {f : PR} {b : Nat}
     exact Thm.symm (by otype) (by otype) (numT_lit _)
   have h2 : Thm env Γ (ev (fstC (var 1)) [r, k, lit d] =ₒ fst k) := by
     orw [ev_fstC hl]
-  orw [ev_comp2 (f := comp2 (chkT T) (ren (· + 2) c) (fstC (var 1))) rfl hl]
-  rw [ev_take 2 (bnd_chkT T)]
+  orw [ev_comp2 (f := comp2 T (ren (· + 2) c) (fstC (var 1))) rfl hl]
+  rw [ev_take 2 hb]
   simp only [List.take_succ_cons, List.take_zero]
   exact ev2_congr (by otype) (by otype) (by otype) (by otype) h1 h2
 
@@ -415,9 +415,9 @@ theorem hM_succ (hk : Tm env Γ k) :
   hT_prec_succ hk
 
 /-- At its own code, the machine's tests are the checks `Qt`. -/
-theorem hM_test (hd : d = (hM T K).code) (b : Nat) (hr : Tm env Γ r) (hk : Tm env Γ k) :
+theorem hM_test (hb : bnd T ≤ 2) (hd : d = (hM T K).code) (b : Nat) (hr : Tm env Γ r) (hk : Tm env Γ k) :
     Thm env Γ (ev (qC T b) [r, k, lit d] =ₒ Qt (hM T K) d T b k) := by
-  refine ev_test ?_ hr hk
+  refine ev_test hb ?_ hr hk
   rw [eval_negSC (hM T K) b (by exact hd), Ss_eq]
   rfl
 

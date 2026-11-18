@@ -22,6 +22,13 @@ def AllH (env : Typing) [ObjEnv env] (T : PR) (z s : Nat) : Prop :=
     Thm env Γ (prf T (tmplH (ys.map litT) (all P) 0) c =ₒ zero) →
     Thm env Γ (prf T (tmplH ((a :: ys).map litT) P 0) (mpX c (numCert z s a)) =ₒ zero)
 
+/-- Modus ponens on the certificates `T` accepts, for a closed conclusion. -/
+def MpT (env : Typing) [ObjEnv env] (T : PR) : Prop :=
+  ∀ {Γ : List VExpr} {A B c₁ c₂ : VExpr}, B.ClosedN → Tm env Γ c₁ → Tm env Γ c₂ →
+    Thm env Γ (prf T (numT (encExpr (imp A B))) c₁ =ₒ zero) →
+    Thm env Γ (prf T (numT (encExpr A)) c₂ =ₒ zero) →
+    Thm env Γ (prf T (numT (encExpr B)) (mpT A B (fldT 1 (jT c₁)) (fldT 1 (jT c₂)) c₁ c₂) =ₒ zero)
+
 /-- `T` is a proof checker for `env` that `env` reasons about. -/
 structure IsChecker (env : Typing) [ObjEnv env] (T : PR) : Prop where
   bnd : bnd T ≤ 2
@@ -32,10 +39,7 @@ structure IsChecker (env : Typing) [ObjEnv env] (T : PR) : Prop where
     Thm env Γ (prf T (tmplH (ys.map litT) P 0) c₂ =ₒ zero) →
     Thm env Γ (prf T (tmplH (ys.map litT) Q 0) (mpX c₁ c₂) =ₒ zero)
   allH : ∃ z s : Nat, AllH env T z s
-  mpT : ∀ {Γ : List VExpr} {A B c₁ c₂ : VExpr}, B.ClosedN → Tm env Γ c₁ → Tm env Γ c₂ →
-    Thm env Γ (prf T (numT (encExpr (imp A B))) c₁ =ₒ zero) →
-    Thm env Γ (prf T (numT (encExpr A)) c₂ =ₒ zero) →
-    Thm env Γ (prf T (numT (encExpr B)) (mpT A B (fldT 1 (jT c₁)) (fldT 1 (jT c₂)) c₁ c₂) =ₒ zero)
+  mpT : MpT env T
 
 /-- `T` accepts only theorems of `env`. -/
 def CheckSound (env : Typing) (T : PR) : Prop :=
@@ -81,6 +85,9 @@ end
 section
 variable {env : Typing} [E : ObjEnv env] {T : Tables}
 
+/-- Modus ponens on the full checker's certificates. -/
+theorem mpT_full : MpT env (chkT T) := fun hB hc₁ hc₂ h₁ h₂ => prf_mpT hB hc₁ hc₂ h₁ h₂
+
 /-- The full checker of tables for `env`'s environment is a checker for `env`. -/
 theorem IsChecker.full (hT : TablesFor env.env T) : IsChecker env (chkT T) where
   bnd := bnd_chkT T
@@ -95,7 +102,7 @@ theorem IsChecker.full (hT : TablesFor env.env T) : IsChecker env (chkT T) where
     exact ⟨z, s, fun hys hc ha h => prf_allH (hz (env := env) (Γ := [])).1
       (hz (env := env) (Γ := [])).2 (hs (env := env) (Γ := [])).1 (hs (env := env) (Γ := [])).2
       hys hc ha h⟩
-  mpT hB hc₁ hc₂ h₁ h₂ := prf_mpT hB hc₁ hc₂ h₁ h₂
+  mpT := mpT_full
 
 end
 

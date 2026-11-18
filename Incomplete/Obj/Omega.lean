@@ -27,7 +27,7 @@ theorem prov_false_ctx_consistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤
 
 /-- The hypothesis `Prov T ⊥`, as a theorem of its context. -/
 theorem prov_false_ctx_proves_prov [ObjEnv env] : Thm env [Prov T falseS] (Prov T falseS) :=
-  (Thm.hyp .zero).cast (Prov_closed T falseS).lift_eq
+  (Thm.hyp .zero).cast (Prov_closed' T falseS).lift_eq
 
 /-- In a consistent theory, each numeral is provably not a certificate of `⊥`. -/
 theorem not_prf_false_lit [ObjEnv env] (hT : TablesFor env T) (hC : Consistent env) (k : Nat) :

@@ -96,7 +96,7 @@ def solσ (f : PR) (d : Nat) {n : Nat} (M : Modal.FinModel (n + 1)) (p : Nat) : 
   bigOr (((List.finRange (n + 1)).filter fun v => M.V v p).map fun v => Ss f d (v.val + 1))
 
 section
-variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {n : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {f : PR} {d : Nat} {n : Nat}
   {M : Modal.FinModel (n + 1)}
 
 theorem solσTy (p : Nat) : env.HasType [] (solσ f d M p) (.sort .zero) := by
@@ -144,13 +144,13 @@ variable {q : Nat → PR}
   (hs : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
     Thm env Γ (hT f d (S k) =ₒ ev (nextC M.solFrame q) [hT f d k, k, lit d]))
   (h0 : ∀ {Γ : List VExpr}, Thm env Γ (hT f d zero =ₒ zero))
-  (hTb : TablesFor env.env T) (hdne : Thm env [] dneS)
+  (hTb : IsChecker env T) (hdne : Thm env [] dneS)
 include hq hs h0 hTb hdne
 
 /-- **The truth lemma**: `S_(w+1)` proves `B*` when `w ⊩ B`, and `¬B*` otherwise. -/
 theorem truth : ∀ (B : Modal) (w : Fin (n + 1)),
-    (M.Forces w B → Thm env [] (imp (Ss f d (w.val + 1)) (B.real T (solσ f d M)))) ∧
-    (¬M.Forces w B → Thm env [] (imp (Ss f d (w.val + 1)) (neg (B.real T (solσ f d M)))))
+    (M.Forces w B → Thm env [] (imp (Ss f d (w.val + 1)) (B.realC T (solσ f d M)))) ∧
+    (¬M.Forces w B → Thm env [] (imp (Ss f d (w.val + 1)) (neg (B.realC T (solσ f d M)))))
   | .var p, w => by
     have hσ := solσTy (env := env) (f := f) (d := d) (M := M) p
     refine ⟨fun h => cl_intro (SsTy _) hσ ?_, fun h => cl_swap hσ (SsTy _) ?_⟩
@@ -184,9 +184,9 @@ theorem truth : ∀ (B : Modal) (w : Fin (n + 1)),
     · have hb : M.Forces w B := Classical.byContradiction fun hb => h fun hb' => absurd hb' hb
       have hc : ¬M.Forces w C := fun hc => h fun _ => hc
       refine cl_intro (SsTy _) (negTy (impTy hB hC)) (cl_neg (impTy hB hC) ?_)
-      have hi : Thm env [imp (B.real T (solσ f d M)) (C.real T (solσ f d M)), Ss f d (w.val + 1)]
-          (imp (B.real T (solσ f d M)) (C.real T (solσ f d M))) := cl_hyp (impTy hB hC)
-      have hS : Thm env [imp (B.real T (solσ f d M)) (C.real T (solσ f d M)), Ss f d (w.val + 1)]
+      have hi : Thm env [imp (B.realC T (solσ f d M)) (C.realC T (solσ f d M)), Ss f d (w.val + 1)]
+          (imp (B.realC T (solσ f d M)) (C.realC T (solσ f d M))) := cl_hyp (impTy hB hC)
+      have hS : Thm env [imp (B.realC T (solσ f d M)) (C.realC T (solσ f d M)), Ss f d (w.val + 1)]
           (Ss f d (w.val + 1)) := cl_weak (SsTy _) (cl_hyp (SsTy _))
       exact (cl_app (ihC.2 hc) hS).mp (hi.mp (cl_app (ihB.1 hb) hS))
   | .box B, w => by
@@ -196,7 +196,7 @@ theorem truth : ∀ (B : Modal) (w : Fin (n + 1)),
     rw [Modal.real_box]
     refine ⟨fun h => ?_, fun h => ?_⟩
     · have hI : Thm env [] (imp (bigOr ((M.solFrame.succL (w.val + 1)).map (Ss f d)))
-          (B.real T (solσ f d M))) := by
+          (B.realC T (solσ f d M))) := by
         refine bigOr_cl_elim (props_map fun _ => SsTy _) hB fun r hr => ?_
         obtain ⟨b, hb, rfl⟩ := List.mem_map.1 hr
         obtain ⟨v, rfl, hv⟩ := (M.mem_succL_succ w).1 hb
@@ -223,7 +223,7 @@ end
 /-! ### The walk never climbs forever -/
 
 section
-variable {env : Typing} [E : ObjEnv env] {T : Tables} {K : SFrame} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {K : SFrame} {d : Nat}
 
 /-- The walk's true value at `m`, provably. -/
 theorem hN_lit {Γ : List VExpr} {m a : Nat} (h : hN T K d m = a) :
@@ -238,32 +238,63 @@ theorem hN_lit {Γ : List VExpr} {m a : Nat} (h : hN T K d m = a) :
 end
 
 section
-variable {env : VEnv} [E : ObjEnv env] {T : Tables} {K : SFrame} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {K : SFrame} {d : Nat} {F : Nat → Nat → Nat}
 
-/-- **No reached world is refuted**, in a `halts`-sound theory: a refutation of `S_a` for a world
-`a` the walk reaches makes it leave `a` (`halts_lv`), along a refutation of the next world's
-sentence (`hN_move`), and the frame is finite. -/
-theorem no_refuted (hTb : TablesFor env T) (hS : HaltsSound env) (hd : d = (hM T K).code) :
-    ∀ (a m : Nat), hN T K d m = a → Provable env (neg (Ss (hM T K) d a)) → False := by
+/-- **No reached world is refuted**, in a `halts`-sound theory whose checker `T` computes `F` and
+accepts only its theorems: a refutation of `S_a` for a world `a` the walk reaches makes it leave
+`a` (`halts_lv`), along a refutation of the next world's sentence (`hN_move`), and the frame is
+finite. -/
+theorem no_refuted (hF : PR.Computes2 T F)
+    (hsound : ∀ (P : VExpr) (k : Nat), F (encExpr P) k = 0 → Thm env [] P)
+    (hS : ∀ f n, Thm env [] (halts f n) → f.Halts n) (hd : d = (hM T K).code) :
+    ∀ (a m : Nat), hN T K d m = a → Thm env [] (neg (Ss (hM T K) d a)) → False := by
   intro a m hm hr
   have hPa : Thm env [] (Pa (hM T K) d a) := by
     unfold Pa
     exact Thm.exI (by otype) (litTy m) (by simpa only [obj_simp] using hN_lit (Γ := []) hm)
   have hnS : Thm env [] (neg (Stay (hM T K) d a)) :=
-    cl_neg (StayTy a) (Thm.absurd (cl_weak (negTy (SsTy a)) (hr : Thm env [] _))
+    cl_neg (StayTy a) (Thm.absurd (cl_weak (negTy (SsTy a)) hr)
       (Thm.conjI (by otype) (by otype) (cl_weak (PaTy a) hPa) (cl_hyp (StayTy a))))
-  have hH : Provable env (halts (lvM T K a) d) :=
-    (halts_lv (nx := nextC K (qC T)) (fun hk => hM_succ hk) hnS).provable
+  have hH : Thm env [] (halts (lvM T K a) d) :=
+    halts_lv (nx := nextC K (qC T)) (fun hk => hM_succ hk) hnS
   obtain ⟨k, hk⟩ := hS _ _ hH
   obtain ⟨h1, h2⟩ := lvM_eval hk
-  obtain ⟨hR, hc⟩ := hN_move (T := T) (K := K) (d := d) (k := k) (by rw [h1]; exact h2)
+  obtain ⟨hR, hc⟩ := hN_move (T := T) (K := K) (d := d) (k := k) hF (by rw [h1]; exact h2)
   rw [eval_negSC (hM T K) _ (by exact hd)] at hc
-  have hprov : Provable env (neg (Ss (hM T K) d (hN T K d (k + 1)))) :=
-    (chkNum_eq_zero hTb _).1 ⟨_, hc⟩
+  have hprov := hsound _ _ hc
   have hb : hN T K d (k + 1) ∈ K.succL a := (K.mem_succL).2 (h1 ▸ hR)
-  exact no_refuted hTb hS hd (hN T K d (k + 1)) (k + 1) rfl hprov
+  exact no_refuted hF hsound hS hd (hN T K d (k + 1)) (k + 1) rfl hprov
 termination_by a => (K.succL a).length
 decreasing_by exact succL_lt hb
+
+/-- **Arithmetical completeness of GL** for a checker `T` of `env` that computes `F` and accepts
+only theorems of `env`, in a `halts`-sound theory that proves double-negation elimination: every
+modal formula that `GL` does not prove has a realization by closed propositions, with `□` read as
+`ProvC T`, that the theory does not prove. -/
+theorem arith_complete (hT : IsChecker env T) (hF : PR.Computes2 T F)
+    (hsound : ∀ (P : VExpr) (k : Nat), F (encExpr P) k = 0 → Thm env [] P)
+    (hdne : Thm env [] dneS) (hS : ∀ f n, Thm env [] (halts f n) → f.Halts n) {A : Modal}
+    (h : ¬Modal.GL A) :
+    ∃ σ : Nat → VExpr, (∀ n, env.HasType [] (σ n) (.sort .zero)) ∧
+      ¬Thm env [] (A.realC T σ) := by
+  obtain ⟨n, M, -, -, hM0⟩ := Modal.GL_complete h
+  refine ⟨solσ (hM T M.solFrame) (hM T M.solFrame).code M, fun p => solσTy p, fun hA => ?_⟩
+  generalize hd : (hM T M.solFrame).code = d at hA
+  have hσ : ∀ p, env.HasType [] (solσ (hM T M.solFrame) d M p) (.sort .zero) := solσTy
+  have hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
+      Thm env Γ (ev (qC T b) [r, k, lit d] =ₒ Qt (hM T M.solFrame) d T b k) :=
+    fun {_} b {_ _} hr hk => hM_test hT.bnd hd.symm b hr hk
+  have htr := (truth hq (fun hk => hM_succ hk) hM_zero hT hdne A 0).2 hM0
+  have hAT := Modal.realTy (T := T) hσ A
+  have hn1 : Thm env [] (neg (Ss (hM T M.solFrame) d ((0 : Fin (n + 1)).val + 1))) :=
+    cl_neg (SsTy _) ((cl_app htr (cl_hyp (SsTy _))).mp (cl_weak hAT hA))
+  have hp1 : Thm env [] _ := Thm.nec hT hn1
+  have hn0 : Thm env [] (neg (Ss (hM T M.solFrame) d 0)) :=
+    cl_neg (SsTy 0) (Ss_not_prov hq (fun hk => hM_succ hk) (i := 0)
+      (j := (0 : Fin (n + 1)).val + 1)
+      (M.solR_zero (b := (0 : Fin (n + 1)).val + 1) (by simp) (by simp)) (cl_hyp (SsTy 0))
+      (cl_weak (ProvTy T _) hp1))
+  exact no_refuted hF hsound hS hd.symm 0 0 (hN_zero d) hn0
 
 end
 
@@ -283,24 +314,9 @@ theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T
     ∃ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) ∧
       ¬Provable env (A.real T σ) := by
   have : ObjEnv env := .full (hasNat_natEnv.mono hext) hwf.ordered
-  obtain ⟨n, M, -, -, hM0⟩ := Modal.GL_complete h
-  refine ⟨solσ (hM T M.solFrame) (hM T M.solFrame).code M, fun p => solσTy (env := env) p, fun hA => ?_⟩
-  generalize hd : (hM T M.solFrame).code = d at hA
-  have hσ : ∀ p, Typing.HasType env [] (solσ (hM T M.solFrame) d M p) (.sort .zero) := solσTy
-  have hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
-      Thm env Γ (ev (qC T b) [r, k, lit d] =ₒ Qt (hM T M.solFrame) d T b k) :=
-    fun {_} b {_ _} hr hk => hM_test hd.symm b hr hk
-  have htr := (truth hq (fun hk => hM_succ hk) hM_zero hT hdne A 0).2 hM0
-  have hAT := Modal.realTy (T := T) hσ A
-  have hn1 : Thm env [] (neg (Ss (hM T M.solFrame) d ((0 : Fin (n + 1)).val + 1))) :=
-    cl_neg (SsTy _) ((cl_app htr (cl_hyp (SsTy _))).mp (cl_weak hAT (hA : Thm env [] _)))
-  have hp1 : Thm env [] _ := Thm.nec (env := env) hT hn1
-  have hn0 : Thm env [] (neg (Ss (hM T M.solFrame) d 0)) :=
-    cl_neg (SsTy 0) (Ss_not_prov hq (fun hk => hM_succ hk) (i := 0)
-      (j := (0 : Fin (n + 1)).val + 1)
-      (M.solR_zero (b := (0 : Fin (n + 1)).val + 1) (by simp) (by simp)) (cl_hyp (SsTy 0))
-      (cl_weak (ProvTy T _) (hp1 : Thm env [] _)))
-  exact no_refuted hT hS hd.symm 0 0 (hN_zero d) hn0.provable
+  obtain ⟨σ, hσ, hn⟩ := arith_complete (env := env) (IsChecker.full hT) (fun ρ => eval_chkT ρ)
+    (fun P k hk => (chkNum_eq_zero hT P).1 ⟨k, hk⟩) hdne hS h
+  exact ⟨σ, hσ, by rw [Modal.real_eq]; exact hn⟩
 
 /-- **GL is the provability logic** of every `halts`-sound well-formed extension of `natEnv` that
 proves double-negation elimination: a modal formula is a theorem of `GL` exactly when the theory

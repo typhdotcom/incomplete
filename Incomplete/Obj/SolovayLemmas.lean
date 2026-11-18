@@ -23,7 +23,7 @@ open Lean4Lean
 open VExpr Typing PR
 
 section
-variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {f : PR} {d : Nat}
 
 /-- The walk stays at `a` from `m` on. -/
 theorem stay_add {Γ : List VExpr} {a : Nat} {m l : VExpr} (hm : Tm env Γ m) (hl : Tm env Γ l)
@@ -79,7 +79,7 @@ theorem Ss_disj {Γ : List VExpr} {i j : Nat} (hij : i ≠ j) (hi : Thm env Γ (
 end
 
 section
-variable {env : Typing} [E : ObjEnv env] {T : Tables} {f : PR} {d : Nat} {q : Nat → PR}
+variable {env : Typing} [E : ObjEnv env] {T : PR} {f : PR} {d : Nat} {q : Nat → PR}
   {K : SFrame}
   (hq : ∀ {Γ : List VExpr} (b : Nat) {r k : VExpr}, Tm env Γ r → Tm env Γ k →
     Thm env Γ (ev (q b) [r, k, lit d] =ₒ Qt f d T b k))
@@ -158,7 +158,7 @@ include hq hs in
 theorem not_prov_core {Γ : List VExpr} {i j : Nat} {p m : VExpr} (hij : K.R i j = true)
     (hp : Tm env Γ p) (hm : Tm env Γ m) (hS : Thm env Γ (Stay f d i))
     (hmi : Thm env Γ (hT f d m =ₒ lit i))
-    (hc : Thm env Γ (prfT T (numT (encExpr (neg (Ss f d j)))) p =ₒ zero)) : Thm env Γ falseS := by
+    (hc : Thm env Γ (prf T (numT (encExpr (neg (Ss f d j)))) p =ₒ zero)) : Thm env Γ falseS := by
   have e0 := stay_add (m := m) (l := tri (add p m)) hm (by otype) hS hmi
   have e1 : Thm env Γ (hT f d (pair p m) =ₒ lit i) := by
     orw [pair_eq, add_comm]; exact e0
@@ -174,13 +174,13 @@ include hq hs in
 /-- **`S_i → ¬Prov(¬S_j)` for `i R j`.** From `m` on the walk is at `i`; a proof `p` of `¬S_j` is
 read at the step `pair p m`, which moves the walk off `i`. -/
 theorem Ss_not_prov {Γ : List VExpr} {i j : Nat} (hij : K.R i j = true)
-    (hi : Thm env Γ (Ss f d i)) (hp : Thm env Γ (Prov T (neg (Ss f d j)))) :
+    (hi : Thm env Γ (Ss f d i)) (hp : Thm env Γ (ProvC T (neg (Ss f d j)))) :
     Thm env Γ falseS := by
   unfold Ss at hi
   have hP := Thm.conjE1 (by otype) (by otype) hi
   have hS := Thm.conjE2 (by otype) (by otype) hi
   unfold Pa at hP
-  unfold Prov at hp
+  unfold ProvC at hp
   ocases hP with hm
   olift hp
   olift hS
@@ -264,9 +264,9 @@ decreasing_by exact succL_lt hb
 omit hq hs in
 /-- **Internal Σ₁-completeness for `Pa`**: a code `σ` turns, provably, every `k` at which the walk
 is at `i` into a certificate `σ k` of `Pa i`. -/
-theorem sigma_Pa (hTb : TablesFor env.env T) (i : Nat) :
+theorem sigma_Pa (hTb : IsChecker env T) (i : Nat) :
     ∃ σ : PR, Thm env [] (∀ₒ k, ev (eqz f (num i)) [k, lit d] =ₒ zero →ₒ
-      prfT T (numT (encExpr (Pa f d i))) (ev σ [k]) =ₒ zero) := by
+      prf T (numT (encExpr (Pa f d i))) (ev σ [k]) =ₒ zero) := by
   have hR : (ex (app2 (fn f) (.bvar 2) (.bvar 0) =ₒ lit i)).inst (lit d) 1 = Pa f d i := by
     simp only [Pa, Obj.hT, obj_simp]
   have hG : Thm env [] (allN 2 (imp ((valF (eqz f (num i)) 2).inst zero 0)
@@ -279,24 +279,19 @@ theorem sigma_Pa (hTb : TablesFor env.env T) (i : Nat) :
     oexists .bvar 1
     orw [fn_ev]
     simpa only [obj_simp] using h'
-  obtain ⟨z, hz⟩ := closed_cert hTb (E.hasNat.zeroT (U := 0) (Γ := []))
-  obtain ⟨s, hs⟩ := closed_cert hTb (E.hasNat.succT (U := 0) (Γ := []))
-  have hz1 := (hz (env := env) (Γ := [])).1
-  have hz2 := (hz (env := env) (Γ := [])).2
-  have hs1 := (hs (env := env) (Γ := [])).1
-  have hs2 := (hs (env := env) (Γ := [])).2
-  obtain ⟨τ, hτ⟩ := ok_exists hz1 hz2 hs1 hs2 hTb (eqz f (num i)) 2
-  obtain ⟨c, hc⟩ := closed_prf hTb hG
+  obtain ⟨z, s, hA⟩ := hTb.allH
+  obtain ⟨τ, hτ⟩ := ok_exists hA hTb (eqz f (num i)) 2
+  obtain ⟨c, hc⟩ := hTb.closed_prf hG
   refine ⟨mpP (instC z s c [num d, var 0]) (.push (num d) (ren swap01 τ)), ?_⟩
   ointro
   ointro h
   have hk : Tm env [ev (eqz f (num i)) [.bvar 0, lit d] =ₒ zero, nat] (.bvar 1) := by otype
-  exact prf_fin hz1 hz2 hs1 hs2 hτ hR (Pa_closed i) hc hk h
+  exact prf_fin hA hTb hτ hR (Pa_closed i) hc hk h
 
 omit hq hs in
 /-- A step at which the walk is at `i` proves that it reaches `i`, provably. -/
-theorem prov_Pa (hTb : TablesFor env.env T) {Γ : List VExpr} {i : Nat} {k : VExpr}
-    (hk : Tm env Γ k) (h : Thm env Γ (hT f d k =ₒ lit i)) : Thm env Γ (Prov T (Pa f d i)) := by
+theorem prov_Pa (hTb : IsChecker env T) {Γ : List VExpr} {i : Nat} {k : VExpr}
+    (hk : Tm env Γ k) (h : Thm env Γ (hT f d k =ₒ lit i)) : Thm env Γ (ProvC T (Pa f d i)) := by
   obtain ⟨σ, hσ⟩ := sigma_Pa (f := f) (d := d) hTb i
   have hl : Tms env Γ [k, lit d] := by otype
   have e1 : Thm env Γ (ev f [k, lit d] =ₒ ev (num i) [k, lit d]) := by
@@ -312,7 +307,7 @@ include hq hs h0 in
 /-- Entering `i` at `k + 1` from elsewhere is reading a proof of `¬S_i`. -/
 theorem prov_neg_core {Γ : List VExpr} {i : Nat} {k : VExpr} (hk : Tm env Γ k)
     (hk1 : Thm env Γ (¬ₒ (hT f d k =ₒ lit i))) (hk2 : Thm env Γ (hT f d (S k) =ₒ lit i)) :
-    Thm env Γ (Prov T (neg (Ss f d i))) := by
+    Thm env Γ (ProvC T (neg (Ss f d i))) := by
   refine bigOr_elim (by otype) (props_map fun _ => by otype) (range hq hs h0 hk)
     fun p hp kp => ?_
   obtain ⟨a, ha, rfl⟩ := List.mem_map.1 hp
@@ -349,9 +344,9 @@ theorem bigOr_Ss_closed (bs : List Nat) : (bigOr (bs.map (Ss f d))).ClosedN :=
 include hq hs h0 in
 /-- **`S_i → Prov(⋁_{i R j} S_j)` for `i ≠ 0`.** The walk entered `i` along a proof of `¬S_i`,
 and it provably reaches `i`; and `Pa i ∧ ¬S_i → ⋁_{i R j} S_j` (`reach_lim`). -/
-theorem Ss_prov (hTb : TablesFor env.env T) (hdne : Thm env [] dneS) {Γ : List VExpr} {i : Nat}
+theorem Ss_prov (hTb : IsChecker env T) (hdne : Thm env [] dneS) {Γ : List VExpr} {i : Nat}
     (hi0 : i ≠ 0) (hiN : i ≤ K.N) (h : Thm env Γ (Ss f d i)) :
-    Thm env Γ (Prov T (bigOr ((K.succL i).map (Ss f d)))) := by
+    Thm env Γ (ProvC T (bigOr ((K.succL i).map (Ss f d)))) := by
   have hBc := bigOr_Ss_closed (f := f) (d := d) (K.succL i)
   have hB : env.HasType [] (bigOr ((K.succL i).map (Ss f d))) (.sort .zero) := by otype
   have hD := reach_lim hq hs hdne i hiN
@@ -374,7 +369,7 @@ theorem Ss_prov (hTb : TablesFor env.env T) (hdne : Thm env [] dneS) {Γ : List 
     · exact Thm.exfalso (Thm.absurd (hn.weak.cast (by simp only [obj_simp]))
         (kp.cast Ss_liftN)) (by otype)
     · exact bigOr_intro (props_map fun _ => by otype) (List.mem_map_of_mem hb) (kp.cast Ss_liftN)
-  have hP1 : Thm env [] (Prov T (imp (Pa f d i) (imp (neg (Ss f d i))
+  have hP1 : Thm env [] (ProvC T (imp (Pa f d i) (imp (neg (Ss f d i))
       (bigOr ((K.succL i).map (Ss f d)))))) :=
     Thm.nec hTb hDimp
   unfold Ss at h
@@ -389,7 +384,7 @@ theorem Ss_prov (hTb : TablesFor env.env T) (hdne : Thm env [] dneS) {Γ : List 
   have hk1 := Thm.conjE1 (by otype) (by otype) hk
   have hk2 := Thm.conjE2 (by otype) (by otype) hk
   have hPN := prov_neg_core hq hs h0 hkT hk1 hk2
-  exact prov_mp_ctx hBc (prov_mp_ctx hNB hP1.weak0
+  exact prov_mp_ctx hTb.mpT hBc (prov_mp_ctx hTb.mpT hNB hP1.weak0
     ((hPP.weak.weak).cast (by simp only [obj_simp]))) hPN
 
 end
