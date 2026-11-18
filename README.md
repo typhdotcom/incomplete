@@ -206,7 +206,9 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   functions by primitive recursion and their computation rules. `Obj/Arith`:
   `add` and `mul`, commutativity and associativity, closed in `natEnv` and at
   arbitrary terms. `Obj/Code`: the compiled codes `fn f` as closed atoms; `add`
-  is `fn PR.addC`.
+  is `fn PR.addC`. `Obj/Eval`: `ev f l`, the code `f` at symbolic arguments
+  `l`, with `fn f x y` equal to `ev f [y, x]`, and the computation rules of each
+  constructor and of `ren`, `comp2` and `comp3` in every context.
 
 ## License
 

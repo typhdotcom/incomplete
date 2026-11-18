@@ -35,3 +35,4 @@ import Incomplete.Obj.Arith
 import Incomplete.Obj.Code
 import Incomplete.Obj.Iota
 import Incomplete.Obj.Logic
+import Incomplete.Obj.Eval
