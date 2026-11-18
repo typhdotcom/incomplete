@@ -22,7 +22,7 @@ theorem fnTy {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} (f : PR) :
     env.HasType 0 Γ (fn f) (.forallE nat (.forallE nat nat)) :=
   (fnT E.hasNat E.ordered f).weak0 E.ordered
 
-macro_rules | `(tactic| otype) => `(tactic| with_reducible exact fnTy _)
+macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible exact fnTy _)
 
 /-- `add` is the compiled addition code of `PRLib`, so its lemmas are about `fn PR.addC`. -/
 theorem addF_eq_fn : addF = fn PR.addC := rfl

@@ -44,8 +44,8 @@ variable {a b e : VExpr} {n k : Nat}
   simp [mul, app2, VExpr.inst, mulF_closed.instN_eq (Nat.zero_le _)]
 end
 
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine addTy ?_ ?_) <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine mulTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine addTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine mulTy ?_ ?_) <;> otype))
 
 section
 variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {a b c : VExpr}

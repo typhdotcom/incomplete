@@ -162,19 +162,90 @@ macro_rules | `(tactic| olookup) => `(tactic| first
   | (refine VEnv.Lookup.succ' (ty := ?_) ?_ ?_ <;>
       [skip; olookup; first | with_reducible rfl | (simp only [obj_simp]; done)]))
 
-/-- Proves `HasType env 0 Γ e A` for object terms and formulas; extended with `macro_rules`. -/
+/-- The rules of `otype`, tried in turn; extended with `macro_rules`. -/
+syntax "otype_rules" : tactic
+
+/-- Proves `HasType env 0 Γ e A` for object terms and formulas: by the typing lemma of the head
+of `e` (`otype_head`), and otherwise by `otype_rules`. -/
 syntax "otype" : tactic
-macro_rules | `(tactic| otype) => `(tactic| with_reducible assumption)
-macro_rules | `(tactic| otype) => `(tactic| with_reducible exact natTy)
-macro_rules | `(tactic| otype) => `(tactic| with_reducible exact zeroTy)
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine STy ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine HasType.bvar ?_); olookup))
-macro_rules | `(tactic| otype) => `(tactic| with_reducible exact litTy _)
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine app2Ty ?_ ?_ ?_) <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine impTy ?_ ?_) <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine allTy ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine EqNTy ?_ ?_) <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine weakTy ?_); otype))
+
+open Lean Meta Elab Tactic in
+/-- The typing lemma for a term or formula with head `c`, of which `T` is the type. -/
+def otypeLemma (c : Name) (args : Array Expr) (T : Expr) : MetaM (Option Name) := do
+  let some n := (match c with
+    | ``Incomplete.zero => some `Incomplete.Obj.zeroTy
+    | ``Incomplete.nat => some `Incomplete.Obj.natTy
+    | ``Incomplete.lit => some `Incomplete.Obj.litTy
+    | ``Incomplete.fn => some `Incomplete.Obj.fnTy
+    | ``Incomplete.falseS => some `Incomplete.Obj.falseTy
+    | `Incomplete.Obj.S => some `Incomplete.Obj.STy
+    | `Incomplete.Obj.add => some `Incomplete.Obj.addTy
+    | `Incomplete.Obj.mul => some `Incomplete.Obj.mulTy
+    | `Incomplete.Obj.sub => some `Incomplete.Obj.subTy
+    | `Incomplete.Obj.pred => some `Incomplete.Obj.predTy'
+    | `Incomplete.Obj.app2 => some `Incomplete.Obj.app2Ty
+    | `Incomplete.Obj.ev => some `Incomplete.Obj.evTy
+    | `Incomplete.Obj.EqN => some `Incomplete.Obj.EqNTy
+    | `Incomplete.Obj.imp => some `Incomplete.Obj.impTy
+    | `Incomplete.Obj.all => some `Incomplete.Obj.allTy
+    | `Incomplete.Obj.neg => some `Incomplete.Obj.negTy
+    | `Incomplete.Obj.conj => some `Incomplete.Obj.conjTy
+    | `Incomplete.Obj.disj => some `Incomplete.Obj.disjTy
+    | `Incomplete.Obj.ex => some `Incomplete.Obj.exTy
+    | `Incomplete.Obj.iff => some `Incomplete.Obj.iffTy
+    | ``VExpr.lift | ``VExpr.liftN =>
+      if c == ``VExpr.liftN && !(args.size == 3 && args[0]!.nat? == some 1 && args[2]!.nat? == some 0)
+      then none
+      else if T.isConstOf ``Incomplete.nat then some `Incomplete.Obj.weakNat
+      else if T == mkApp (mkConst ``VExpr.sort) (mkConst ``VLevel.zero) then
+        some `Incomplete.Obj.weakProp
+      else some ``Incomplete.Obj.weakTy
+    | _ => none) | return none
+  return if (← getEnv).contains n then some n else none
+
+open Lean Meta Elab Tactic in
+/-- Type a term or formula by a hypothesis, or by the typing lemma of its head and then its parts
+by `otype`. -/
+elab "otype_head" : tactic => withMainContext do
+  let g ← getMainGoal
+  let rest := (← getGoals).tail
+  let tgt ← whnfR (← instantiateMVars (← g.getType))
+  let n ← match_expr tgt with
+    | VEnv.HasType _ _ _ e T =>
+      if (← try withReducible g.assumption; pure true catch _ => pure false) then
+        setGoals rest; return
+      if e.isAppOfArity ``VExpr.bvar 1 then
+        evalTactic (← `(tactic| ((with_reducible refine HasType.bvar ?_); olookup)))
+        return
+      let .const c _ := e.getAppFn | throwError "otype_head: no head"
+      let some n ← otypeLemma c e.getAppArgs T | throwError "otype_head: no lemma for {c}"
+      pure n
+    | _ =>
+      let some l := tgt.getAppArgs.back? | throwError "otype_head: not a typing"
+      unless tgt.isAppOfArity `Incomplete.Obj.Tms 3 do throwError "otype_head: not a typing"
+      if l.isAppOfArity ``List.nil 1 then pure `Incomplete.Obj.Tms.nil
+      else if l.isAppOfArity ``List.cons 3 then pure `Incomplete.Obj.Tms.cons
+      else throwError "otype_head: list {l}"
+  let gs ← withReducible (g.apply (← mkConstWithFreshMVarLevels n))
+  for g in gs do
+    unless ← g.isAssigned do
+      setGoals [g]
+      evalTactic (← `(tactic| otype))
+  setGoals rest
+
+macro_rules | `(tactic| otype) => `(tactic| first | otype_head | otype_rules)
+
+macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible assumption)
+macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible exact natTy)
+macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible exact zeroTy)
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine STy ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine HasType.bvar ?_); olookup))
+macro_rules | `(tactic| otype_rules) => `(tactic| with_reducible exact litTy _)
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine app2Ty ?_ ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine impTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine allTy ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine EqNTy ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine weakTy ?_); otype))
 
 /-! ### Conversion -/
 

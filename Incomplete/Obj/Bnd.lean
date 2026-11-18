@@ -69,6 +69,6 @@ attribute [bnd_simp] bnd ren liftR bnd_num ren_num bnd_numC bnd_ren_numC comp2 c
   leq eqz fstC fstC.sndC sndC dmC divC modC tagC minP dblC addC mulC subC predC selC triC
   triRootC pairC histC covC iterC nthC histPC covPC
 
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible show bnd _ ≤ _); simp [bnd_simp]; done))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible show bnd _ ≤ _); simp [bnd_simp]; done))
 
 end Incomplete.Obj

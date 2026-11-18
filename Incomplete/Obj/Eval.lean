@@ -166,14 +166,14 @@ theorem liftS_T {σ : Subst} (hσ : ∀ i, Tm env Γ (σ i)) :
 
 end
 
-macro_rules | `(tactic| otype) => `(tactic| exact Tms.nil)
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine Tms.cons ?_ ?_) <;> otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine Tms.weak ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine Tms.lift1 ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine Tms.lift2 ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine lift1Ty ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine lift2Ty ?_); otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible refine evTy ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| exact Tms.nil)
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.cons ?_ ?_) <;> otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.weak ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.lift1 ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine Tms.lift2 ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine lift1Ty ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine lift2Ty ?_); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine evTy ?_); otype))
 
 /-- Reduce typing `liftN 1 e k`, for a literal `k`, to typing `e` without the `k`th binder. -/
 elab "otype_liftN" : tactic => Lean.Elab.Tactic.withMainContext do
@@ -186,8 +186,8 @@ elab "otype_liftN" : tactic => Lean.Elab.Tactic.withMainContext do
   Lean.Elab.Tactic.evalTactic (← `(tactic|
     simp only [List.replicate_succ, List.replicate_zero, List.cons_append, List.nil_append]))
 
-macro_rules | `(tactic| otype) => `(tactic| (otype_liftN; otype))
-macro_rules | `(tactic| otype) => `(tactic| ((with_reducible show bnd _ ≤ _); decide))
+macro_rules | `(tactic| otype_rules) => `(tactic| (otype_liftN; otype))
+macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible show bnd _ ≤ _); decide))
 
 /-- The step of `prec g h`'s recursion, at the values `σ` of its other variables. -/
 def precStep (h : PR) (σ : Subst) : VExpr := .lam nat (.lam nat (h.tr.subst σ.lift.lift))
