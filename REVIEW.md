@@ -1,80 +1,78 @@
 State: COMPLETE
 Turn: none
-Candidate: lkmszzkpkzuwknksqmqkxrzvzqqlzosn / 9deb50bc684448f50b72689a073c74a4b3f59bb1
+Candidate: zwnoupklzpspwruxmxxpvttsnylkymvy / 4c9cd1db34a24af9e56e14a63f3b2181168c3920
 
-# Classical bounded provability-logic review
+# Chaitin review
 
 ## Objective and meaning
 
-Review the unconditional identification of GL with the provability logic of
-the projection-free `Prop`/`Type` fragment of `clEnv`, the extension of
-`natEnv` by a DNE constant. Verify the fragment's set-model consistency and
-halting soundness, its actual bounded checker, the generalization of the proof
-kit and checker-dependent arguments, and the letterless corollaries.
+Review Chaitin incompleteness for the documented description system: some
+numeric description bound `L` makes every individual complexity assertion
+`Complex L n` unprovable, although at most `L + 1` numbers fail the assertion
+and every sufficiently large number satisfies it. Review both the
+consistency-only full-theory theorem and the unconditional classical bounded
+fragment theorem.
 
-The candidate is the development after `6cf13244`, ending at version
-`0.10.0`. It adds `ClEnv`, `BProvLogic`, `Obj/Typing`, `Obj/Leaf`, `Obj/Checker`
-and `Obj/BChecker`, generalizes the object-level modules, and extends the set
-model's environment interface.
+The candidate comprises the two commits after `ab7552f0`, adding
+`Obj/Chaitin.lean`, `Chaitin.lean`, their public imports, README statements
+and version `0.11.0`.
 
 ## Accepted foundation
 
 - The formal judgment and upstream/fork dependencies remain as documented in
   `README.md`. These results establish no kernel implementation correctness.
-- Preserve the accepted incompleteness, bounded-model, Löb, derivability,
-  FairBot, finite Kripke, Solovay and letterless results. The full-theory
-  headline statements retain their original hypotheses and actual typing
-  judgment, through specializations of the generalized development.
-- `BDefEq` and `BProvable` remain the original bounded judgment and its closed
-  theoremhood predicate. The new abstract interface does not redefine them.
-- `clEnv` contains an object-theory axiom constant for DNE. Its interpretation
-  is proved valid in the set model; no new Lean axiom is introduced.
-- The unconditional result concerns bounded theoremhood with `BProv` read
-  through `bchkT clT`. It does not prove consistency or halting soundness of
-  the full typing judgment of `clEnv`.
+- Preserve the accepted incompleteness, bounded-model, modal and Solovay
+  results, including unconditional GL completeness for the classical bounded
+  fragment. Their sources and statements are unchanged in this candidate.
+- Description size is the numeric `PR.code`, as explicitly defined and
+  documented. A description runs on its own code and outputs the first
+  component of its least zero witness. `Complex L n` is a finite conjunction
+  for fixed `L,n`, using a classical test for whether an index is a code.
+- Full-theory Chaitin assumes consistency of the well-formed extension of
+  `natEnv`; the unconditional statement concerns `BProvable clEnv`. Neither
+  statement establishes consistency of the full typing judgment of `clEnv`.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
 
-Accepted. No blocking proof or implementation finding was identified. The
-review is complete, and no worker action remains for this milestone.
+Accepted. No blocking finding was identified. This review is complete, and
+no worker action remains for the submitted milestone.
 
-`Typing` keeps the underlying environment and chosen equality judgment
-separate. `ObjEnv` supplies the actual inference rules, substitution,
-weakening and primitive-recursive adequacy needed by the proof kit. Its
-bounded instance is proved directly from `BDefEq`; the map to full typing
-supports syntactic closure arguments without replacing bounded derivations
-by full ones. Iota is derived from the available equality rules in the chosen
-judgment.
+Least-witness output is single-valued. Equality of numeric codes implies
+identical closed function syntax, and the accepted bounded fragment's
+consistency and numeral-computation proofs establish identical two-input
+behavior. This handles distinct PR syntax sharing a code without assuming
+syntactic injectivity. Choosing a description for each distinct non-complex
+number therefore injects those numbers into the `L + 1` available indices.
+The separate finite-index induction establishes eventual complexity, and
+constant-output descriptions show that every number has a description.
 
-`IsChecker` packages internal closed certificates, modus ponens and numeral
-instantiation. These properties support the generalized derivability and Löb
-arguments. Generic Solovay completeness additionally requires external
-checker soundness and halting soundness; these remain explicit premises of
-the generic result, rather than being inferred from internal closure alone.
+The internal description formula records a zero, the first component of its
+witness, and nonzero values at every smaller witness. Numeral computation and
+finite bounded reasoning prove every true description in either supported
+judgment. `Complex` includes the negated description at each genuine code
+through `L`, with top for a non-code. A short description therefore refutes the
+sentence; consistency alone makes a provable complexity assertion true.
 
-The bounded checker conjoins the full certificate check with the original
-leaf-bound check. Its external soundness and completeness use the existing
-certificate correspondence for `BDefEq`. Internal bounds are preserved by
-application certificates, modus ponens and numeral certificates, establishing
-the bounded `IsChecker` instance used in the new result.
+The three-hole template computes the exact negated description about the
+machine's function, its own input and the output selected by the paired step.
+Closed replacements prevent capture, and projection-free translated machine
+terms are preserved by filling. Chaitin's machine uses the pair's first
+component as output and its second as the proof certificate.
 
-The set-model extension permits only the original constants or monomorphic
-constants with a proved interpretation in their types, and only the original
-extra equality rules. The new DNE constant has such an interpretation.
-`clEnv` is well formed, extends `natEnv`, has the stated concrete tables, and
-has a bounded DNE proof. Model soundness then discharges bounded consistency
-and halting soundness. The new public GL completeness theorem has no residual
-model, checker, soundness, DNE or abstract-judgment assumptions. Its realizations
-are propositions of the bounded fragment and its boxes use that fragment's
-checker. The letterless consequences use this theorem and the accepted level
-classification.
+Given a proof of any `Complex d n` at the machine's own code `d`, checker
+completeness supplies a proof certificate for the required negated
+description. This supplies a successful search step. At the least successful
+step, checker soundness gives the selected output's negated description,
+while the actual least witness gives its provable positive description.
+Consistency yields the contradiction. The selected output need not equal the
+number in the original complexity proof. No halting-soundness or object DNE
+premise is used.
 
-One README wording ambiguity was corrected during review: the downward
-consistency implications are true and unprovable *for every n*, rather than
-*at every level*. Their tower evaluations fail at one finite level, so the
-previous wording obscured the accepted truth/provability distinction. No Lean
-implementation changes were made by the reviewer.
+The wrappers instantiate the actual full or bounded checkers and discharge
+all generic checker premises. The unconditional bounded result uses the
+previously established consistency proof. The README accurately describes
+the encoding, counting bound, assumptions and proof mechanism.
 
 ## Current drawers
 
@@ -82,30 +80,29 @@ None. D1 remains closed; hypothesis search was not changed in this round.
 
 ## Verification
 
-- `nix develop -c lake build` passed (151 jobs).
-- A fresh temporary package containing every project source and the pinned
-  package configuration built successfully (151 jobs), recompiling project
-  modules while reusing only installed dependency artifacts.
-- Independent `lake env lean --trust=0` audits passed against both the working
-  package and freshly rebuilt artifacts. All 46 README headline theorems
-  report exactly `[propext, Classical.choice, Quot.sound]`. Additional audits
-  of the concrete DNE proof, bounded checker instance and adequacy, bounded
-  judgment instance, generic model soundness, and new GL soundness and
-  completeness report subsets of that set.
-- Inspected explicit theorem types: unconditional bounded GL results have
-  no residual theory assumptions, and the full-theory Löb and Solovay public
-  statements retain their original hypotheses and typing judgment.
-- Disposable probes checked exact bounded-checker adequacy for every sentence,
-  existence of an accepted DNE certificate, and rejection of every certificate
-  of bottom. A valid full sort certificate for `Type : Type 1` fails the leaf
-  check and is rejected by `bchkNum`; the set model independently rules out
-  the corresponding bounded judgment.
-- Probes checked the exact bounded box translation, compatibility of full
-  and generic realizations, an unconditional bounded counter-realization of
-  reflection, a bounded proof from a positive letterless decision, and
-  unconditional true-but-unprovable consistency iterations.
+- `nix develop -c lake build` passed (153 jobs).
+- Independently re-elaborated both new modules with
+  `lake env lean --trust=0`; both passed without warnings.
+- A separate audit passed for all 48 README headline theorems. Each reports
+  exactly `[propext, Classical.choice, Quot.sound]`. Supporting audits covered
+  equal-code evaluation, output and description uniqueness, description
+  existence, counting, eventual complexity, refutation, consistency-based
+  truth, template filling, machine evaluation and the generic Chaitin core;
+  their dependencies are subsets of that set.
+- Explicit public types confirm that the full theorem needs consistency but
+  no halting soundness or DNE, and the bounded theorem has no hypotheses.
+- Disposable probes checked distinct PR syntax with the same code, uniqueness
+  despite multiple zero witnesses, a machine with no zero, constant-output
+  descriptions, inclusive size boundaries, and bounded refutation of a known
+  non-complex number.
+- Negative controls checked that zero is not a machine code and that its
+  conjunct is top; every `Complex 0 n` is bounded-provable. Symbolic probes
+  checked the own-code sentence and certificate selection at a paired step,
+  and the exact internal description of a concrete output.
+- A specialization of the unconditional theorem supplies a common `L,N` such
+  that every `n ≥ N` is complex and its sentence is bounded-unprovable,
+  checking that the result includes genuinely true unprovable assertions.
 - Source inspection found no proof holes, native decision proofs, custom Lean
-  axiom declarations, or unsafe definitions in project sources.
-- `nix flake check` passed. Unused-section-variable and unused-simp-argument
-  warnings remain nonblocking. Temporary probes and the fresh package were
-  removed after verification.
+  axiom declarations, or unsafe definitions in the new modules.
+- `nix flake check` passed. Existing warnings in unchanged modules remain
+  nonblocking. Disposable probes were removed after verification.
