@@ -7,7 +7,8 @@ extended with concrete inductives and primitive projections from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
 
 GL is also shown sound and complete for finite transitive irreflexive Kripke
-models.
+models, and on letterless formulas it is decided by a level tower on `ω`, which
+also gives their provability and truth in the object theory.
 
 Provability is defined directly against the typing judgment
 `VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`. The results
@@ -213,6 +214,65 @@ so `S_(w+1)` proves `A`'s realization or its negation as `w` forces `A` or not
 walk reaches into a move of the walk up the finite frame (`no_refuted`)
 (`Incomplete/Obj/Solovay*.lean`).
 
+### Letterless sentences
+
+```lean
+def Modal.lvl (n : Nat) : Modal → Bool
+  | var _ => false
+  | bot => false
+  | imp A B => !lvl n A || lvl n B
+  | box A => decide (∀ m, m < n → lvl m A = true)
+
+theorem Modal.FinModel.forces_iff_lvl {n : Nat} (M : FinModel n) {A : Modal}
+    (hA : Letterless A) (w : Fin n) : M.Forces w A ↔ lvl (M.height w) A = true
+
+theorem Modal.GL_iff_lvl {A : Modal} (hA : Letterless A) : GL A ↔ ∀ n, lvl n A = true
+
+theorem Modal.GL_iff_dec {A : Modal} (hA : Letterless A) : GL A ↔ dec A = true
+
+theorem provable_iff_lvl (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal}
+    (hA : A.Letterless) (σ : Nat → VExpr) :
+    Provable env (A.real T σ) ↔ ∀ n, Modal.lvl n A = true
+
+theorem tr_iff_lim (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) :
+    ∀ {A : Modal}, A.Letterless → (A.tr env T ↔ Modal.lim A = true)
+
+theorem boxBot_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hS : HaltsSound env) (σ : Nat → VExpr) :
+    ∀ n, ¬Provable env ((Modal.boxBot n).real T σ)
+
+theorem boxBot_succ_imp_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
+    {T : Tables} (hT : TablesFor env T) (hS : HaltsSound env) (σ : Nat → VExpr) (n : Nat) :
+    ¬Provable env ((Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).real T σ)
+```
+
+A letterless modal formula, built from `⊥`, `→` and `□` alone, is evaluated on the level tower:
+`□B` holds at level `n` when `B` holds at every level `m < n`. In a finite transitive irreflexive
+model, a letterless formula is forced at a world exactly when it holds at the level given by the
+world's height, the length of the longest chain above it (`FinModel.height`; more generally
+`Kripke.forces_iff_lvl` for any `IsHeight`). So `GL` proves a letterless formula iff it holds at
+every level. From the box depth `bd A` on, `lvl n A` is constant, `lim A` (`lvl_eq_lim`), so the
+Boolean `dec A`, which checks the levels `n ≤ bd A`, decides `GL` on letterless formulas
+(`Incomplete/Modal/Letterless.lean`).
+
+The realization of a letterless formula does not depend on `σ` (`Modal.real_letterless`). In a
+`halts`-sound well-formed extension of `natEnv` that proves `dneS`, the theory proves it iff it
+holds at every level, iff `dec A = true` (`provable_iff_dec`). The direction from the levels
+needs only `dneS` (`provable_of_lvl`); `dneS` is not removable through `iGL`, since `GL` proves the
+letterless `¬¬□⊥ → □⊥` and `iGL` does not (`Modal.not_iGL_dne_box`, by a three-element algebra).
+With truth `Modal.tr`, which reads `□B` as provability of `B`'s realization, a letterless sentence
+is true iff its limit value is `true` (`tr_iff_lim`): the letterless case of Solovay's theorem on
+true provability.
+
+With `halts`-soundness alone, `□ⁿ⊥` is unprovable for every `n`, and `□ⁿ⁺¹⊥ → □ⁿ⊥` is true
+(`tr_boxBot_succ_imp`) and, by Löb's theorem, unprovable; `GL` does not prove it, while its limit
+value is `true` (`Modal.boxBot_succ_imp`). The case `n = 0` is `¬□⊥`, which the theory proves
+equivalent to `Con T` (`con_iff_real_neg_box`); its unprovability needs only `Consistent env`
+(`con_unprovable_letterless`). `halts`-soundness implies consistency
+(`HaltsSound.consistent`) (`Incomplete/Obj/Letterless.lean`).
+
 ### A consistent, ω-inconsistent context
 
 ```lean
@@ -287,6 +347,10 @@ well-formed declarations that include `Nat`. They replace the binders
   an accessibility relation and a valuation on a type of worlds; a
   `FinModel n` is a transitive irreflexive one on `Fin n` with Boolean
   relation and valuation; `Modal.sub A` lists the subformulas of `A`.
+- `Modal.Letterless`, `Modal.lvl`, `Modal.bd`, `Modal.lim`, `Modal.dec`, `Modal.boxBot`,
+  `Modal.tr`: `A` has no variables; `A`'s value at level `n`; box depth; `lvl (bd A) A`, the
+  eventual value; the conjunction of `lvl n A` over `n ≤ bd A`; `□ⁿ⊥`; truth with `□B` read as
+  `Provable env (B.real T fun _ => falseS)`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -301,7 +365,8 @@ additionally assumes `HaltsSound`; neither hypothesis is proved here for the
 full type theory. Löb's theorem, the derivability conditions, formalized Löb,
 `iGL_sound`, and `fairbot` assume neither; `GL_sound` assumes only that the
 theory proves `dneS`; `GL_arith_complete` and `GL_iff_provable` assume that
-and `HaltsSound env`.
+and `HaltsSound env`, as do `provable_iff_lvl` and `tr_iff_lim`; `boxBot_unprovable` and
+`boxBot_succ_imp_unprovable` assume only `HaltsSound env`.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -376,6 +441,17 @@ open Incomplete
 #print axioms Modal.GL_iff
 #print axioms GL_arith_complete
 #print axioms GL_iff_provable
+#print axioms Modal.FinModel.forces_iff_lvl
+#print axioms Modal.GL_iff_lvl
+#print axioms Modal.GL_iff_dec
+#print axioms Modal.not_iGL_dne_box
+#print axioms provable_iff_lvl
+#print axioms provable_iff_dec
+#print axioms tr_iff_lim
+#print axioms boxBot_unprovable
+#print axioms boxBot_succ_imp_unprovable
+#print axioms tr_boxBot_succ_imp
+#print axioms con_unprovable_letterless
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -436,11 +512,13 @@ results.
     and its external behaviour; its step read inside the theory; Solovay's
     lemmas about the sentences `S_b`; the truth lemma; and
     `GL_arith_complete`.
+  - *Letterless sentences* (`Letterless`): provability decided by the level tower, truth by its
+    limit, and iterated consistency.
 - **Modal logic (`Modal/`)**, independent of the object theory: `Modal`,
   `GL` and `iGL` (`Basic`); derivations from hypotheses, the deduction
   theorem, the 4 axiom and the Lindenbaum step (`Deduction`); Kripke models,
-  forcing and soundness (`Kripke`); and completeness for finite rooted models
-  (`Complete`).
+  forcing and soundness (`Kripke`); completeness for finite rooted models
+  (`Complete`); and letterless formulas, the level tower and the height lemma (`Letterless`).
 
 ## License
 
