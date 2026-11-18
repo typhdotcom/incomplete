@@ -98,7 +98,7 @@ theorem ilookup_blockEntries (d : VInductDecl) (r : List (Name × (VInductDecl �
     simp only [blockEntries, List.cons_append, ilookup, List.findIdx?_cons]
     by_cases h : n = T.name
     · subst h; simp only [beq_self_eq_true, ↓reduceIte, Nat.add_zero]
-    · rw [if_neg h, ilookup_blockEntries d r n l (i + 1)]
+    · rw [ite_eq_right h, ilookup_blockEntries d r n l (i + 1)]
       have : (T.name == n) = false := by
         rw [beq_eq_false_iff_ne]; exact fun e => h e.symm
       rw [this]; simp only [Bool.false_eq_true, ↓reduceIte]
@@ -193,7 +193,7 @@ theorem TablesFor.decl {env env' : VEnv} {D : VDecl} {T : Tables} (hT : TablesFo
   | mutualDef _ h _ => exact hT.mutualDef h
   | «example» => exact ⟨T, hT⟩
   | quot _ h =>
-    simp only [VEnv.addQuot, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    simp only [VEnv.addQuot, Option.bind_eq_bind, Option.bind_eq_some_iff,
       Option.some.injEq] at h
     obtain ⟨_, h1, _, h2, _, h3, _, h4, rfl⟩ := h
     obtain ⟨_, t1⟩ := hT.addConst h1
@@ -227,8 +227,8 @@ theorem tlookupD_mono {f g : Name → Option VConstant} (hfg : ∀ m a, f m = so
   | (n, ci) :: r, m, a, h => by
     simp only [tlookupD] at h ⊢
     split
-    · rwa [if_pos ‹_›] at h
-    · rw [if_neg ‹_›] at h; exact tlookupD_mono hfg r m a h
+    · rwa [ite_eq_left ‹_›] at h
+    · rw [ite_eq_right ‹_›] at h; exact tlookupD_mono hfg r m a h
 
 /-- A block added to the empty environment is contained in it added to any environment. -/
 theorem addInduct_empty_le {d : VInductDecl} {e env env' : VEnv}

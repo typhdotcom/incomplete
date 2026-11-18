@@ -54,7 +54,7 @@ theorem lenF_eq : ∀ ls : List VLevel, cov lenF (encList encLevel ls) = ls.leng
     rw [cov, lenF]
     simp only [lenStep, val2, eval_ifz, eval_var, vcons_zero, vcons_succ, eval_num, eval_succ,
       eval_histAt, eval_sndC, eval_leq, encList, Nat.add_sub_cancel, unpair2_pair,
-      Nat.add_one_ne_zero, if_false]
+      Nat.add_one_ne_zero, ite_false]
     rw [nthN_histN' _ (by have := pair_ge_right (encLevel a) (encList encLevel ls); omega),
       lenF_eq ls]
     rfl
@@ -81,7 +81,7 @@ theorem allF_eq : ∀ ls : List VLevel,
     rw [cov, allF]
     simp only [allStep, val2, eval_ifz, eval_var, vcons_zero, vcons_succ, eval_num, eval_andz,
       eval_notz, eval_levAt, eval_fstC, eval_histAt, eval_sndC, eval_leq, encList,
-      Nat.add_sub_cancel, unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, if_false]
+      Nat.add_sub_cancel, unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, ite_false]
     rw [nthN_histN' _ (by have := pair_ge_right (encLevel a) (encList encLevel ls); omega),
       allF_eq ls]
     simp only [levNum, decLevel_enc, List.mem_cons, forall_eq_or_imp]
@@ -121,7 +121,7 @@ theorem eqvF_eq : ∀ ls ls' : List VLevel,
     rw [cov, eqvF]
     simp only [eqvStep, val2, eval_ifz, eval_var, vcons_zero, vcons_succ, eval_num, eval_andz,
       eval_eqz, eval_levAt, eval_fstC, eval_histAt, eval_sndC, eval_leq, eval_cpair, encList,
-      Nat.add_sub_cancel, unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, if_false]
+      Nat.add_sub_cancel, unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, ite_false]
     rw [nthN_histN _ _ _ (by
       have := pair_ge_right (encLevel a) (encList encLevel ls)
       have := pair_ge_right (encLevel b) (encList encLevel ls')
@@ -286,8 +286,8 @@ theorem constOK_eq (tbl : List (Name × VConstant)) (jn N CI LS LS' : Nat) :
     obtain ⟨n, ci⟩ := e
     simp only [tlookup, constOK]
     by_cases h : N = encName n
-    · simp only [if_pos ((decName_eq_iff _ _).2 h), if_pos h]; exact constEntry_eq ci jn N CI LS LS'
-    · simp only [if_neg (fun e => h ((decName_eq_iff _ _).1 e)), if_neg h]; exact ih
+    · simp only [ite_eq_left ((decName_eq_iff _ _).2 h), ite_eq_left h]; exact constEntry_eq ci jn N CI LS LS'
+    · simp only [ite_eq_right (fun e => h ((decName_eq_iff _ _).1 e)), ite_eq_right h]; exact ih
 
 theorem certNum_constDF {R : Nat → Bool} (hR : R 4 = true) {n : Nat} (h : n % 16 = 4) :
     certNum T R n = if constOK T.consts (fld 0 (n / 16)) (fld 1 (n / 16)) (fld 2 (n / 16))
@@ -366,7 +366,7 @@ theorem extraOK_eq (rules : List VDefEq) (jn DF LS : Nat) :
   | cons d r ih =>
     simp only [extraOK]
     by_cases h : DF = encDefEq d
-    · simp only [if_pos h, (decDefEq_eq_iff _ _).2 h]
+    · simp only [ite_eq_left h, (decDefEq_eq_iff _ _).2 h]
       unfold extraEntryOK
       apply Bool.eq_iff_iff.2
       simp only [Bool.and_eq_true, decide_eq_true_eq, List.mem_cons, true_or, and_true]
@@ -374,7 +374,7 @@ theorem extraOK_eq (rules : List VDefEq) (jn DF LS : Nat) :
       exact ⟨fun ⟨a, b, c⟩ => ⟨c, b, by simpa [extraJ, encJudg] using a⟩,
         fun ⟨c, b, a⟩ => ⟨by simpa [extraJ, encJudg] using a, b, c⟩⟩
     · have hd : decDefEq DF ≠ d := fun e => h ((decDefEq_eq_iff _ _).1 e)
-      simp only [if_neg h, ← ih]
+      simp only [ite_eq_right h, ← ih]
       simp [hd]
 
 theorem certNum_extra {R : Nat → Bool} (hR : R 12 = true) {n : Nat} (h : n % 16 = 12) :

@@ -29,7 +29,7 @@ variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr}
 theorem numT_step {n : Nat} (hn : n ≠ 0) :
     Thm env Γ (numT n =ₒ add (add (numT (n / 2)) (numT (n / 2))) (lit (n % 2))) := by
   dsimp only [numT]
-  rw [numC.eq_1 n, if_neg hn]
+  rw [numC.eq_1 n, ite_eq_right hn]
   split
   · rename_i h
     rw [h, dblC]

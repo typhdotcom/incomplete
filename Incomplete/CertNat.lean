@@ -137,7 +137,7 @@ theorem natEnv_tables : TablesFor natEnv natT := by
   · simp only [natEnv, natT, ilookup]
     by_cases h : m = ``Nat
     · subst h; rfl
-    · rw [if_neg h]
+    · rw [ite_eq_right h]
       have : natDecl.types.findIdx? (·.name == m) = none := by
         rw [List.findIdx?_eq_none_iff]; simp [natDecl, Ne.symm h]
       rw [this]; rfl

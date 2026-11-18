@@ -66,13 +66,13 @@ theorem instT_tmpl (ha : Tm env Γ a) (hh : ∀ j, Tm env Γ (h j))
   | .bvar i, j => by
     simp only [tmplT]
     rcases Nat.lt_trichotomy i j with hij | rfl | hij
-    · rw [if_pos hij]
+    · rw [ite_eq_left hij]
       orw [numT_bvar, numT_lit]
       orw [instT_bvar_lt (by otype) ha (by otype) (lit_lt hij), ← numT_lit i, ← numT_bvar i]
-    · rw [if_neg (Nat.lt_irrefl _), if_pos rfl]
+    · rw [ite_eq_right (Nat.lt_irrefl _), ite_eq_left rfl]
       have := hh i
       orw [numT_bvar, numT_lit, instT_bvar_eq ha (by otype), hl]
-    · rw [if_neg (by omega), if_neg (by omega)]
+    · rw [ite_eq_right (by omega), ite_eq_right (by omega)]
       orw [numT_bvar, numT_lit, instT_bvar_gt (by otype) ha (by otype) (lit_lt hij), sub_lit,
         ← numT_lit (i - 1), ← numT_bvar (i - 1)]
   | .sort u, j => by
@@ -111,7 +111,7 @@ theorem tmplT_closed (hh : ∀ j, Tm env Γ (h j)) : ∀ (B : VExpr) (j : Nat), 
     Thm env Γ (tmplT h B j =ₒ numT (encExpr B))
   | .bvar i, j, hc => by
     have hc : i < j := hc
-    simp only [tmplT, if_pos hc]; orefl
+    simp only [tmplT, ite_eq_left hc]; orefl
   | .sort u, j, _ => by simp only [tmplT]; orefl
   | .const c ls, j, _ => by simp only [tmplT]; orefl
   | .app f b, j, hc => by

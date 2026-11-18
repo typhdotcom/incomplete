@@ -281,7 +281,7 @@ theorem certT_appT {T : Tables} {R : Nat → Bool} (hR : R 5 = true)
   orw [certT_eq hnT]
   rw [hH]
   have hstep := ev_certStep_tag (T := T) (R := R) (t := 5) (by decide) hxT hHT
-  rw [hR, if_pos rfl, show add (mul (lit 16) x) (lit 5) = n from hn] at hstep
+  rw [hR, ite_eq_left rfl, show add (mul (lit 16) x) (lit 5) = n from hn] at hstep
   orw [hstep]
   show Thm env Γ (ev appDFC [n, H] =ₒ zero)
   refine ev_andz_zero rfl hl ?_ (ev_andz_zero rfl hl ?_ (ev_andz_zero rfl hl ?_

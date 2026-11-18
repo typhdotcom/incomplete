@@ -32,12 +32,12 @@ theorem appStep_computes : Computes3 appStep appF := by
 
 theorem appF_eq (h : Nat) : ∀ L : List VExpr,
     cov (appF h) (encList encExpr L) = encExpr ((decExpr h).appN L.reverse)
-  | [] => by rw [cov, appF]; simp [appStep, val3, eval_var, encList, appN, encExpr_dec]
+  | [] => by rw [cov, appF]; simp [appStep, val3, eval_var, encList, encExpr_dec]
   | x :: L => by
     rw [cov, appF]
     simp only [appStep, val3, eval_ifz, eval_var, vcons_zero, vcons_succ, eval_tagC, eval_cpair,
       eval_histP, eval_sndC, eval_fstC, eval_leq, eval_num, encList, Nat.add_sub_cancel,
-      unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, if_false]
+      unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, ite_false]
     rw [nthN_histN' _ (by have := pair_ge_right (encExpr x) (encList encExpr L); omega),
       appF_eq h L, List.reverse_cons, appN_append_singleton]
     simp [encExpr]

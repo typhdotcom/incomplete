@@ -174,19 +174,19 @@ theorem ok_var {i n : Nat} (hi : i < n) : ∃ τ, Ok env T (var i) n τ := by
   have h1 := prf_instC hA (argC 0 n) hxs (by rw [length_argC]; exact hc)
   rw [argC_ev 0 n xs (by omega), List.drop_zero] at h1
   have e1 : (VExpr.bvar (1 + i) =ₒ .bvar 0).inst (.bvar i) 0 = (.bvar i =ₒ .bvar i) := by
-    simp only [EqN_inst, VExpr.inst, instVar, if_neg (show ¬ 1 + i < 0 by omega),
-      if_neg (show ¬ 1 + i = 0 by omega), Nat.lt_irrefl, if_false, if_true,
+    simp only [EqN_inst, VExpr.inst, instVar, ite_eq_right (show ¬ 1 + i < 0 by omega),
+      ite_eq_right (show ¬ 1 + i = 0 by omega), Nat.lt_irrefl, ite_false, ite_true,
       show 1 + i - 1 = i by omega, liftN_zero]
   have e2 := tmplH_inst_insert [] (xs.map litT) (e := .bvar i)
     (show i < (xs.map litT).length by simp [hlen, hi]) (.bvar (1 + i) =ₒ .bvar 0) 0
   simp only [List.nil_append, List.length_nil, Nat.add_zero, e1] at e2
   rw [e2] at h1
   have e3 : tmplH (xs.map litT) (.bvar i) 0 = litT (xs.getD i zero) := by
-    simp only [tmplH, Nat.not_lt_zero, if_false, Nat.sub_zero, List.length_map,
-      if_pos (show i < xs.length by omega), getD_map_litT (show i < xs.length by omega)]
+    simp only [tmplH, Nat.not_lt_zero, ite_false, Nat.sub_zero, List.length_map,
+      ite_eq_left (show i < xs.length by omega), getD_map_litT (show i < xs.length by omega)]
   rw [e3] at h1
   unfold okF valF
-  simp only [ev_var, args_getD, if_pos hi, List.map_cons]
+  simp only [ev_var, args_getD, ite_eq_left hi, List.map_cons]
   exact h1
 
 theorem ok_succ {f τf : PR} {n : Nat} (hf : Ok env T f n τf) : ∃ τ, Ok env T (.succ f) n τ := by
@@ -216,8 +216,8 @@ theorem ok_succ {f τf : PR} {n : Nat} (hf : Ok env T f n τf) : ∃ τ, Ok env 
   rw [e3] at h3
   have ew : tmplH (litT (ev f xs) :: xs.map litT) (S (.bvar 0)) 0 =
       tagT 7 3 (pair (numT (encExpr succ)) (litT (ev f xs))) := by
-    simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, if_false, Nat.sub_self,
-      Nat.zero_lt_succ, if_true, List.getD_cons_zero]
+    simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, ite_false, Nat.sub_self,
+      Nat.zero_lt_succ, ite_true, List.getD_cons_zero]
     rfl
   rw [ew] at h3
   unfold okF
@@ -367,8 +367,8 @@ theorem prec_step {g h τh : PR} {n cₛ : Nat} (hh : Ok env T h (n + 2) τh)
   rw [e6] at h3
   have ew : tmplH (litT t :: xs.map litT) (S (.bvar 0)) 0 =
       tagT 7 3 (pair (numT (encExpr succ)) (litT t)) := by
-    simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, if_false, Nat.sub_self,
-      Nat.zero_lt_succ, if_true, List.getD_cons_zero]
+    simp only [S, tmplH, List.length_cons, Nat.lt_irrefl, ite_false, Nat.sub_self,
+      Nat.zero_lt_succ, ite_true, List.getD_cons_zero]
     rfl
   rw [ew] at h3
   have E8 : Thm env Γ (tmplH (litT r' :: tagT 7 3 (pair (numT (encExpr succ)) (litT t)) ::
@@ -481,7 +481,7 @@ theorem ok_exists : ∀ (f : PR) (n : Nat), ∃ τ, Ok env T f n τ := by
     · exact ok_var hA hT hi
     · refine ok_zeroLike hT (fun xs hl => ?_) ?_
       · rw [ev_var, List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega), Option.getD_none]
-      · simp only [valF, ev_var, args_getD, if_neg hi]
+      · simp only [valF, ev_var, args_getD, ite_eq_right hi]
   | succ f ih => intro n; exact ok_succ hA hT (ih n).choose_spec
   | push h g ihh ihg =>
     intro n; exact ok_push hA hT (ihh n).choose_spec (ihg (n + 1)).choose_spec

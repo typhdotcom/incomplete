@@ -43,12 +43,12 @@ theorem andDecl_largeElim : andDecl.LargeElim := rfl
 
 theorem andDecl_recConsts : andDecl.recConsts = [(``And.rec, ⟨1, andRecTy⟩)] := by
   simp only [VInductDecl.recConsts, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos andDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left andDecl_largeElim]
   rfl
 
 theorem andDecl_iotaRules : andDecl.iotaRules = [andIota] := by
   simp only [VInductDecl.iotaRules, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos andDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left andDecl_largeElim]
   rfl
 
 def andEnvT : VEnv := withConst natEnv ``And ⟨0, andTyE⟩

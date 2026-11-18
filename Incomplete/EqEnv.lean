@@ -34,7 +34,7 @@ theorem eqDecl_largeElim : eqDecl.LargeElim := rfl
 
 theorem eqDecl_recConsts : eqDecl.recConsts = [(``Eq.rec, ⟨2, eqRecTy⟩)] := by
   simp only [VInductDecl.recConsts, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos eqDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left eqDecl_largeElim]
   rfl
 
 /-- The binders of `Eq.rec` up to its minor premise. -/
@@ -55,7 +55,7 @@ def eqIota : VDefEq where
 
 theorem eqDecl_iotaRules : eqDecl.iotaRules = [eqIota] := by
   simp only [VInductDecl.iotaRules, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos eqDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left eqDecl_largeElim]
   rfl
 
 def eqEnvT : VEnv := withConst natEnv ``Eq ⟨1, eqTyE⟩
@@ -112,7 +112,7 @@ theorem eqDecl_wf : eqDecl.WF natEnv where
   indices T hT := by
     simp only [eqDecl, VInductDecl.allTypes, List.append_nil, List.mem_singleton] at hT
     subst hT; exact .cons ⟨_, HasType.bvar (.succ .zero)⟩ .nil
-  aux T hT := by simp [eqDecl, VInductDecl.allTypes] at hT
+  aux T hT := by simp [eqDecl] at hT
   ctors env' h' T hT := by
     cases h'.symm.trans eq_typeConsts_add
     have : eqEnvT.constants ``Eq = some ⟨1, eqTyE⟩ := rfl

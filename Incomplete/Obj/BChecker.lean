@@ -64,7 +64,7 @@ theorem bchkNum_complete {P : VExpr} (h : BProvable X P) : ∃ k, bchkNum T (enc
   obtain ⟨c, k, b, hj⟩ := Cert.check_bcomplete (Tables.deciders_spec hT) h
   refine ⟨encCert c, ?_⟩
   simp only [bchkNum, chkNumFor, decExpr_enc, decCert_enc]
-  rw [if_pos]
+  rw [ite_eq_left]
   refine ⟨?_, leafNum_eq_zero.2 (by rw [decCert_enc]; exact b)⟩
   simp [Cert.usesOnly_all, checkProofT, hc, k, hj]
 
@@ -79,8 +79,7 @@ theorem ev_leafPush (hs : Tm env Γ s) (hc : Tm env Γ c) :
     Thm env Γ (ev (push (var 1) leafC) [s, c] =ₒ leafT c) := by
   orw [ev_push (f := push (var 1) leafC) rfl (by otype)]
   rw [ev_take 1 bnd_leafC]
-  simp only [List.take_succ_cons, List.take_zero, ev_var, valS, List.getD_cons_succ,
-    List.getD_cons_zero]
+  simp only [List.take_succ_cons, List.take_zero]
   orefl
 
 /-- A certificate `bchkT T` accepts is one `chkT T` accepts within the bounds. -/

@@ -14,8 +14,6 @@ namespace Incomplete.Obj
 open Lean4Lean
 open VExpr Typing
 
-set_option linter.unusedSectionVars false
-
 /-! ### Formulas -/
 
 /-- `P → Q`, with `Q` in the context of `P`'s, not depending on the proof. -/
@@ -279,6 +277,7 @@ end
 namespace Thm
 variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {P Q a b c : VExpr}
 
+omit E in
 theorem cast (h : Thm env Γ P) (e : P = Q) : Thm env Γ Q := e ▸ h
 
 theorem conv (h : Thm env Γ P) (e : env.IsDefEq Γ P Q (.sort u)) : Thm env Γ Q :=

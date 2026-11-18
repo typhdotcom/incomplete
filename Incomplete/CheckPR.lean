@@ -47,14 +47,14 @@ def Reads01 (c : PR) : Prop := ∀ ρ ρ' : Val, ρ 0 = ρ' 0 → ρ 1 = ρ' 1 �
 theorem ruleC_reads (t : Nat) : Reads01 (ruleC T t) := by
   intro ρ ρ' h0 h1
   match t with
-  | 0 => simp [ruleC, bvarC, h0, h1, eval_comp2 lookC_computes]
+  | 0 => simp [ruleC, bvarC, h0, eval_comp2 lookC_computes]
   | 10 => simp [ruleC, etaC, h0, h1]
   | 5 => simp [ruleC, appDFC, h0, h1]
   | 4 => simp only [ruleC, eval_constDFC, h0]
   | 9 => simp [ruleC, betaC, h0, h1]
   | 1 => simp [ruleC, symmC, h0, h1]
   | 2 => simp [ruleC, transC, h0, h1]
-  | 3 => simp [ruleC, sortDFC, h0, h1]
+  | 3 => simp [ruleC, sortDFC, h0]
   | 6 => simp [ruleC, lamDFC, h0, h1]
   | 7 => simp [ruleC, forallEDFC, h0, h1]
   | 8 => simp [ruleC, defeqDFC, h0, h1]
@@ -87,7 +87,7 @@ theorem ruleC_spec {R : Nat → Bool} {t : Nat} (hR : R t = true) {ρ : Val}
   | _ + 16 => exact absurd h (by have := Nat.mod_lt (ρ 0) (show 16 > 0 by decide); omega)
 
 theorem tag_enc (c : Cert) : encCert c % 16 = c.tag := by
-  cases c <;> simp [encCert, Cert.tag, tag_mod]
+  cases c <;> simp [encCert, Cert.tag]
 
 theorem tag_dec (n : Nat) : (decCert n).tag = n % 16 := by
   conv => rhs; rw [← encCert_dec n]
@@ -131,13 +131,13 @@ theorem dispC_eval {R : Nat → Bool} {ρ : Val}
   | k + 1, t, h1, h2 => by
     simp only [dispC, eval_ifz, eval_eqz, eval_modC (by decide : 0 < 16), eval_var, eval_num]
     by_cases ht : ρ 0 % 16 = t
-    · rw [if_pos ht]
+    · rw [ite_eq_left ht]
       cases hR : R t
       · simp only [Bool.false_eq_true, ↓reduceIte, eval_num]
         rw [certNum_of_not (ht ▸ hR)]
       · simp only [↓reduceIte]
         exact ruleC_spec hR ht hv
-    · rw [if_neg ht]; exact dispC_eval hv k (t + 1) (by omega) (by omega)
+    · rw [ite_eq_right ht]; exact dispC_eval hv k (t + 1) (by omega) (by omega)
 
 noncomputable def certF (T : Tables) (R : Nat → Bool) (n h : Nat) : Nat := (certStep T R).eval (val2 n h)
 

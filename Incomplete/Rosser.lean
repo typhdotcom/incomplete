@@ -376,7 +376,7 @@ theorem rosser_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)
       ∀ k (ν : Val), ν 0 = (rosserC G).code → (stateC G).eval (vcons k ν) = 0 := by
     intro hn k ν hν
     have hf : ∀ ν' : Val, ν' 1 = (rosserC G).code → (foundC G).eval ν' = 0 := fun ν' h1 => by
-      rw [eval_foundC, if_neg fun h => hn (hH ν' h1 h)]
+      rw [eval_foundC, ite_eq_right fun h => hn (hH ν' h1 h)]
     induction k with
     | zero => obtain ⟨ν', _, h1, h⟩ := eval_stateC_zero G ν; rw [h]; exact hf ν' (h1.trans hν)
     | succ k ih =>
@@ -387,7 +387,7 @@ theorem rosser_of_check {env : VEnv} (H : HasNat env) (henv : env.Ordered)
     intro hp
     obtain ⟨q, hq⟩ := hHc hp
     have hf : ∀ ν' : Val, ν' 0 = q → ν' 1 = (rosserC G).code → (foundC G).eval ν' = 1 :=
-      fun ν' h0 h1 => by rw [eval_foundC, if_pos (hq ν' h0 h1)]
+      fun ν' h0 h1 => by rw [eval_foundC, ite_eq_left (hq ν' h0 h1)]
     refine ⟨q, ?_⟩
     cases q with
     | zero =>

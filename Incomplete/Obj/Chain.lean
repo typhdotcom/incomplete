@@ -54,6 +54,7 @@ theorem ev_mpP {p₁ p₂ : PR} (hl : Tms env Γ l) :
   orw [ev_appC hl, ev_fstC hl, ev_sndC hl, ev_divC hl, ev_restC hl, ev_fldC hl, ev_fldC hl,
     ev_childJC hl, ev_childJC hl, ← div_eq]
 
+omit E in
 theorem Tms.mem {l : List VExpr} (hl : Tms env Γ l) : ∀ {y}, y ∈ l → Tm env Γ y := by
   induction hl with
   | nil => intro y h; cases h
@@ -68,12 +69,14 @@ theorem Tms.map_litT {l : List VExpr} (hl : Tms env Γ l) : Tms env Γ (l.map li
   | nil => exact .nil
   | cons ha _ ih => exact .cons (evTy (.cons ha .nil)) ih
 
+omit E in
 theorem Tms.append {l l' : List VExpr} (hl : Tms env Γ l) (hl' : Tms env Γ l') :
     Tms env Γ (l ++ l') := by
   induction hl with
   | nil => exact hl'
   | cons ha _ ih => exact .cons ha ih
 
+omit E in
 theorem Tms.reverse {l : List VExpr} (hl : Tms env Γ l) : Tms env Γ l.reverse := by
   induction hl with
   | nil => exact .nil

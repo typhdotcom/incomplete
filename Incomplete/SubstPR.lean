@@ -33,7 +33,7 @@ theorem liftN_listS_apply (L : List VExpr) : ∀ k i, (listS L).liftN k i =
     rw [liftN_listS_apply L k i]
     by_cases h : i < k
     · simp [h, VExpr.lift, VExpr.liftN, liftVar]; omega
-    · rw [if_neg h, if_neg (by omega), Nat.add_sub_add_right, VExpr.lift, liftN_liftN]
+    · rw [ite_eq_right h, ite_eq_right (by omega), Nat.add_sub_add_right, VExpr.lift, liftN_liftN]
 
 theorem Fixes_liftN (σ : Subst) : ∀ k, (σ.liftN k).Fixes k
   | 0 => .zero
@@ -115,7 +115,7 @@ macro "subst_simp" : tactic => `(tactic| simp (disch := omega) only [substStep, 
   vcons_zero, vcons_succ, eval_ifz, eval_eqz, eval_fstC, eval_sndC, eval_modC (by decide : 0 < 7),
   eval_divC (by decide : 0 < 7), eval_num, eval_tagC, eval_cpair, eval_histK, eval_addP, eval_leq,
   eval_liftP, eval_succ, unpair1_capKey, unpair2_capKey, unpair1_pair, unpair2_pair, encExpr, tag_mod,
-  tag_div, Nat.reduceEqDiff, if_true, if_false])
+  tag_div, Nat.reduceEqDiff, ite_true, ite_false])
 
 theorem substF_eq (R : Nat) : ∀ (X : VExpr) (k : Nat),
     cov (substF R) (capKey (encExpr X) k) =
@@ -129,20 +129,20 @@ theorem substF_eq (R : Nat) : ∀ (X : VExpr) (k : Nat),
       eval_modC (by decide : 0 < 7), eval_divC (by decide : 0 < 7), eval_num, eval_tagC,
       eval_leq, eval_succ, eval_liftP, eval_lenAt', eval_nthC, unpair1_capKey, unpair2_capKey,
       encExpr, VExpr.subst, liftN_listS_apply]
-    simp only [Nat.mul_div_cancel_left _ (show 0 < 7 by decide), Nat.mul_mod_right, if_true]
+    simp only [Nat.mul_div_cancel_left _ (show 0 < 7 by decide), Nat.mul_mod_right, ite_true]
     by_cases h : i < k
     · have e : i + 1 - min k (7 * i + 1) = 0 := by omega
       simp [h, e, encExpr]
     · have e : i + 1 - min k (7 * i + 1) ≠ 0 := by omega
       have e2 : i - min k (7 * i + 1) = i - k := by omega
-      rw [if_neg e, if_neg h, e2, liftNum, show min k (7 * i + 1) = k by omega]
+      rw [ite_eq_right e, ite_eq_right h, e2, liftNum, show min k (7 * i + 1) = k by omega]
       have := listS_num R (i - k)
       simp only [listS] at this
       rw [show (if i - k + 1 - (decList decExpr R).length = 0 then nthN R (i - k) else 1) =
         (if i - k < (decList decExpr R).length then nthN R (i - k) else 1) by
           by_cases hh : i - k < (decList decExpr R).length
-          · rw [if_pos (by omega), if_pos hh]
-          · rw [if_neg (by omega), if_neg hh], ← this, decExpr_enc]
+          · rw [ite_eq_left (by omega), ite_eq_left hh]
+          · rw [ite_eq_right (by omega), ite_eq_right hh], ← this, decExpr_enc]
   | sort u => intro k; rw [cov, substF]; simp [substStep, val3, eval_var, capKey, encExpr, VExpr.subst]
   | const c ls =>
     intro k; rw [cov, substF]; simp [substStep, val3, eval_var, capKey, encExpr, VExpr.subst]

@@ -100,7 +100,7 @@ macro "lift_simp" : tactic => `(tactic| simp (disch := omega) only [liftStep, va
   eval_ifz, eval_eqz, eval_fstC, eval_sndC, eval_modC (by decide : 0 < 7),
   eval_divC (by decide : 0 < 7), eval_num, eval_tagC, eval_cpair, eval_histK, eval_addP, eval_leq,
   eval_succ, unpair1_capKey, unpair2_capKey, unpair1_pair, unpair2_pair, encExpr, tag_mod,
-  tag_div, Nat.reduceEqDiff, if_true, if_false])
+  tag_div, Nat.reduceEqDiff, ite_true, ite_false])
 
 theorem liftF_eq (n : Nat) : ∀ (X : VExpr) (k : Nat),
     cov (liftF n) (capKey (encExpr X) k) = encExpr (X.liftN n k) := by
@@ -111,8 +111,8 @@ theorem liftF_eq (n : Nat) : ∀ (X : VExpr) (k : Nat),
     rw [cov, liftF]
     simp [liftStep, val3, eval_var, capKey, encExpr, VExpr.liftN, liftVar]
     by_cases h : i < k
-    · rw [if_pos (by omega), if_pos h]
-    · rw [if_neg (by omega), if_neg h]
+    · rw [ite_eq_left (by omega), ite_eq_left h]
+    · rw [ite_eq_right (by omega), ite_eq_right h]
   | sort u => intro k; rw [cov, liftF]; simp [liftStep, val3, eval_var, capKey, encExpr, VExpr.liftN]
   | const c ls =>
     intro k; rw [cov, liftF]; simp [liftStep, val3, eval_var, capKey, encExpr, VExpr.liftN]

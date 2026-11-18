@@ -135,7 +135,7 @@ theorem extend : ∀ (L : List Modal) {Γ : List Modal}, Con Γ →
     · have hq (b : Bool) : L.map (fun D => if (if D = B then b else p D) = true then D else neg D)
           = L.map fun D => if p D then D else neg D :=
         List.map_congr_left fun D hD => by
-          rw [if_neg (show D ≠ B from fun e => hB (e ▸ hD))]
+          rw [ite_eq_right (show D ≠ B from fun e => hB (e ▸ hD))]
       rcases con_or hp B with h' | h'
       · refine ⟨fun D => if D = B then true else p D, ?_⟩
         rw [List.map_cons, hq]; simpa using h'
@@ -217,7 +217,7 @@ theorem GL_complete {A : Modal} (h : ¬GL A) :
       subst this
       exact hw0 ▸ ⟨hX₀, hm₀, fun h => (h rfl).elim⟩
     · have hm := List.getElem_mem (l := ws) (n := i.1 - 1) (by have := i.2; omega)
-      have hwi : w i = ws[i.1 - 1]'(by have := i.2; omega) := dif_neg h
+      have hwi : w i = ws[i.1 - 1]'(by have := i.2; omega) := dite_eq_right h
       rw [hwi]
       simp only [ws, List.mem_filter, decide_eq_true_eq] at hm
       exact ⟨hm.1, hm.2.1, fun _ => hm.2.2⟩

@@ -154,7 +154,7 @@ noncomputable def omk (env : Typing) [ObjEnv env] (Γ : List VExpr) (e : VExpr) 
 section
 variable {env : Typing} [E : ObjEnv env] {Γ : List VExpr} {a b : VExpr}
 
-theorem omk_of (h : Tm env Γ a) : omk env Γ a = ONat.of a h := dif_pos h
+theorem omk_of (h : Tm env Γ a) : omk env Γ a = ONat.of a h := dite_eq_left h
 
 theorem omk_add (ha : Tm env Γ a) (hb : Tm env Γ b) :
     omk env Γ (add a b) = omk env Γ a + omk env Γ b := by

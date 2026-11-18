@@ -253,8 +253,8 @@ theorem triRootC_computes : Computes1 triRootC triRoot := by
     simp only [eval_ifz, eval_leq, eval_push triC_computes, eval_succ, eval_var, vcons_zero,
       vcons_succ, triRoot]
     by_cases h : tri (triRoot y + 1) ≤ y + 1
-    · rw [if_pos (by omega), if_pos h]
-    · rw [if_neg (by omega), if_neg h]
+    · rw [ite_eq_left (by omega), ite_eq_left h]
+    · rw [ite_eq_right (by omega), ite_eq_right h]
 
 /-- The components of the pair `a`. -/
 def fstC (a : PR) : PR := comp2 subC (push a triRootC) (sndC a)
@@ -368,14 +368,14 @@ theorem dmC_computes {k : Nat} (hk : 0 < k) : Computes1 (dmC k) (fun y => pair (
     by_cases h : y % k + 1 = k
     · have e0 := (eval_eqz (PR.succ (sndC (var 0))) (num k)
         (vcons (pair (y / k) (y % k)) (vcons y (tl ρ)))).2 (by simp [eval_var, eval_succ, h])
-      rw [if_pos e0]
+      rw [ite_eq_left e0]
       simp only [eval_cpair, eval_succ, eval_fstC, eval_var, vcons_zero, unpair1_pair, eval_num]
       have e : y + 1 = k * (y / k + 1) := by rw [Nat.mul_add]; omega
       rw [e, tag0_div' hk, tag0_mod']
     · have e0 : (eqz (PR.succ (sndC (var 0))) (num k)).eval
           (vcons (pair (y / k) (y % k)) (vcons y (tl ρ))) ≠ 0 := fun e =>
         h (by simpa [eval_var, eval_succ] using (eval_eqz _ _ _).1 e)
-      rw [if_neg e0]
+      rw [ite_eq_right e0]
       simp only [eval_cpair, eval_succ, eval_fstC, eval_sndC, eval_var, vcons_zero,
         unpair1_pair, unpair2_pair]
       have e : y + 1 = k * (y / k) + (y % k + 1) := by omega

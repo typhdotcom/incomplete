@@ -53,12 +53,12 @@ theorem natDecl_largeElim : natDecl.LargeElim := rfl
 
 theorem natDecl_recConsts : natDecl.recConsts = [(``Nat.rec, ⟨1, recTy⟩)] := by
   simp only [VInductDecl.recConsts, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos natDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left natDecl_largeElim]
   rfl
 
 theorem natDecl_iotaRules : natDecl.iotaRules = [iotaZero, iotaSucc] := by
   simp only [VInductDecl.iotaRules, VInductDecl.recUVars, VInductDecl.recLevels,
-    VInductDecl.motiveLevel, if_pos natDecl_largeElim]
+    VInductDecl.motiveLevel, ite_eq_left natDecl_largeElim]
   rfl
 
 /-! ### The environment, stage by stage -/

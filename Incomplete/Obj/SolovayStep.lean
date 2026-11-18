@@ -78,6 +78,7 @@ theorem bigOr_elim {ps : List VExpr} {Γ : List VExpr} {R : VExpr}
     (k : ∀ p ∈ ps, Thm env (p :: Γ) p.lift → Thm env (p :: Γ) R.lift) : Thm env Γ R :=
   bigOr_elim_len _ rfl hR hps h k
 
+omit E in
 theorem props_cons {p : VExpr} {ps : List VExpr} (hp : env.HasType Γ p (.sort .zero))
     (hps : Props env Γ ps) : Props env Γ (p :: ps) := by
   intro r hr
@@ -85,6 +86,7 @@ theorem props_cons {p : VExpr} {ps : List VExpr} (hp : env.HasType Γ p (.sort .
   · exact hp
   · exact hps r hr
 
+omit E in
 theorem props_map {α : Type} {g : α → VExpr} {bs : List α}
     (h : ∀ b, env.HasType Γ (g b) (.sort .zero)) : Props env Γ (bs.map g) := by
   intro r hr
@@ -167,9 +169,9 @@ variable {f : PR} {d : Nat} {T : PR} {b n j : Nat} {k e : VExpr}
 @[obj_simp] theorem hT_inst : (hT f d k).inst e j = hT f d (k.inst e j) := by
   simp only [hT, obj_simp]
 @[obj_simp] theorem Qt_liftN : (Qt f d T b k).liftN n j = Qt f d T b (k.liftN n j) := by
-  simp only [Qt, prfT, numT, fst, obj_simp]
+  simp only [Qt, numT, fst, obj_simp]
 @[obj_simp] theorem Qt_inst : (Qt f d T b k).inst e j = Qt f d T b (k.inst e j) := by
-  simp only [Qt, prfT, numT, fst, obj_simp]
+  simp only [Qt, numT, fst, obj_simp]
 
 end
 

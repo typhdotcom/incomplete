@@ -280,7 +280,7 @@ theorem mem_pi {A F : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}} :
   · rintro ⟨g, rfl⟩
     refine ⟨_, fun x hx => ?_, rfl⟩
     have h : ∃ i, A.elt i = x := (mem_iff.1 hx).imp fun _ e => e.symm
-    rw [dif_pos h]
+    rw [dite_eq_left h]
     have key : ∀ y, y = x → ∀ j : (B y).Idx, (B y).elt j ∈ B x := by
       intro y hy j; subst hy; exact elt_mem _ _
     exact key _ h.choose_spec _
@@ -289,7 +289,7 @@ theorem mem_pi {A F : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}} :
       mem_iff.1 (hf _ (elt_mem _ _))
     refine ⟨fun i => (hi i).choose, lam_congr fun x hx => ?_⟩
     have h : ∃ i, A.elt i = x := (mem_iff.1 hx).imp fun _ e => e.symm
-    rw [dif_pos h, ← (hi h.choose).choose_spec, h.choose_spec]
+    rw [dite_eq_left h, ← (hi h.choose).choose_spec, h.choose_spec]
 
 theorem app_mem_pi {A F x : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}} (hF : F ∈ pi A B)
     (hx : x ∈ A) : app F x ∈ B x := by
@@ -347,7 +347,7 @@ theorem pi_mem_two {A : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}} (h : ∀ x ∈ 
     have := hf x hx
     rwa [proof_eq (h x hx) this] at this
 
-theorem pi_eq_single_empty {A : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}} (h : ∀ x ∈ A, B x ∈ two)
+theorem pi_eq_single_empty {A : ZFSet.{u}} {B : ZFSet.{u} → ZFSet.{u}}
     (hP : empty ∈ pi A B) : ∀ x ∈ A, empty ∈ B x := by
   intro x hx
   have := app_mem_pi hP hx
@@ -363,7 +363,7 @@ theorem num_inj : ∀ {m n : Nat}, (num m : ZFSet.{u}) = num n → m = n
   | 0, 0, _ => rfl
   | 0, n + 1, h => absurd (h ▸ mem_single.2 rfl : num n ∈ (num 0 : ZFSet.{u})) (not_mem_empty _)
   | m + 1, 0, h => absurd (h ▸ mem_single.2 rfl : num m ∈ (num 0 : ZFSet.{u})) (not_mem_empty _)
-  | m + 1, n + 1, h => congrArg (· + 1) (num_inj (single_eq_single h))
+  | _ + 1, _ + 1, h => congrArg (· + 1) (num_inj (single_eq_single h))
 
 noncomputable def omega : ZFSet.{u} := ofFn fun n : ULift.{u} Nat => num n.down
 

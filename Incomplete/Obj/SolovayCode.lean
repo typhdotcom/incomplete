@@ -111,7 +111,7 @@ def Sb (F D : VExpr) (a : Nat) : VExpr :=
 theorem fill_negSb {F D : VExpr} (hF : F.ClosedN) (hD : D.ClosedN) (a : Nat) :
     fill F D (neg (Sb holeF holeD a)) = neg (Sb F D a) := by
   simp only [neg, Sb, conj, ex, all, imp, EqN, app2, S, predTy, falseS, nat, succ, fill,
-    fill_liftN hF hD, fill_lit, holeF, holeD, if_true, Nat.one_ne_zero, if_false]
+    fill_liftN hF hD, fill_lit, holeF, holeD, ite_true, Nat.one_ne_zero, ite_false]
 
 /-- The number of `¬S_b` about the code numbered by variable `0`, at that number. -/
 def negSC (b : Nat) : PR := fillC (var 0) litC (neg (Sb holeF holeD b))
@@ -203,10 +203,10 @@ theorem eval_casc_lt (c d : PR) (ρ : Val) : ∀ (bs : List PR) (j i : Nat) (hi 
     c.eval ρ = j + i → (casc c bs d j).eval ρ = bs[i].eval ρ
   | b :: bs, j, 0, _, hc => by
     simp only [casc, eval_ifz_eqz, eval_num, List.getElem_cons_zero]
-    rw [if_pos (by omega)]
+    rw [ite_eq_left (by omega)]
   | b :: bs, j, i + 1, hi, hc => by
     simp only [casc, eval_ifz_eqz, eval_num, List.getElem_cons_succ]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
     exact eval_casc_lt c d ρ bs (j + 1) i (by simp at hi; omega) (by omega)
 
 theorem eval_casc_ge (c d : PR) (ρ : Val) : ∀ (bs : List PR) (j : Nat),
@@ -215,7 +215,7 @@ theorem eval_casc_ge (c d : PR) (ρ : Val) : ∀ (bs : List PR) (j : Nat),
   | b :: bs, j, h => by
     simp only [List.length_cons] at h
     simp only [casc, eval_ifz_eqz, eval_num]
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
     exact eval_casc_ge c d ρ bs (j + 1) (by omega)
 
 /-- The next world, externally: `a` itself, or a world `a` sees whose `qC` is `0`. -/

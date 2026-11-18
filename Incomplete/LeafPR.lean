@@ -58,7 +58,7 @@ theorem le1F_eq : ∀ ls : List VLevel,
       have := pair_ge_right (encLevel a) (encList encLevel ls); simp only [encList]; omega
     simp only [le1Step, val2, eval_ifz, eval_var, vcons_zero, vcons_succ, eval_num, eval_andz,
       eval_le1C, eval_histAt, eval_fstC, eval_sndC, eval_leq, encList, Nat.add_sub_cancel,
-      unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, if_false, decLevel_enc]
+      unpair1_pair, unpair2_pair, Nat.add_one_ne_zero, ite_false, decLevel_enc]
     rw [nthN_histN' _ (by simpa [encList] using hlt), le1F_eq ls]
     simp only [List.mem_cons, forall_eq_or_imp]
     by_cases h1 : a.WF 0 ∧ a.eval [] ≤ 1 <;> by_cases h2 : ∀ l ∈ ls, l.WF 0 ∧ l.eval [] ≤ 1 <;>
@@ -167,8 +167,8 @@ theorem dispL_eval {ρ : Val} (hv : HistL ρ) : ∀ k t, t ≤ ρ 0 % 16 → ρ 
   | k + 1, t, h1, h2 => by
     simp only [dispL, eval_ifz, eval_eqz, eval_modC (by decide : 0 < 16), eval_var, eval_num]
     by_cases ht : ρ 0 % 16 = t
-    · rw [if_pos ht]; exact leafRule_spec ht hv
-    · rw [if_neg ht]; exact dispL_eval hv k (t + 1) (by omega) (by omega)
+    · rw [ite_eq_left ht]; exact leafRule_spec ht hv
+    · rw [ite_eq_right ht]; exact dispL_eval hv k (t + 1) (by omega) (by omega)
 
 def leafStep : PR := clampC (dispL 16 0)
 

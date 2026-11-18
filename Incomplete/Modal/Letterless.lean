@@ -165,7 +165,7 @@ theorem height_lt {w v : Fin n} (h : M.R w v = true) : M.height v < M.height w :
   have := foldr_max_ge (fun v => if M.R w v = true then M.height v + 1 else 0)
     (List.mem_finRange v)
   rw [← height_eq] at this
-  simp only [h, if_true] at this
+  simp only [h, ite_true] at this
   omega
 
 theorem isHeight : IsHeight M.toKripke.R M.height where

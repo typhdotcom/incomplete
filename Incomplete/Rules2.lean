@@ -45,7 +45,7 @@ theorem certNum_eta {R : Nat → Bool} (hR : R 10 = true) {n : Nat} (h : n % 16 
   rw [certNum, decCert_eta h]
   refine ite_iff ?_ _ _
   rule_simp hR
-  simp only [encExpr_liftN_dec, Nat.mul_zero]
+  simp only [encExpr_liftN_dec]
   exact ⟨fun ⟨u, ⟨e1, e2⟩, k⟩ => ⟨e1, e2, u, k⟩, fun ⟨e1, e2, u, k⟩ => ⟨u, ⟨e1, e2⟩, k⟩⟩
 
 theorem etaC_spec {R : Nat → Bool} (hR : R 10 = true) {ρ : Val} (h : ρ 0 % 16 = 10)
@@ -91,9 +91,9 @@ theorem lookF_eq : ∀ (Γ : List VExpr) (i : Nat),
     simp only [lookStep, val2, eval_var, vcons_zero, vcons_succ, eval_ifz, eval_fstC, eval_sndC,
       eval_leq, eval_num, eval_cpair, eval_histAt, eval_succ, eval_liftP, unpair1_pair,
       unpair2_pair, encList]
-    simp only [Nat.add_sub_cancel, Nat.add_one_ne_zero, if_false, unpair2_pair]
+    simp only [Nat.add_sub_cancel, Nat.add_one_ne_zero, ite_false, unpair2_pair]
     rw [nthN_histN _ _ _ (by simpa [encList] using hlt), ih]
-    simp only [lookNum, decList, Nat.add_sub_cancel, unpair1_pair, unpair2_pair, lookupTy,
+    simp only [lookNum, decList, unpair1_pair, unpair2_pair, lookupTy,
       decList_enc decExpr_enc]
     cases lookupTy Γ i <;> simp [decExpr_enc, liftNum]
 
@@ -133,7 +133,7 @@ theorem certNum_bvar {R : Nat → Bool} (hR : R 0 = true) {n : Nat} (h : n % 16 
       then 0 else 1 := by
   rw [certNum, decCert_bvar h]
   refine ite_iff ?_ _ _
-  simp only [Cert.usesOnly, Cert.check, Cert.tag, hR, Bool.true_and, Bool.and_eq_true,
+  simp only [Cert.usesOnly, Cert.check, Cert.tag, hR, Bool.true_and,
     decide_eq_true_eq, decJudg_Γ, decJudg_e1, decJudg_e2, decJudg_A, lookupTy_eq_iff]
   have e1 : ∀ a b : Nat, decExpr a = .bvar b ↔ a = 7 * b + 0 := fun a b =>
     ⟨fun h => by rw [← encExpr_dec a, h]; rfl, fun h => by rw [h, Nat.add_zero, ← decExpr_enc (.bvar b)]; rfl⟩

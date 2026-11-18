@@ -53,7 +53,7 @@ macro "inst_simp" : tactic => `(tactic| simp (disch := omega) only [instStep, va
   eval_ifz, eval_eqz, eval_fstC, eval_sndC, eval_modC (by decide : 0 < 7),
   eval_divC (by decide : 0 < 7), eval_num, eval_tagC, eval_cpair, eval_histK, eval_addP, eval_leq, eval_liftP,
   eval_succ, unpair1_capKey, unpair2_capKey, unpair1_pair, unpair2_pair, encExpr, tag_mod,
-  tag_div, Nat.reduceEqDiff, if_true, if_false])
+  tag_div, Nat.reduceEqDiff, ite_true, ite_false])
 
 theorem instF_eq (n : Nat) : ∀ (X : VExpr) (k : Nat),
     cov (instF n) (capKey (encExpr X) k) = encExpr (X.inst (decExpr n) k) := by

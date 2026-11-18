@@ -130,8 +130,8 @@ theorem symmC_spec {R : Nat → Bool} (hR : R 1 = true) {ρ : Val} (h : ρ 0 % 1
 theorem ite_iff {p q : Prop} [Decidable p] [Decidable q] (h : p ↔ q) (a b : α) :
     (if p then a else b) = (if q then a else b) := by
   by_cases hp : p
-  · rw [if_pos hp, if_pos (h.1 hp)]
-  · rw [if_neg hp, if_neg (fun hq => hp (h.2 hq))]
+  · rw [ite_eq_left hp, ite_eq_left (h.1 hp)]
+  · rw [ite_eq_right hp, ite_eq_right (fun hq => hp (h.2 hq))]
 
 theorem childOK {R : Nat → Bool} (y : Nat) : certNum T R y = 0 ↔
     (decCert y).usesOnly R = true ∧ (decCert y).check T.env 0 T.deciders = true := by

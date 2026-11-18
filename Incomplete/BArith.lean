@@ -157,8 +157,7 @@ theorem HasNat.biota_zero {A z s : VExpr} (hI : Inert A)
   have e3 := BDefEq.appDF (BDefEq.appDF (BDefEq.appDF E hm) hz') hs'
   have h := l3.symm.trans (e3.trans r3)
   simp [bzBody, VExpr.appN, VExpr.inst, instVar, hmI.liftN, hzc.liftN_eq (Nat.zero_le _),
-    hsc.liftN_eq (Nat.zero_le _), hmI.inst, hzc.instN_eq (Nat.zero_le _),
-    hsc.instN_eq (Nat.zero_le _)] at h
+    hsc.liftN_eq (Nat.zero_le _), hmI.inst, hzc.instN_eq (Nat.zero_le _)] at h
   exact .defeqDF (bmotive_app hI hA N.bzeroT) h
 
 def bsBodyL : VExpr :=
@@ -252,8 +251,7 @@ theorem HasNat.biota_succ {A z s n : VExpr} (hI : Inert A)
   have h := l4.symm.trans (e4.trans r4)
   simp [bsBodyL, bsBodyR, VExpr.appN, VExpr.inst, instVar, hmI.liftN,
     hzc.liftN_eq (Nat.zero_le _), hsc.liftN_eq (Nat.zero_le _), hnc.liftN_eq (Nat.zero_le _),
-    hmI.inst, hzc.instN_eq (Nat.zero_le _), hsc.instN_eq (Nat.zero_le _),
-    hnc.instN_eq (Nat.zero_le _)] at h
+    hmI.inst, hzc.instN_eq (Nat.zero_le _), hsc.instN_eq (Nat.zero_le _)] at h
   exact .defeqDF (bmotive_app hI hA (.app' N.bsuccT hn rfl)) h
 
 end

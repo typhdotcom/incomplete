@@ -63,7 +63,7 @@ theorem pi_mem_univ {u v : Nat} {A : ZS} {B : ZS → ZS} (hu : u ≤ 1) (hv : v 
   rcases (by omega : v = 0 ∨ v = 1) with rfl | rfl
   · exact pi_mem_two hB
   · have : Lean.Nat.imax u 1 = 1 := by
-      unfold Lean.Nat.imax; simp only [Nat.one_ne_zero, if_false]; exact Nat.max_eq_right hu
+      unfold Lean.Nat.imax; simp only [Nat.one_ne_zero, ite_false]; exact Nat.max_eq_right hu
     rw [this]
     exact pi_mem_V0 (mem_V0_of_univ hu hA) hB
 
@@ -77,9 +77,9 @@ theorem iotaZero_sound (u : Nat) (ρ : Nat → ZS) :
       interp [u] iotaZero.lhs ρ ∈ interp [u] iotaZero.type ρ := by
   simp only [iotaZero, VExpr.lams, VExpr.foralls, VExpr.appN, interp, recC, motiveTy, zeroTy,
     succTy, zcons_zero, zcons_succ, interp_nat, interp_zero, interp_succ, List.map_cons,
-    List.map_nil, VLevel.eval, constV, if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat by decide),
-    if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat.zero by decide),
-    if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide), if_true, List.headD_cons,
+    List.map_nil, VLevel.eval, constV, ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat by decide),
+    ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat.zero by decide),
+    ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide), ite_true, List.headD_cons,
     List.getD_cons_zero]
   constructor
   · refine lam_congr fun M hM => lam_congr fun z hz => lam_congr fun s hs => ?_
@@ -92,9 +92,9 @@ theorem iotaSucc_sound (u : Nat) (ρ : Nat → ZS) :
       interp [u] iotaSucc.lhs ρ ∈ interp [u] iotaSucc.type ρ := by
   simp only [iotaSucc, VExpr.lams, VExpr.foralls, VExpr.appN, interp, recC, motiveTy, zeroTy,
     succTy, zcons_zero, zcons_succ, interp_nat, interp_zero, interp_succ, List.map_cons,
-    List.map_nil, VLevel.eval, constV, if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat by decide),
-    if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat.zero by decide),
-    if_neg (show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide), if_true, List.headD_cons,
+    List.map_nil, VLevel.eval, constV, ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat by decide),
+    ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat.zero by decide),
+    ite_eq_right (show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide), ite_true, List.headD_cons,
     List.getD_cons_zero]
   have key : ∀ {M z s n : ZS}, M ∈ pi omega (fun _ => univ u) → z ∈ app M (num 0) →
       s ∈ (pi omega fun n => pi (app M n) fun _ => app M (app succV n)) → n ∈ omega →
@@ -152,17 +152,17 @@ theorem BDefEq.sound {env : VEnv} (hM : ModelEnv env) {Γ : List VExpr} {e1 e2 A
       simp only [hl, List.map_cons, List.map_nil, constV, interp_recTy]
       simp only [show ¬(``Nat.rec : Lean.Name) = ``Nat by decide,
         show ¬(``Nat.rec : Lean.Name) = ``Nat.zero by decide,
-        show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide, if_false, if_true,
+        show ¬(``Nat.rec : Lean.Name) = ``Nat.succ by decide, ite_false, ite_true,
         List.headD_cons]
       exact recV_mem _
     · simp only [constV, show ¬(``Nat.succ : Lean.Name) = ``Nat by decide,
-        show ¬(``Nat.succ : Lean.Name) = ``Nat.zero by decide, if_false, if_true, interp,
+        show ¬(``Nat.succ : Lean.Name) = ``Nat.zero by decide, ite_false, ite_true, interp,
         interp_nat]
       exact succV_mem
-    · simp only [constV, show ¬(``Nat.zero : Lean.Name) = ``Nat by decide, if_false, if_true,
+    · simp only [constV, show ¬(``Nat.zero : Lean.Name) = ``Nat by decide, ite_false, ite_true,
         interp_nat]
       exact num_mem_omega 0
-    · simp only [constV, if_true, interp, VLevel.eval, univ]
+    · simp only [constV, ite_true, interp, VLevel.eval, univ]
       exact omega_mem_V0
   | appDF _ _ ih₁ ih₂ =>
     intro ρ hρ

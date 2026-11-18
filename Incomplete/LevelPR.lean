@@ -29,8 +29,8 @@ def fldC (i : Nat) (a : PR) : PR := fstC (restC i a)
 @[simp] theorem eval_ifz_eqz (a b c d : PR) (ρ : Val) :
     (ifz (eqz a b) c d).eval ρ = if a.eval ρ = b.eval ρ then c.eval ρ else d.eval ρ := by
   rw [eval_ifz]; by_cases h : a.eval ρ = b.eval ρ
-  · rw [if_pos ((eval_eqz _ _ _).2 h), if_pos h]
-  · rw [if_neg (fun e => h ((eval_eqz _ _ _).1 e)), if_neg h]
+  · rw [ite_eq_left ((eval_eqz _ _ _).2 h), ite_eq_left h]
+  · rw [ite_eq_right (fun e => h ((eval_eqz _ _ _).1 e)), ite_eq_right h]
 
 def mulP (a b : PR) : PR := comp2 mulC a b
 def addP (a b : PR) : PR := comp2 addC a b
@@ -95,7 +95,7 @@ theorem levNum_succ (m : Nat) (val : Nat → Nat) (hv : ∀ c ≤ m, val c = lev
   · simp only [VLevel.WF, VLevel.eval]
     by_cases ha : (decLevel (p1 (m / 4))).WF 0 <;> by_cases hb : (decLevel (p2 (m / 4))).WF 0 <;>
       simp [ha, hb, Lean.Nat.imax]
-    split <;> simp_all [Nat.add_max_add_right]
+    split <;> simp_all
   · simp [VLevel.WF]
 
 theorem levF_eq (n : Nat) : cov levF n = levNum n := by

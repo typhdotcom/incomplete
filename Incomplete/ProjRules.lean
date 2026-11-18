@@ -96,7 +96,7 @@ theorem eval_paC {LS : PR} {ρ : Val} {ls : List VLevel} (hL : LS.eval ρ = encL
     rw [neverZero_closed (inst_closed h _), equiv_zero_closed (inst_closed h _)]; omega
   rw [paC, eval_ifz, VInductDecl.ProjAllowed, hnz]
   by_cases hd : (zeroC LS d.level).eval ρ = 0
-  · rw [if_pos hd, eval_andz, ite01_eq_zero, eval_earlierC hL h c k k]
+  · rw [ite_eq_left hd, eval_andz, ite01_eq_zero, eval_earlierC hL h c k k]
     have hd' := hz.1 hd
     constructor
     · rintro ⟨h1, h2⟩ _
@@ -108,7 +108,7 @@ theorem eval_paC {LS : PR} {ρ : Val} {ls : List VLevel} (hL : LS.eval ρ = encL
       cases hf : c.fields[k]? with
       | none => rfl
       | some f => exact (eval_zeroC hL h _).2 (h1 f hf)
-  · rw [if_neg hd]
+  · rw [ite_eq_right hd]
     exact ⟨fun _ e => absurd (hz.2 e) hd, fun _ => rfl⟩
 
 /-- `0` exactly when every projection `k < m` is allowed. -/
@@ -298,7 +298,7 @@ theorem eval_etaEntryC {R : Nat → Bool} {ρ : Val} (h : ρ 0 % 16 = 15) (hv : 
         ⟨u1, u2, u3, u4, u5, u6, u7, u8, u9⟩⟩
     · exact ⟨fun ⟨u1, _⟩ => absurd u1 hw, fun ⟨⟨_, _, u1, _⟩, _⟩ => absurd u1 hw⟩
   · rename_i hf
-    rw [eval_num, if_neg]
+    rw [eval_num, ite_eq_right]
     rintro ⟨⟨h1, h2, -⟩, -⟩; exact hf ⟨h1, h2⟩
 
 /-! ### Dispatch on the block table and the field index -/
@@ -316,8 +316,8 @@ theorem eval_indTabC (entry : VInductDecl → Nat → PR) (ρ : Val) :
   | (n, (d, t)) :: r => by
     simp only [indTabC, ilookup, eval_ifz, eval_eqz, eval_fldC, eval_xC, eval_numC]
     by_cases h : fld 1 (ρ 0 / 16) = encName n
-    · rw [if_pos h, if_pos (by rw [h, decName_enc])]
-    · rw [if_neg h, if_neg (by rintro rfl; exact h (encName_dec _).symm)]
+    · rw [ite_eq_left h, ite_eq_left (by rw [h, decName_enc])]
+    · rw [ite_eq_right h, ite_eq_right (by rintro rfl; exact h (encName_dec _).symm)]
       exact eval_indTabC entry ρ r
 
 def ctorEnt (g : VInductDecl → VInductiveType → VConstructor → PR) (d : VInductDecl) (t : Nat) : PR :=
@@ -339,18 +339,18 @@ theorem eval_fieldTab (g : Nat → VField → PR) (ρ : Val) : ∀ fs i, (fieldT
   | f :: fs, i => by
     simp only [fieldTab, eval_ifz, eval_eqz, eval_fldC, eval_xC, eval_numC]
     by_cases h : fld 2 (ρ 0 / 16) = i
-    · rw [if_pos h, if_pos (by omega), h, Nat.sub_self]; rfl
-    · rw [if_neg h, eval_fieldTab g ρ fs (i + 1)]
+    · rw [ite_eq_left h, ite_eq_left (by omega), h, Nat.sub_self]; rfl
+    · rw [ite_eq_right h, eval_fieldTab g ρ fs (i + 1)]
       by_cases h' : i + 1 ≤ fld 2 (ρ 0 / 16)
-      · rw [if_pos h', if_pos (by omega), show fld 2 (ρ 0 / 16) - i = (fld 2 (ρ 0 / 16) - (i + 1)) + 1
+      · rw [ite_eq_left h', ite_eq_left (by omega), show fld 2 (ρ 0 / 16) - i = (fld 2 (ρ 0 / 16) - (i + 1)) + 1
           by omega, List.getElem?_cons_succ]
-      · rw [if_neg h', if_neg (by omega)]
+      · rw [ite_eq_right h', ite_eq_right (by omega)]
 
 theorem eval_fieldTab0 (g : Nat → VField → PR) (ρ : Val) (fs : List VField) :
     (fieldTab g fs 0).eval ρ = match fs[fld 2 (ρ 0 / 16)]? with
       | some f => (g (fld 2 (ρ 0 / 16)) f).eval ρ
       | none => 1 := by
-  rw [eval_fieldTab, if_pos (Nat.zero_le _), Nat.sub_zero]
+  rw [eval_fieldTab, ite_eq_left (Nat.zero_le _), Nat.sub_zero]
 
 /-! ### Shared rewriting -/
 
@@ -661,10 +661,10 @@ theorem projEtaC_spec {R : Nat → Bool} (hR : R 15 = true) {ρ : Val} (h : ρ 0
     (hv : HistOK T R ρ) : (projEtaC T).eval ρ = certNum T R (ρ 0) := by
   rw [certNum_projEta hR h, projEtaC, eval_indTabC]
   rcases hl : ilookup T.inducts (decName (fld 1 (ρ 0 / 16))) with _ | ⟨⟨d, t⟩⟩
-  · rw [if_neg (by simp [etaCondT, hl])]
+  · rw [ite_eq_right (by simp [etaCondT, hl])]
   simp only [ctorEnt]
   rcases hs : singleCtor d t with _ | ⟨⟨T', c⟩⟩
-  · rw [if_neg (by simp [etaCondT, hl, hs])]; rfl
+  · rw [ite_eq_right (by simp [etaCondT, hl, hs])]; rfl
   · exact (eval_etaEntryC h hv d T' c).trans (ite_iff (by simp only [etaCondT, hl, hs]) _ _)
 
 open Classical in
@@ -672,13 +672,13 @@ theorem projIotaC_spec {R : Nat → Bool} (hR : R 14 = true) {ρ : Val} (h : ρ 
     (hv : HistOK T R ρ) : (projIotaC T).eval ρ = certNum T R (ρ 0) := by
   rw [certNum_projIota hR h, projIotaC, eval_indTabC]
   rcases hl : ilookup T.inducts (decName (fld 1 (ρ 0 / 16))) with _ | ⟨⟨d, t⟩⟩
-  · rw [if_neg (by simp [iotaCondT, hl])]
+  · rw [ite_eq_right (by simp [iotaCondT, hl])]
   simp only [ctorEnt]
   rcases hs : singleCtor d t with _ | ⟨⟨T', c⟩⟩
-  · rw [if_neg (by simp [iotaCondT, hl, hs])]; rfl
+  · rw [ite_eq_right (by simp [iotaCondT, hl, hs])]; rfl
   simp only [eval_fieldTab0]
   rcases hf : c.fields[fld 2 (ρ 0 / 16)]? with _ | f
-  · rw [if_neg (by simp [iotaCondT, hl, hs, hf])]
+  · rw [ite_eq_right (by simp [iotaCondT, hl, hs, hf])]
   · exact (eval_iotaEntryC h hv d T' c _ f hf).trans
       (ite_iff (by simp only [iotaCondT, hl, hs, hf]) _ _)
 
@@ -687,13 +687,13 @@ theorem projDFC_spec {R : Nat → Bool} (hR : R 13 = true) {ρ : Val} (h : ρ 0 
     (hv : HistOK T R ρ) : (projDFC T).eval ρ = certNum T R (ρ 0) := by
   rw [certNum_projDF hR h, projDFC, eval_indTabC]
   rcases hl : ilookup T.inducts (decName (fld 1 (ρ 0 / 16))) with _ | ⟨⟨d, t⟩⟩
-  · rw [if_neg (by simp [dfCondT, hl])]
+  · rw [ite_eq_right (by simp [dfCondT, hl])]
   simp only [ctorEnt]
   rcases hs : singleCtor d t with _ | ⟨⟨T', c⟩⟩
-  · rw [if_neg (by simp [dfCondT, hl, hs])]; rfl
+  · rw [ite_eq_right (by simp [dfCondT, hl, hs])]; rfl
   simp only [eval_fieldTab0]
   rcases hf : c.fields[fld 2 (ρ 0 / 16)]? with _ | f
-  · rw [if_neg (by simp [dfCondT, hl, hs, hf])]
+  · rw [ite_eq_right (by simp [dfCondT, hl, hs, hf])]
   · exact (eval_dfEntryC h hv d T' c _ f hf).trans
       (ite_iff (by simp only [dfCondT, hl, hs, hf]) _ _)
 

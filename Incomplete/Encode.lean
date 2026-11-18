@@ -357,7 +357,7 @@ def encCert : Cert → Nat
 
 def decCert (n : Nat) : Cert :=
   let x := n / 16
-  if h0 : n % 16 = 0 then .bvar (decJudg (fld 0 x)) ((rest 1 x))
+  if _ : n % 16 = 0 then .bvar (decJudg (fld 0 x)) ((rest 1 x))
   else if n % 16 = 1 then .symm (decJudg (fld 0 x)) (decCert (rest 1 x))
   else if n % 16 = 2 then .trans (decJudg (fld 0 x)) (decExpr (fld 1 x)) (decCert (fld 2 x)) (decCert (rest 3 x))
   else if n % 16 = 3 then .sortDF (decJudg (fld 0 x)) (decLevel (fld 1 x)) (decLevel (rest 2 x))
@@ -376,13 +376,13 @@ def decCert (n : Nat) : Cert :=
 termination_by n
 decreasing_by
   all_goals first
-    | exact Nat.lt_of_le_of_lt (fld_le _ _) (div_lt_of_mod (by decide) h0)
-    | exact Nat.lt_of_le_of_lt (rest_le _ _) (div_lt_of_mod (by decide) h0)
+    | exact Nat.lt_of_le_of_lt (fld_le _ _) (div_lt_of_mod (by decide) ‹¬n % 16 = 0›)
+    | exact Nat.lt_of_le_of_lt (rest_le _ _) (div_lt_of_mod (by decide) ‹¬n % 16 = 0›)
 
 theorem decCert_enc (c : Cert) : decCert (encCert c) = c := by
   induction c with
   | bvar j i  =>
-    rw [encCert, decCert]; simp [tag_div, decJudg_enc]
+    rw [encCert, decCert]; simp [decJudg_enc]
   | symm j c ihc =>
     rw [encCert, decCert]; simp [tag_div, decJudg_enc, ihc]
   | trans j m c₁ c₂ ihc₁ ihc₂ =>
@@ -419,51 +419,51 @@ theorem encCert_dec (n : Nat) : encCert (decCert n) = n := by
   have hm := Nat.mod_lt n (show 16 > 0 by decide)
   rw [decCert]
   by_cases h0 : n % 16 = 0
-  · rw [dif_pos h0]; rw [encCert, encJudg_dec, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [dif_neg h0]
+  · rw [dite_eq_left h0]; rw [encCert, encJudg_dec, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [dite_eq_right h0]
   have hl := div_lt_of_mod (by decide) h0
   by_cases h1 : n % 16 = 1
-  · rw [if_pos h1]; rw [encCert, encJudg_dec, encCert_dec (rest 1 (n / 16)), pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h1]
+  · rw [ite_eq_left h1]; rw [encCert, encJudg_dec, encCert_dec (rest 1 (n / 16)), pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h1]
   by_cases h2 : n % 16 = 2
-  · rw [if_pos h2]; rw [encCert, encJudg_dec, encExpr_dec, encCert_dec (fld 2 (n / 16)), encCert_dec (rest 3 (n / 16)), pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h2]
+  · rw [ite_eq_left h2]; rw [encCert, encJudg_dec, encExpr_dec, encCert_dec (fld 2 (n / 16)), encCert_dec (rest 3 (n / 16)), pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h2]
   by_cases h3 : n % 16 = 3
-  · rw [if_pos h3]; rw [encCert, encJudg_dec, encLevel_dec, encLevel_dec, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h3]
+  · rw [ite_eq_left h3]; rw [encCert, encJudg_dec, encLevel_dec, encLevel_dec, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h3]
   by_cases h4 : n % 16 = 4
-  · rw [if_pos h4]; rw [encCert, encJudg_dec, encName_dec, encConst_dec, encList_dec encLevel_dec, encList_dec encLevel_dec, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h4]
+  · rw [ite_eq_left h4]; rw [encCert, encJudg_dec, encName_dec, encConst_dec, encList_dec encLevel_dec, encList_dec encLevel_dec, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h4]
   by_cases h5 : n % 16 = 5
-  · rw [if_pos h5]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h5]
+  · rw [ite_eq_left h5]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h5]
   by_cases h6 : n % 16 = 6
-  · rw [if_pos h6]; rw [encCert, encJudg_dec, encLevel_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h6]
+  · rw [ite_eq_left h6]; rw [encCert, encJudg_dec, encLevel_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h6]
   by_cases h7 : n % 16 = 7
-  · rw [if_pos h7]; rw [encCert, encJudg_dec, encLevel_dec, encLevel_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h7]
+  · rw [ite_eq_left h7]; rw [encCert, encJudg_dec, encLevel_dec, encLevel_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (rest 8 (n / 16)), pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h7]
   by_cases h8 : n % 16 = 8
-  · rw [if_pos h8]; rw [encCert, encJudg_dec, encLevel_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 4 (n / 16)), encCert_dec (rest 5 (n / 16)), pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h8]
+  · rw [ite_eq_left h8]; rw [encCert, encJudg_dec, encLevel_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 4 (n / 16)), encCert_dec (rest 5 (n / 16)), pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h8]
   by_cases h9 : n % 16 = 9
-  · rw [if_pos h9]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 5 (n / 16)), encCert_dec (rest 6 (n / 16)), pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h9]
+  · rw [ite_eq_left h9]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 5 (n / 16)), encCert_dec (rest 6 (n / 16)), pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h9]
   by_cases h10 : n % 16 = 10
-  · rw [if_pos h10]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (rest 4 (n / 16)), pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h10]
+  · rw [ite_eq_left h10]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (rest 4 (n / 16)), pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h10]
   by_cases h11 : n % 16 = 11
-  · rw [if_pos h11]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 4 (n / 16)), encCert_dec (fld 5 (n / 16)), encCert_dec (rest 6 (n / 16)), pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h11]
+  · rw [ite_eq_left h11]; rw [encCert, encJudg_dec, encExpr_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 4 (n / 16)), encCert_dec (fld 5 (n / 16)), encCert_dec (rest 6 (n / 16)), pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h11]
   by_cases h12 : n % 16 = 12
-  · rw [if_pos h12]; rw [encCert, encJudg_dec, encDefEq_dec, encList_dec encLevel_dec, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h12]
+  · rw [ite_eq_left h12]; rw [encCert, encJudg_dec, encDefEq_dec, encList_dec encLevel_dec, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h12]
   by_cases h13 : n % 16 = 13
-  · rw [if_pos h13]; rw [encCert, encJudg_dec, encName_dec, encList_dec encLevel_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encLevel_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 11 (n / 16)), encCert_dec (fld 12 (n / 16)), encCert_dec (rest 13 (n / 16)), pair_fld_rest 12, pair_fld_rest 11, pair_fld_rest 10, pair_fld_rest 9, pair_fld_rest 8, pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h13]
+  · rw [ite_eq_left h13]; rw [encCert, encJudg_dec, encName_dec, encList_dec encLevel_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encLevel_dec, encExpr_dec, encExpr_dec, encCert_dec (fld 11 (n / 16)), encCert_dec (fld 12 (n / 16)), encCert_dec (rest 13 (n / 16)), pair_fld_rest 12, pair_fld_rest 11, pair_fld_rest 10, pair_fld_rest 9, pair_fld_rest 8, pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h13]
   by_cases h14 : n % 16 = 14
-  · rw [if_pos h14]; rw [encCert, encJudg_dec, encName_dec, encList_dec encLevel_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (fld 8 (n / 16)), encCert_dec (rest 9 (n / 16)), pair_fld_rest 8, pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
-  rw [if_neg h14]
+  · rw [ite_eq_left h14]; rw [encCert, encJudg_dec, encName_dec, encList_dec encLevel_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encList_dec encExpr_dec, encCert_dec (fld 7 (n / 16)), encCert_dec (fld 8 (n / 16)), encCert_dec (rest 9 (n / 16)), pair_fld_rest 8, pair_fld_rest 7, pair_fld_rest 6, pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
+  rw [ite_eq_right h14]
   rw [encCert, encJudg_dec, encName_dec, encList_dec encLevel_dec, encList_dec encExpr_dec, encExpr_dec, encCert_dec (fld 5 (n / 16)), encCert_dec (rest 6 (n / 16)), pair_fld_rest 5, pair_fld_rest 4, pair_fld_rest 3, pair_fld_rest 2, pair_fld_rest 1, pair_fld_rest 0]; simp only [rest_zero]; omega
 termination_by n
 decreasing_by

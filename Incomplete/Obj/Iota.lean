@@ -172,7 +172,7 @@ theorem natRec_succ' {A z s n : VExpr} (hI : Inert A) (hA : ∀ Γ, env.HasType 
     (IsDefEq.instN hz' W3' (IsDefEq.instN hm W3 tR4))) hn'
   have e4 := IsDefEq.appDF (IsDefEq.appDF (IsDefEq.appDF (IsDefEq.appDF Ex hm) hz') hs') hn'
   have h := l4.symm.trans (e4.trans r4)
-  simp [bsBodyL, bsBodyR, VExpr.appN, VExpr.inst, instVar, hmI.liftN, hmI.inst, inst_lift,
+  simp [bsBodyL, bsBodyR, VExpr.appN, VExpr.inst, instVar, hmI.liftN, hmI.inst,
     inst_liftN_lo] at h
   exact .defeqDF (motive_app hI hA (.app' succT hn rfl)) h
 

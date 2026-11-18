@@ -35,7 +35,7 @@ theorem solR_zero {b : Nat} (h1 : 1 ≤ b) (h2 : b ≤ n + 1) : M.solR 0 b = tru
 theorem solR_succ (w v : Fin (n + 1)) : M.solR (w.val + 1) (v.val + 1) = M.R w v := by
   have := v.isLt; have := w.isLt
   simp only [solR, Nat.add_sub_cancel]
-  rw [dif_pos (by omega), if_neg (by omega), dif_pos (by omega)]
+  rw [dite_eq_left (by omega), ite_eq_right (by omega), dite_eq_left (by omega)]
 
 theorem solR_spec {a b : Nat} (h : M.solR a b = true) :
     1 ≤ b ∧ b ≤ n + 1 ∧ a ≤ n + 1 ∧ (a ≠ 0 → ∃ (w v : Fin (n + 1)), a = w.val + 1 ∧

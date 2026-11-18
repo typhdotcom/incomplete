@@ -43,8 +43,8 @@ theorem args_map_inst : ∀ (s n : Nat) {k : Nat} (e : VExpr), k ≤ s →
   | _, 0, _, _, _ => rfl
   | s, n + 1, k, e, h => by
     have ih := args_map_inst (s + 1) n (k := k) e (by omega)
-    simp only [args, List.map_cons, VExpr.inst, instVar, if_neg (show ¬ s + 1 < k by omega),
-      if_neg (show s + 1 ≠ k by omega), Nat.add_sub_cancel, ih]
+    simp only [args, List.map_cons, VExpr.inst, instVar, ite_eq_right (show ¬ s + 1 < k by omega),
+      ite_eq_right (show s + 1 ≠ k by omega), Nat.add_sub_cancel, ih]
 
 theorem args_getD : ∀ (s n i : Nat), (args s n).getD i zero = if i < n then .bvar (s + i) else zero
   | _, 0, _ => rfl

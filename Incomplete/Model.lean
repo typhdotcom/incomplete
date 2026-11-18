@@ -34,7 +34,7 @@ noncomputable def natOf (n : ZS) : Nat := if h : ∃ k, n = num k then h.choose 
 
 theorem natOf_num (k : Nat) : natOf (num k : ZS) = k := by
   have h : ∃ j, (num k : ZS) = num j := ⟨k, rfl⟩
-  rw [natOf, dif_pos h]; exact (num_inj h.choose_spec).symm
+  rw [natOf, dite_eq_left h]; exact (num_inj h.choose_spec).symm
 
 noncomputable def recN (z s : ZS) : Nat → ZS
   | 0 => z

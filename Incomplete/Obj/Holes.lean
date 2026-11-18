@@ -105,7 +105,7 @@ theorem tmplH_closed (hs : List VExpr) : ∀ (B : VExpr) (j : Nat), B.ClosedN j 
     tmplH hs B j = tmplH [] B j
   | .bvar i, j, hc => by
     have hc : i < j := hc
-    simp only [tmplH, if_pos hc]
+    simp only [tmplH, ite_eq_left hc]
   | .sort _, _, _ | .const _ _, _, _ => rfl
   | .app f a, j, hc => by simp only [tmplH, tmplH_closed hs f j hc.1, tmplH_closed hs a j hc.2]
   | .lam A b, j, hc => by
@@ -123,20 +123,20 @@ theorem tmplH_liftN_erase (hs₁ hs₂ : List VExpr) (y : VExpr) : ∀ (B : VExp
     · rw [liftVar_lt h1]
       simp only [tmplH, List.length_append, List.length_cons]
       rcases Nat.lt_or_ge i j with h | h
-      · simp only [if_pos h]
-      · simp only [if_neg (show ¬ i < j by omega),
-          if_pos (show i - j < hs₁.length + (hs₂.length + 1) by omega),
-          if_pos (show i - j < hs₁.length + hs₂.length by omega),
+      · simp only [ite_eq_left h]
+      · simp only [ite_eq_right (show ¬ i < j by omega),
+          ite_eq_left (show i - j < hs₁.length + (hs₂.length + 1) by omega),
+          ite_eq_left (show i - j < hs₁.length + hs₂.length by omega),
           getD_app_lt (show i - j < hs₁.length by omega)]
     · rw [liftVar_le h1]
       simp only [tmplH, List.length_append, List.length_cons]
-      simp only [if_neg (show ¬ 1 + i < j by omega), if_neg (show ¬ i < j by omega)]
+      simp only [ite_eq_right (show ¬ 1 + i < j by omega), ite_eq_right (show ¬ i < j by omega)]
       by_cases h2 : i - j < hs₁.length + hs₂.length
-      · simp only [if_pos (show 1 + i - j < hs₁.length + (hs₂.length + 1) by omega), if_pos h2,
+      · simp only [ite_eq_left (show 1 + i - j < hs₁.length + (hs₂.length + 1) by omega), ite_eq_left h2,
           getD_app_ge (show hs₁.length ≤ 1 + i - j by omega),
           getD_app_ge (show hs₁.length ≤ i - j by omega),
           show 1 + i - j - hs₁.length = (i - j - hs₁.length) + 1 by omega, List.getD_cons_succ]
-      · simp only [if_neg (show ¬ 1 + i - j < hs₁.length + (hs₂.length + 1) by omega), if_neg h2,
+      · simp only [ite_eq_right (show ¬ 1 + i - j < hs₁.length + (hs₂.length + 1) by omega), ite_eq_right h2,
           show 1 + i - (hs₁.length + (hs₂.length + 1)) = i - (hs₁.length + hs₂.length) by omega]
   | .sort _, _ | .const _ _, _ => rfl
   | .app f a, j => by
@@ -160,13 +160,13 @@ theorem tmplH_liftN_holes (hs₁ hs₂ : List VExpr) (j : Nat) : ∀ (e : VExpr)
     simp only [VExpr.liftN]
     rcases Nat.lt_or_ge i d with h | h
     · rw [liftVar_lt h]
-      simp only [tmplH, if_pos h, if_pos (by omega : i < j + d)]
+      simp only [tmplH, ite_eq_left h, ite_eq_left (by omega : i < j + d)]
     · rw [liftVar_le h]
       simp only [tmplH, List.length_append]
-      simp only [if_neg (show ¬ j + hs₁.length + i < j + d by omega),
-        if_neg (show ¬ i < d by omega),
-        if_pos (show j + hs₁.length + i - (j + d) < hs₁.length + hs₂.length by omega),
-        if_pos (show i - d < hs₂.length by omega),
+      simp only [ite_eq_right (show ¬ j + hs₁.length + i < j + d by omega),
+        ite_eq_right (show ¬ i < d by omega),
+        ite_eq_left (show j + hs₁.length + i - (j + d) < hs₁.length + hs₂.length by omega),
+        ite_eq_left (show i - d < hs₂.length by omega),
         getD_app_ge (show hs₁.length ≤ j + hs₁.length + i - (j + d) by omega),
         show j + hs₁.length + i - (j + d) - hs₁.length = i - d by omega]
   | .sort _, _, _ | .const _ _, _, _ => rfl
@@ -190,34 +190,34 @@ theorem tmplH_inst_insert (hs₁ hs₂ : List VExpr) {e : VExpr} (he : e.ClosedN
   | .bvar i, j => by
     simp only [VExpr.inst, instVar]
     rcases Nat.lt_or_ge i (j + hs₁.length) with h1 | h1
-    · rw [if_pos h1]
+    · rw [ite_eq_left h1]
       simp only [tmplH, List.length_append, List.length_cons]
       rcases Nat.lt_or_ge i j with h | h
-      · simp only [if_pos h]
-      · simp only [if_neg (show ¬ i < j by omega),
-          if_pos (show i - j < hs₁.length + (hs₂.length + 1) by omega),
-          if_pos (show i - j < hs₁.length + hs₂.length by omega),
+      · simp only [ite_eq_left h]
+      · simp only [ite_eq_right (show ¬ i < j by omega),
+          ite_eq_left (show i - j < hs₁.length + (hs₂.length + 1) by omega),
+          ite_eq_left (show i - j < hs₁.length + hs₂.length by omega),
           getD_app_lt (show i - j < hs₁.length by omega)]
-    · rw [if_neg (show ¬ i < j + hs₁.length by omega)]
+    · rw [ite_eq_right (show ¬ i < j + hs₁.length by omega)]
       by_cases h2 : i = j + hs₁.length
-      · rw [if_pos h2]
+      · rw [ite_eq_left h2]
         have := tmplH_liftN_holes hs₁ hs₂ j e 0 (by simpa using he)
         simp only [Nat.add_zero] at this
         rw [this]
         simp only [tmplH, List.length_append, List.length_cons]
-        simp only [if_neg (show ¬ i < j by omega),
-          if_pos (show i - j < hs₁.length + (hs₂.length + 1) by omega),
+        simp only [ite_eq_right (show ¬ i < j by omega),
+          ite_eq_left (show i - j < hs₁.length + (hs₂.length + 1) by omega),
           getD_app_ge (show hs₁.length ≤ i - j by omega),
           show i - j - hs₁.length = 0 by omega, List.getD_cons_zero]
-      · rw [if_neg h2]
+      · rw [ite_eq_right h2]
         simp only [tmplH, List.length_append, List.length_cons]
-        simp only [if_neg (show ¬ i - 1 < j by omega), if_neg (show ¬ i < j by omega)]
+        simp only [ite_eq_right (show ¬ i - 1 < j by omega), ite_eq_right (show ¬ i < j by omega)]
         by_cases h3 : i - 1 - j < hs₁.length + hs₂.length
-        · simp only [if_pos h3, if_pos (show i - j < hs₁.length + (hs₂.length + 1) by omega),
+        · simp only [ite_eq_left h3, ite_eq_left (show i - j < hs₁.length + (hs₂.length + 1) by omega),
             getD_app_ge (show hs₁.length ≤ i - 1 - j by omega),
             getD_app_ge (show hs₁.length ≤ i - j by omega),
             show i - j - hs₁.length = (i - 1 - j - hs₁.length) + 1 by omega, List.getD_cons_succ]
-        · simp only [if_neg h3, if_neg (show ¬ i - j < hs₁.length + (hs₂.length + 1) by omega),
+        · simp only [ite_eq_right h3, ite_eq_right (show ¬ i - j < hs₁.length + (hs₂.length + 1) by omega),
             show i - 1 - (hs₁.length + hs₂.length) = i - (hs₁.length + (hs₂.length + 1)) by omega]
   | .sort _, _ | .const _ _, _ => rfl
   | .app f a, j => by
@@ -244,7 +244,7 @@ theorem getD_mem {l : List VExpr} {i : Nat} (h : i < l.length) : l.getD i zero �
 /-- A template without holes is the number of its expression. -/
 theorem tmplH_nil : ∀ (B : VExpr) (j : Nat), Thm env Γ (tmplH [] B j =ₒ numT (encExpr B))
   | .bvar i, j => by
-    simp only [tmplH, List.length_nil, Nat.not_lt_zero, if_false, Nat.sub_zero]
+    simp only [tmplH, List.length_nil, Nat.not_lt_zero, ite_false, Nat.sub_zero]
     split <;> orefl
   | .sort _, _ | .const _ _, _ => by simp only [tmplH]; orefl
   | .app f b, j => by simp only [tmplH]; orw [numT_app, tmplH_nil f j, tmplH_nil b j]
@@ -303,16 +303,16 @@ theorem instT_tmplH_lift (hh : Tms env Γ hs)
     simp only [VExpr.liftN]
     rcases Nat.lt_or_ge i j with h | h
     · rw [liftVar_lt h]
-      simp only [tmplH, if_pos h, if_pos (show i < j + 1 by omega)]
+      simp only [tmplH, ite_eq_left h, ite_eq_left (show i < j + 1 by omega)]
       orw [numT_bvar, numT_lit]
       orw [instT_bvar_lt (by otype) ha (by otype) (lit_lt h), ← numT_lit i, ← numT_bvar i]
     · rw [liftVar_le h]
-      simp only [tmplH, if_neg (show ¬ 1 + i < j + 1 by omega), if_neg (show ¬ i < j by omega),
+      simp only [tmplH, ite_eq_right (show ¬ 1 + i < j + 1 by omega), ite_eq_right (show ¬ i < j by omega),
         show 1 + i - (j + 1) = i - j by omega]
       by_cases h2 : i - j < hs.length
-      · simp only [if_pos h2]
+      · simp only [ite_eq_left h2]
         exact hin _ (getD_mem h2) j
-      · simp only [if_neg h2]
+      · simp only [ite_eq_right h2]
         orw [numT_bvar, numT_lit,
           instT_bvar_gt (by otype) ha (by otype) (lit_lt (show j < 1 + i - hs.length by omega)),
           sub_lit]
@@ -352,18 +352,18 @@ theorem instT_tmplH_num (hh : Tms env Γ hs)
   | .bvar i, j => by
     simp only [tmplH, List.length_cons]
     rcases Nat.lt_trichotomy i j with h | rfl | h
-    · simp only [if_pos h, if_pos (show i < j + 1 by omega)]
+    · simp only [ite_eq_left h, ite_eq_left (show i < j + 1 by omega)]
       orw [numT_bvar, numT_lit]
       orw [instT_bvar_lt (by otype) ha (by otype) (lit_lt h), ← numT_lit i, ← numT_bvar i]
-    · simp only [if_pos (show i < i + 1 by omega), Nat.lt_irrefl, if_false, Nat.sub_self,
-        if_pos (show 0 < hs.length + 1 by omega), List.getD_cons_zero]
+    · simp only [ite_eq_left (show i < i + 1 by omega), Nat.lt_irrefl, ite_false, Nat.sub_self,
+        ite_eq_left (show 0 < hs.length + 1 by omega), List.getD_cons_zero]
       orw [numT_bvar, numT_lit, instT_bvar_eq ha (by otype), hl]
-    · simp only [if_neg (show ¬ i < j + 1 by omega), if_neg (show ¬ i < j by omega)]
+    · simp only [ite_eq_right (show ¬ i < j + 1 by omega), ite_eq_right (show ¬ i < j by omega)]
       by_cases h2 : i - (j + 1) < hs.length
-      · simp only [if_pos h2, show i - j = (i - (j + 1)) + 1 by omega,
-          if_pos (show i - (j + 1) + 1 < hs.length + 1 by omega), List.getD_cons_succ]
+      · simp only [ite_eq_left h2, show i - j = (i - (j + 1)) + 1 by omega,
+          ite_eq_left (show i - (j + 1) + 1 < hs.length + 1 by omega), List.getD_cons_succ]
         exact hin _ (getD_mem h2) j
-      · simp only [if_neg h2, if_neg (show ¬ i - j < hs.length + 1 by omega)]
+      · simp only [ite_eq_right h2, ite_eq_right (show ¬ i - j < hs.length + 1 by omega)]
         orw [numT_bvar, numT_lit,
           instT_bvar_gt (by otype) ha (by otype) (lit_lt (show j < i - hs.length by omega)),
           sub_lit]

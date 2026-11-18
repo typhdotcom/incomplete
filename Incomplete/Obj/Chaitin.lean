@@ -322,13 +322,13 @@ theorem decExpr_code {f : PR} {c : Nat} (hf : f.code = c) : decExpr c = fn f := 
 
 theorem cplxC_code {n c : Nat} {f : PR} (hf : f.code = c) :
     cplxC n c = ¬ₒ (descS (fn f) (lit c) (lit n)) := by
-  unfold cplxC; rw [if_pos ⟨f, hf⟩, decExpr_code hf]
+  unfold cplxC; rw [ite_eq_left ⟨f, hf⟩, decExpr_code hf]
 
 theorem cplxCTy {Γ : List VExpr} (n c : Nat) : env.HasType Γ (cplxC n c) (.sort .zero) := by
   by_cases h : ∃ f : PR, f.code = c
   · obtain ⟨f, hf⟩ := h
     rw [cplxC_code hf]; exact negTy (descSTy f c n)
-  · unfold cplxC; rw [if_neg h]; exact trueT
+  · unfold cplxC; rw [ite_eq_right h]; exact trueT
 
 theorem complexTy {Γ : List VExpr} (L n : Nat) : env.HasType Γ (Complex L n) (.sort .zero) :=
   bigAndTy (props_map fun c => cplxCTy n c)

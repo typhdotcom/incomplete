@@ -23,7 +23,7 @@ theorem natEnv_dneName : natEnv.constants dneName = none := by
 theorem natEnv_le_clEnv : natEnv ≤ clEnv where
   constants {n a} h := by
     have hn : dneName ≠ n := by rintro rfl; rw [natEnv_dneName] at h; cases h
-    simp only [clEnv, withConst, if_neg hn, h]
+    simp only [clEnv, withConst, ite_eq_right hn, h]
   defeqs h := h
   inducts h := h
 
@@ -77,7 +77,7 @@ theorem modelEnv_clEnv : ModelEnv clEnv where
       simp only [constV, dneName, show ¬(`Classical.dne : Lean.Name) = ``Nat by decide,
         show ¬(`Classical.dne : Lean.Name) = ``Nat.zero by decide,
         show ¬(`Classical.dne : Lean.Name) = ``Nat.succ by decide,
-        show ¬(`Classical.dne : Lean.Name) = ``Nat.rec by decide, if_false, if_true]
+        show ¬(`Classical.dne : Lean.Name) = ``Nat.rec by decide, ite_false, ite_true]
       exact dneV_mem ρ
     · exact .inl h
   defeq h := h
