@@ -104,6 +104,11 @@ theorem bigOr_mono {ps qs : List VExpr} (hps : Props env Γ ps) (hqs : Props env
 
 end
 
+macro_rules | `(tactic| otype_rules) => `(tactic|
+  ((with_reducible refine bigOrTy (props_map fun _ => ?_)); otype))
+macro_rules | `(tactic| otype_rules) => `(tactic|
+  ((with_reducible refine bigOrTy (props_cons ?_ (props_map fun _ => ?_))) <;> otype))
+
 /-! ### Numerals -/
 
 section
