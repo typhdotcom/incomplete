@@ -39,7 +39,7 @@ macro "ospec " h:term:max hs:term:max* : tactic => do
 macro "oind" : tactic => `(tactic|
   (refine Thm.ind ?_ ?_ ?_; otype; (try onorm); on_goal 2 => try onorm))
 
-macro "ohyp" : tactic => `(tactic| (apply Thm.hyp; lookup_tac))
+macro "ohyp" : tactic => `(tactic| (apply Thm.hyp; olookup))
 
 macro "orefl" : tactic => `(tactic| (refine Thm.refl ?_; otype))
 
@@ -115,7 +115,7 @@ def orwCore (stx : Term) (symm : Bool) : TacticM Unit := withMainContext do
   for m in side do
     unless ← m.isAssigned do others := others ++ [m]
   setGoals [hG.mvarId!]
-  evalTactic (← `(tactic| first | rfl | simp only [obj_simp]))
+  evalTactic (← `(tactic| first | with_reducible rfl | simp only [obj_simp]))
   unless ← hG.mvarId!.isAssigned do
     throwError "orw: could not check the motive{indentExpr M}\nagainst the goal{indentExpr G}"
   for g in [hM, ha, hb] do

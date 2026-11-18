@@ -78,6 +78,9 @@ attribute [obj_simp] Nat.reduceLT Nat.reduceEqDiff Nat.reduceSub Nat.reduceAdd N
 attribute [obj_simp] nat_liftN nat_inst zero_liftN zero_inst succ_liftN succ_inst liftN_zero
   inst_lift inst_liftN_lo natRec_inst
 
+@[obj_simp] theorem lit_liftN (m : Nat) : (lit m).liftN n k = lit m := (Inert.lit m).liftN n k
+@[obj_simp] theorem lit_inst (m : Nat) : (lit m).inst e k = lit m := (Inert.lit m).inst e k
+
 @[obj_simp] theorem imp_liftN : (imp P Q).liftN n k = imp (P.liftN n k) (Q.liftN n k) := by
   simp only [imp, VExpr.liftN, lift_liftN']
 @[obj_simp] theorem imp_inst : (imp P Q).inst e k = imp (P.inst e k) (Q.inst e k) := by
@@ -107,6 +110,7 @@ variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr}
 
 theorem natTy : env.HasType 0 Γ nat (.sort (.succ .zero)) := E.hasNat.natT
 theorem zeroTy : env.HasType 0 Γ zero nat := E.hasNat.zeroT
+theorem litTy (m : Nat) : env.HasType 0 Γ (lit m) nat := E.hasNat.litT m
 theorem STy (ha : env.HasType 0 Γ a nat) : env.HasType 0 Γ (S a) nat := .app' E.hasNat.succT ha rfl
 theorem predTyTy : env.HasType 0 Γ predTy (.sort (.imax (.succ .zero) (.succ .zero))) :=
   .forallE natTy (.sort trivial)
@@ -143,13 +147,21 @@ theorem instTy (h : env.HasType 0 (A :: Γ) e B) (ha : env.HasType 0 Γ a A) :
 
 end
 
+/-- `Lookup Γ i A`, checking each lift by `simp` rather than by unfolding. -/
+syntax "olookup" : tactic
+macro_rules | `(tactic| olookup) => `(tactic| first
+  | (refine VEnv.Lookup.zero' ?_; first | with_reducible rfl | (simp only [obj_simp]; done))
+  | (refine VEnv.Lookup.succ' (ty := ?_) ?_ ?_ <;>
+      [skip; olookup; first | with_reducible rfl | (simp only [obj_simp]; done)]))
+
 /-- Proves `HasType env 0 Γ e A` for object terms and formulas; extended with `macro_rules`. -/
 syntax "otype" : tactic
 macro_rules | `(tactic| otype) => `(tactic| assumption)
 macro_rules | `(tactic| otype) => `(tactic| exact natTy)
 macro_rules | `(tactic| otype) => `(tactic| exact zeroTy)
 macro_rules | `(tactic| otype) => `(tactic| (refine STy ?_; otype))
-macro_rules | `(tactic| otype) => `(tactic| (refine HasType.bvar ?_; lookup_tac))
+macro_rules | `(tactic| otype) => `(tactic| (refine HasType.bvar ?_; olookup))
+macro_rules | `(tactic| otype) => `(tactic| exact litTy _)
 macro_rules | `(tactic| otype) => `(tactic| (refine app2Ty ?_ ?_ ?_ <;> otype))
 macro_rules | `(tactic| otype) => `(tactic| (refine impTy ?_ ?_ <;> otype))
 macro_rules | `(tactic| otype) => `(tactic| (refine allTy ?_; otype))
