@@ -1,72 +1,78 @@
 State: COMPLETE
 Turn: none
-Candidate: zyrnlxqwwtmqoznwooqwmpswrsyrunrq / 9b89319577b57cd66a4fa1d38ac1732010fec0ed
+Candidate: xsqrxvmvxuvluwzmnmkowmssrmwrnmov / 7a24b2c4d5bc3347e6eaf06022c8cde76630416f
 
-# Finite Kripke completeness review
+# Solovay review
 
 ## Objective and meaning
 
-Review soundness and completeness of GL for finite transitive irreflexive
-Kripke models, including the stronger existence of a nonempty rooted
-countermodel whose valuation is false off the variables of the formula.
+Review arithmetical completeness of GL for the actual arithmetized certificate
+checker: over a halting-sound well-formed extension of `natEnv` that proves
+double-negation elimination, every GL non-theorem has a realization by closed
+propositions that the theory does not prove. Together with accepted soundness,
+GL is exactly the modal logic valid under all such realizations.
 
-The candidate comprises the five commits after `ef37e658`: extraction of the
-unchanged modal syntax and Hilbert system into `Modal/Basic.lean`, Kripke
-semantics and evaluation, derivations from hypotheses, the finite completeness
-construction, public imports, README statements and version `0.7.0`.
-
-This accepts the delivered modal completeness milestone toward the user's
-announced Solovay target. Arithmetical completeness remains outside this
-candidate, as the README explicitly states.
+The candidate comprises the seven commits after `baad963c`, adding
+`Obj/SolovayCode.lean`, `Obj/SolovayStep.lean`, `Obj/SolovayLemmas.lean`,
+`Obj/Solovay.lean`, their public imports, README statements and version `0.8.0`.
 
 ## Accepted foundation
 
 - The formal judgment and upstream/fork dependencies remain as documented in
-  `README.md`. The object-theory results establish no kernel implementation
-  correctness.
-- Preserve the accepted Gödel–Kleene, Rosser, second incompleteness, Löb,
-  omega-inconsistent-context, derivability, formalized Löb, arithmetical
-  soundness, FairBot and bounded unconditional results. The modal extraction
-  preserves the syntax and derivability rules used by those results.
-- `Prov T P` is the object proposition asserting an impredicatively encoded
-  existential certificate for `chkT T`, distinct from host provability.
-  Classical arithmetical GL soundness retains its explicit `dneS` premise.
-- `Modal/` is ordinary Lean mathematics independent of the object theory.
-  Its forcing has classical implication at a world and universal quantification
-  over accessible worlds for boxes. No intuitionistic Kripke semantics is
-  claimed for this construction.
+  `README.md`. These results establish no kernel implementation correctness.
+- Preserve the accepted incompleteness, Löb, omega-inconsistent-context,
+  derivability, formalized Löb, arithmetical soundness, FairBot, bounded
+  unconditional and finite Kripke completeness results. Their sources and
+  statements are unchanged in this candidate.
+- `Prov T P` asserts an impredicatively encoded existential certificate for
+  `chkT T`, distinct from host provability. `TablesFor env T` ties this checker
+  to the actual formal typing judgment.
+- `HaltsSound env` means every object proof of the specified `halts f n`
+  sentence implies actual halting of that primitive recursive machine.
+  `GL_arith_complete` and `GL_iff_provable` assume this property and an object
+  proof of `dneS`; they do not establish either for the full theory.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
 
-Accepted. No blocking finding was identified. This review is complete, and
-no worker action remains for the submitted milestone.
+Accepted. No blocking finding was identified. The advertised conditional
+Solovay theorem is established. This review is complete, and no worker action
+remains for the submitted milestone.
 
-General Kripke soundness uses transitivity and well-foundedness of the
-converse accessibility relation in the correct direction. For finite models,
-the number of successors strictly decreases along accessibility, establishing
-that well-foundedness from transitivity and irreflexivity. The Boolean
-evaluator agrees with forcing, including universal box evaluation and empty
-successor sets.
+The two-hole expression template computes the numbers of the negated limit
+sentences about the machine and its input. Filling is compatible with lifting
+for closed replacements. At the machine's own code, `hM_test` identifies its
+actual tests with the checker applied to its own `neg (Ss ... b)` sentences.
+The walk starts at zero, stays within the finite frame, and every move follows
+accessibility along an accepted certificate of the destination's refutation.
 
-Derivations from hypotheses permit modus ponens over GL theorems, without
-necessitation of a local assumption. The deduction theorem, boxed-context
-rule, derivation of 4 from Löb, and literal-extension step support the finite
-construction without changing the accepted Hilbert calculus.
+The internal step lemmas cover staying and moving. Reading a certificate at
+`pair p m` ensures that every refutation is tested after a reached world has
+become stable. The limit sentences are pairwise exclusive; along an edge,
+`S_i` refutes `Prov T (neg S_j)`. Finite induction and the explicit DNE premise
+establish a limit above each reached world. For a nonzero world, its entry
+certificate and internal completeness for reachability yield provability of
+the disjunction of its successors' limit sentences.
 
-The canonical worlds are consistent literal assignments over the subformula
-list. Accessibility preserves and unboxes every existing box and requires a
-new boxed member. This relation is transitive and irreflexive. The successor
-witness uses Löb and 4 to establish consistency of the required successor
-literals, including a new box and the negation of its body.
+Adding a fresh zero root preserves the finite model's relation under the
+shift by one. The realization is the finite disjunction of the corresponding
+limit sentences. The truth lemma proves both forcing and refutation cases,
+including both box directions, using the established internal lemmas rather
+than an assumed truth correspondence.
 
-The truth lemma covers every subformula. Restricting worlds to the selected
-root and all its successors preserves witnesses by transitivity. Thus the
-countermodel is nonempty and rooted, and its valuation support is contained
-in the formula's variables. `GL_iff` correctly combines this result with
-soundness over all finite models. The construction is a classical existence
-proof; evaluation decides forcing for a supplied finite model. The README
-accurately distinguishes these results from arithmetical completeness.
+A proof of the countermodel formula's realization refutes the sentence at
+its selected world, then the sentence at the new root. `no_refuted` rules this
+out: an actual reached world has a provable reachability witness, so refuting
+its limit sentence refutes stability. `halts_lv` turns that into a halting
+sentence; the explicit `HaltsSound` premise supplies a concrete leaving step.
+Checker adequacy then supplies the next world's refutation. The successor
+count strictly decreases, terminating this recursion in contradiction. The
+argument does not infer host soundness of arbitrary object propositions.
+
+The public theorem has no residual graph, self-reference, frame, or truth
+lemma hypotheses. It quantifies over every GL non-theorem and returns a
+well-typed realization. `GL_iff_provable` combines this with the accepted
+soundness direction. The README accurately states the assumptions and scope.
 
 ## Current drawers
 
@@ -74,22 +80,24 @@ None. D1 remains closed; the accepted hypothesis-search fix is unchanged.
 
 ## Verification
 
-- `nix develop -c lake build` passed (139 jobs).
-- Independently re-elaborated all four `Modal/` modules and the changed
-  `Obj/GL.lean` with `lake env lean --trust=0`; all passed without warnings.
-- A separate audit passed for all 25 README headline theorems. Each reports
-  exactly `[propext, Classical.choice, Quot.sound]`. Additional audits covered
-  `GL_four`, deduction, boxing, successor witnesses, literal extension,
-  evaluator correctness and finite well-foundedness; their axiom dependencies
-  are subsets of that set.
-- Disposable concrete one- and two-world models checked terminal box truth,
-  relation direction, changing valuations, refutation of unrestricted
-  reflection and local necessitation, and evaluations of 4 and Löb.
-- An independent forcing induction for derivations from hypotheses ruled out
-  `Der [p] (box p)`. A specialization of `GL_complete` produced a nonempty
-  rooted countermodel for `box bot` with valuation false everywhere, checking
-  both additional guarantees in the public theorem.
+- `nix develop -c lake build` passed (143 jobs).
+- Independently re-elaborated all four new modules with
+  `lake env lean --trust=0`; all passed without warnings.
+- A separate audit passed for all 27 README headline theorems and for
+  `Obj.truth`, `Obj.no_refuted`, `Obj.Ss_not_prov`, `Obj.Ss_prov`,
+  `Obj.halts_lv`, `Obj.sigma_Pa` and `Obj.hM_test`. Each reports exactly
+  `[propext, Classical.choice, Quot.sound]`. Explicit theorem types confirm
+  the documented assumptions.
+- Disposable concrete probes checked frame renumbering, a decreasing numeric
+  world label, terminal and out-of-frame successors, first-success selection,
+  fallback behavior, and realization of present and absent variables.
+- Symbolic probes checked the exact self-reference encoding, filling beneath
+  a binder, and the actual checker test at the machine's own code.
+- Specializing arithmetical completeness to a finite countermodel of
+  `box p → p` supplied a closed object proposition whose reflection implication
+  is unprovable. The variable-free `box bot` instance yielded unprovability of
+  `Prov T falseS`, under the stated public assumptions.
 - Source inspection found no proof holes, native decision proofs, custom
-  axiom declarations, or unsafe definitions in the changed modules.
+  axiom declarations, or unsafe definitions in the new modules.
 - `nix flake check` passed. Existing warnings in unchanged modules remain
   nonblocking. Disposable probes were removed after use.
