@@ -1,15 +1,12 @@
 import Incomplete.Obj.Derivability
+import Incomplete.Modal.Basic
 
 /-!
 # Arithmetical soundness of GL
 
-Modal formulas (`Modal`) are built from variables, `⊥`, `→` and `□`. `Modal.Deriv cl` is the
-Hilbert system with the axioms `A → B → A`, `(A → B → C) → (A → B) → A → C`, `⊥ → A`, K
-(`□(A → B) → □A → □B`) and Löb (`□(□A → A) → □A`), the rules modus ponens and necessitation, and,
-when `cl` holds, double-negation elimination `¬¬A → A`: `GL` is `Deriv true` and its
-intuitionistic fragment `iGL` is `Deriv false`. A realization `σ` sends variables to closed
-propositions; `A.real T σ` sends `⊥` to `falseS`, `→` to the object implication and `□` to
-`Prov T`.
+`Modal`, `GL` and `iGL` are defined in `Incomplete.Modal.Basic`. A realization `σ` sends
+variables to closed propositions; `A.real T σ` sends `⊥` to `falseS`, `→` to the object implication
+and `□` to `Prov T`.
 
 Every `iGL` theorem is provable under every realization (`iGL_sound`); every `GL` theorem is, when
 the theory proves double-negation elimination `dneS` (`GL_sound`). K is D2 (`prov_mp`), Löb's
@@ -24,44 +21,7 @@ open Lean4Lean Obj
 /-- Double-negation elimination, `∀ p : Prop, ¬¬p → p`. -/
 def dneS : VExpr := .forallE (.sort .zero) (imp (neg (neg (.bvar 0))) (.bvar 0))
 
-/-- Modal formulas: variables, `⊥`, `→` and `□`. -/
-inductive Modal where
-  | var (n : Nat)
-  | bot
-  | imp (A B : Modal)
-  | box (A : Modal)
-
 namespace Modal
-
-/-- `¬A`. -/
-def neg (A : Modal) : Modal := imp A bot
-/-- `⊤`. -/
-def top : Modal := neg bot
-/-- `A ∨ B`. -/
-def or (A B : Modal) : Modal := imp (neg A) B
-/-- `A ∧ B`. -/
-def and (A B : Modal) : Modal := neg (imp A (neg B))
-/-- `A ↔ B`. -/
-def iff (A B : Modal) : Modal := and (imp A B) (imp B A)
-/-- `◇A`. -/
-def dia (A : Modal) : Modal := neg (box (neg A))
-
-/-- Derivability in `GL` (`cl = true`) and in its intuitionistic fragment (`cl = false`). -/
-inductive Deriv (cl : Bool) : Modal → Prop
-  | k1 (A B : Modal) : Deriv cl (imp A (imp B A))
-  | s (A B C : Modal) : Deriv cl (imp (imp A (imp B C)) (imp (imp A B) (imp A C)))
-  | efq (A : Modal) : Deriv cl (imp bot A)
-  | dne (A : Modal) : cl = true → Deriv cl (imp (neg (neg A)) A)
-  | k (A B : Modal) : Deriv cl (imp (box (imp A B)) (imp (box A) (box B)))
-  | loeb (A : Modal) : Deriv cl (imp (box (imp (box A) A)) (box A))
-  | mp {A B : Modal} : Deriv cl (imp A B) → Deriv cl A → Deriv cl B
-  | nec {A : Modal} : Deriv cl A → Deriv cl (box A)
-
-/-- `GL ⊢ A`. -/
-abbrev GL : Modal → Prop := Deriv true
-
-/-- `iGL ⊢ A`: `GL` without double-negation elimination. -/
-abbrev iGL : Modal → Prop := Deriv false
 
 /-- The realization of `A` at `σ`: `⊥` is `falseS`, `→` the object implication, `□` is
 `Prov T`. -/
