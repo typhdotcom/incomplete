@@ -1,71 +1,82 @@
 State: COMPLETE
 Turn: none
-Candidate: yvnpokxyustvvsttkxvlmvwnspyllrwz / 7e6276a9902567f6f02fbd55586212322cfbe4d6
+Candidate: lxooslookymonlxxvnszqkrtovltqyvz / c329860a229a0adbdd215b767bd7035bb1ada0c4
 
-# Rosser and second incompleteness review
+# Löb review
 
 ## Objective and meaning
 
-Review the Rosser and second incompleteness developments and their object-level
-proof toolkit, including the correction to hypothesis search returned as D1.
+Review Löb's theorem for the actual arithmetized certificate checker: every
+closed proposition `P` of a well-formed extension of `natEnv` is provable if
+the theory proves `Prov T P → P`, for every `TablesFor env T`. Review the
+supporting generalizations of internal completeness and modus ponens, the
+halting-form variant, and the consistency corollary.
+
+The implementation under review is the two commits after `dc449884`, including
+`Incomplete/Obj/Loeb.lean`, changes in `Obj/Second.lean` and `Obj/Reduce.lean`,
+the library import, version `0.4.0`, and the README additions.
 
 ## Accepted foundation
 
-- The proof system remains the pinned lean4lean fork's formal
-  `VEnv.HasType` / `VEnv.IsDefEq` judgment. The upstream/fork distinction and
-  specific dependencies are documented in `README.md`; preserve that account.
-- Preserve the previously reviewed unconditional result for
-  `BProvable natEnv`, the bounded, projection-free fragment, and the
-  conditional full-theory Gödel–Kleene results.
-- The new full-theory Rosser and second incompleteness statements assume
-  consistency of a well-formed extension of `natEnv`. They do not establish
-  full-theory consistency or kernel implementation correctness.
-- `Con T` uses the existing checker `chkC T (fun _ => true)` through `conM T`.
-  `con_true_iff` identifies its external non-halting interpretation with
-  `Consistent env` for `TablesFor env T`.
+- The formal judgment and upstream/fork dependencies remain as documented in
+  `README.md`. These are results about that specification; they establish no
+  kernel implementation correctness.
+- Preserve the accepted Gödel–Kleene, Rosser, second incompleteness and bounded
+  unconditional results. Their statements and axiom constraints are unchanged.
+- `Prov T P` is the object proposition asserting an impredicatively encoded
+  existential witness for `chkT T` accepting a certificate of `P`. It is
+  distinct from the host predicate `Provable env P` and from the
+  double-negation halting sentence.
+- Löb's theorem assumes neither `Consistent env` nor `HaltsSound env`.
+  `prov_lit_iff` has its documented consistency assumption; `prov_sound` has
+  its documented halting-soundness assumption.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
 
-Accepted. D1 is closed, and the review is complete. No worker action remains.
+Accepted. No blocking finding was identified. The review is complete, and no
+worker action remains.
 
-The headline theorems and their documented hypotheses passed the preceding
-mathematical review at `a9192d26a3bd`. The current candidate changes only the
-`ohyp` elaborator; it corrects the returned failure without changing the
-formal definitions or theorem statements. The existing proof evidence remains
-applicable, and the corrected tactic passed independent regression checks.
+The proof establishes the advertised Löb rule for every closed proposition,
+with all machine and internal-completeness hypotheses discharged. Inspection
+followed the positive halting sentence, its syntax encoding, the self-reference
+identity `fn_loebM_code`, the proved graph lemma in `sigma_E`, internal
+certificate modus ponens, and `loeb_core`. The final step obtains an actual
+closed certificate of the internally proved implication and constructs its
+positive halting witness. It does not extract an external witness from an
+arbitrary proof of an existential sentence.
 
-## Closed drawers
+The generalized `sigma_of_fin` retains its graph and closed-conclusion
+premises; `sigma_E` discharges them for positive halting. The original
+`sigma_of` remains a specialization, and the existing second theorem builds
+and retains its previous axiom dependencies. The halting-form Löb variant
+uses the proved implication from positive provability, and the consistency
+corollary specializes Löb to `falseS`.
 
-### D1 — `ohyp` stops before reaching a matching hypothesis
+The accompanying README correction removes a stale claim that `HaltsSound`
+is used only by the Gödel–Kleene form: `prov_sound` now uses it too.
 
-Status: closed
+## Current drawers
 
-The original context `[nat, nat, falseS]` now succeeds with `ohyp`. Candidate
-lookup is performed as a tactic sequence under `withoutRecover`, with `done`
-requiring completion and saved-state restoration on failure. Search traverses
-the explicit context prefix up to reducible unfolding, replacing the fixed
-16-entry limit. An open tail is searched through its explicit prefix.
-
-Independent checks passed for indices 0, 1, 2, 3, 7, 15, 16, 17, 20, 31 and
-32, an explicit prefix over a variable context tail, and the submitted
-normalized `List.replicate` case. Empty and nonempty no-match contexts failed
-as expected, then allowed a fallback proof with no logged elaboration errors.
-An additional two-goal probe confirmed that a failed search preserves the
-remaining goals. Every success case exercised `ohyp` itself.
+None. D1, closed in the preceding review, remains closed; hypothesis-search
+implementation was not changed in this candidate.
 
 ## Verification
 
-- `nix develop -c lake build` passed (131 jobs). The fresh project build and
-  mathematical inspection from the preceding review are reused for the
-  unchanged formal development.
-- An independent temporary probe, run with
-  `nix develop -c lake env lean --trust=0`, passed the submitted regression
-  cases and the additional cases above.
-- The same audit checked all ten README theorems:
-  `incomplete_unconditional`, `incomplete_rosser`, `incomplete_rosser'`,
-  `incomplete_of_wf`, `incomplete_of_wf'`, `second_incompleteness`,
-  `second_incompleteness'`, `con_unprovable`, `bconsistent` and `bhaltsSound`.
-  Each reports exactly `[propext, Classical.choice, Quot.sound]`.
-- `nix flake check` passed for the review submission. Existing unused-variable
-  and unused-simp-argument warnings remain nonblocking.
+- `nix develop -c lake build` passed (132 jobs).
+- A fresh temporary package containing all project sources and the pinned
+  package configuration built successfully (132 jobs), recompiling every
+  project module and reusing installed dependency artifacts.
+- An independent `lake env lean --trust=0` audit passed for all thirteen
+  README theorems, including `loeb`, `loeb_halts` and
+  `con_unprovable_of_loeb`. Additional audits covered `prov_of_provable`,
+  `prov_lit_iff`, `prov_sound`, `con_iff_not_prov`, `Obj.sigma_E`,
+  `Obj.sigma_of_fin` and `Obj.prf_mpT`. Every audited result reports exactly
+  `[propext, Classical.choice, Quot.sound]`.
+- Inspected the fully explicit types of the headline and internal theorems.
+  Disposable specializations checked reflection at `falseS` and the
+  unprovability of reflection for an unprovable proposition.
+- Source inspection found no new proof holes, native decision proofs, custom
+  axiom declarations, or unsafe definitions in the changed Lean files.
+- `nix flake check` passed. Existing unused-variable and unused-simp-argument
+  warnings remain nonblocking.

@@ -120,7 +120,7 @@ well-formed declarations that include `Nat`. They replace the binders
   `Type` and free of projection rules (`BDefEq`, `Incomplete/Bounded.lean`).
 - `Consistent env`: `¬Provable env falseS`.
 - `HaltsSound env`: every provable `halts f n` is true (1-consistency for
-  halting sentences; used only in the Gödel–Kleene form).
+  halting sentences).
 - `TablesFor env T`: the finite lists in `T` enumerate `env`'s constants,
   definitional-equality rules, and inductive types.
 - `chkT T`, `Con T`, `G0 T`: `chkT T` is the `PR` proof checker for `T`. On the
