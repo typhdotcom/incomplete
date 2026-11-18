@@ -245,7 +245,9 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   constructor of `encExpr` for any step of their shape. `Obj/Lift`, `Obj/Inst`:
   `liftC` and `instC` one constructor at a time at symbolic components:
   variables below, at and above the cutoff, sorts, constants, `app`, `lam`,
-  `forallE`, `proj`.
+  `forallE`, `proj`. `Obj/Numeral`: the binary numeral codes `numC n` at
+  `n = k * a + b`, and the number of the numeral `lit v` (`litC`) left
+  unchanged by lifting and instantiation, for every `v`.
 
 ## License
 

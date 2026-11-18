@@ -93,6 +93,10 @@ theorem Thm.sind (hP : env.HasType 0 (nat :: Γ) P (.sort .zero))
 
 end
 
+theorem sind_provable : Provable natEnv (.forallE predTy (imp
+    (all (imp (all (imp (.bvar 0 <ₒ .bvar 1) (.app (.bvar 2) (.bvar 0)))) (.app (.bvar 1) (.bvar 0))))
+    (all (.app (.bvar 1) (.bvar 0))))) := sind_c
+
 /-- Start a strong induction on the goal `∀ n, P n`: the goal becomes `(∀ m < n, P m) → P n`. -/
 macro "osind" : tactic => `(tactic| (refine Thm.sind ?_ ?_; otype; unfold below; try onorm))
 

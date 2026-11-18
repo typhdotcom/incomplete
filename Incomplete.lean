@@ -51,3 +51,4 @@ import Incomplete.Obj.Reads
 import Incomplete.Obj.Key
 import Incomplete.Obj.Lift
 import Incomplete.Obj.Inst
+import Incomplete.Obj.Numeral
