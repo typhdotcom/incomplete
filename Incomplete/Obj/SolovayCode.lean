@@ -154,33 +154,29 @@ end SFrame
 
 /-! ### The machine -/
 
-section
-variable (T : Tables) (K : SFrame)
+/-- The first `b` of `bs` whose test `q b` is `0`, else `a`. -/
+def scC (q : Nat → PR) : List Nat → Nat → PR
+  | [], a => num a
+  | b :: bs, a => ifz (q b) (num b) (scC q bs a)
+
+/-- At `[r, y, x]`: the next world after `r`, with the tests `q`. -/
+def nextC (K : SFrame) (q : Nat → PR) : PR :=
+  casc (var 0) (K.worlds.map fun a => scC q (K.succL a) a) (var 0) 0
+
+/-- At `[k, x]`: `0` when `f` is `a` at `k` and `nx` after it is not. -/
+def lvC (f nx : PR) (a : Nat) : PR :=
+  ifz (eqz f (num a)) (ifz (eqz (push f nx) (num a)) (num 1) .zero) (num 1)
 
 /-- At `[r, y, x]`: `0` when the first component of `y` checks as a proof of `¬S_b` about the
 code numbered `x`. -/
-noncomputable def qC (b : Nat) : PR := comp2 (chkT T) (ren (· + 2) (negSC b)) (fstC (var 1))
-
-/-- The first `b` of `bs` whose `qC` is `0`, else `a`. -/
-noncomputable def scC : List Nat → Nat → PR
-  | [], a => num a
-  | b :: bs, a => ifz (qC T b) (num b) (scC bs a)
-
-/-- At `[r, y, x]`: the next world after `r`. -/
-noncomputable def nextC : PR :=
-  casc (var 0) (K.worlds.map fun a => scC T (K.succL a) a) (var 0) 0
+noncomputable def qC (T : Tables) (b : Nat) : PR :=
+  comp2 (chkT T) (ren (· + 2) (negSC b)) (fstC (var 1))
 
 /-- **Solovay's machine**: at `[k, x]`, the world `h k` of the walk for the code numbered `x`. -/
-noncomputable def hM : PR := prec .zero (nextC T K)
+noncomputable def hM (T : Tables) (K : SFrame) : PR := prec .zero (nextC K (qC T))
 
 /-- At `[k, x]`: `0` when the walk is at `a` at `k` and leaves it at `k + 1`. -/
-noncomputable def lvM (a : Nat) : PR :=
-  ifz (eqz (hM T K) (num a)) (ifz (eqz (push (hM T K) (nextC T K)) (num a)) (num 1) .zero) (num 1)
-
-/-- At `[k, x]`: `0` when the walk is at `a` at `k`. -/
-noncomputable def eqM (a : Nat) : PR := eqz (hM T K) (num a)
-
-end
+noncomputable def lvM (T : Tables) (K : SFrame) (a : Nat) : PR := lvC (hM T K) (nextC K (qC T)) a
 
 /-! ### The walk, externally -/
 
@@ -192,8 +188,8 @@ theorem eval_qC (b : Nat) (ρ : Val) :
       chkNumFor T (fun _ => true) ((negSC b).eval fun i => ρ (i + 2)) (unpair1 (ρ 1)) := by
   rw [qC, eval_comp2 (fun ρ => eval_chkT ρ), eval_ren, eval_fstC, eval_var]; rfl
 
-theorem eval_scC (ρ : Val) (a : Nat) : ∀ bs : List Nat, (scC T bs a).eval ρ = a ∨
-    ∃ b ∈ bs, (scC T bs a).eval ρ = b ∧ (qC T b).eval ρ = 0
+theorem eval_scC (ρ : Val) (a : Nat) : ∀ bs : List Nat, (scC (qC T) bs a).eval ρ = a ∨
+    ∃ b ∈ bs, (scC (qC T) bs a).eval ρ = b ∧ (qC T b).eval ρ = 0
   | [] => .inl (eval_num a ρ)
   | b :: bs => by
     simp only [scC, eval_ifz, eval_num]
@@ -223,11 +219,11 @@ theorem eval_casc_ge (c d : PR) (ρ : Val) : ∀ (bs : List PR) (j : Nat),
     exact eval_casc_ge c d ρ bs (j + 1) (by omega)
 
 /-- The next world, externally: `a` itself, or a world `a` sees whose `qC` is `0`. -/
-theorem eval_nextC (ρ : Val) : (nextC T K).eval ρ = ρ 0 ∨
-    ((nextC T K).eval ρ ≠ ρ 0 → K.R (ρ 0) ((nextC T K).eval ρ) = true ∧
-      (qC T ((nextC T K).eval ρ)).eval ρ = 0) := by
+theorem eval_nextC (ρ : Val) : (nextC K (qC T)).eval ρ = ρ 0 ∨
+    ((nextC K (qC T)).eval ρ ≠ ρ 0 → K.R (ρ 0) ((nextC K (qC T)).eval ρ) = true ∧
+      (qC T ((nextC K (qC T)).eval ρ)).eval ρ = 0) := by
   by_cases ha : ρ 0 ≤ K.N
-  · have e := eval_casc_lt (var 0) (var 0) ρ (K.worlds.map fun a => scC T (K.succL a) a) 0 (ρ 0)
+  · have e := eval_casc_lt (var 0) (var 0) ρ (K.worlds.map fun a => scC (qC T) (K.succL a) a) 0 (ρ 0)
       (by simp [SFrame.worlds]; omega) (by simp [eval_var])
     simp only [List.getElem_map, SFrame.worlds, List.getElem_range] at e
     rw [nextC, SFrame.worlds, e]
@@ -246,7 +242,7 @@ noncomputable def hN (T : Tables) (K : SFrame) (d k : Nat) : Nat := (hM T K).eva
 theorem hN_zero (d : Nat) : hN T K d 0 = 0 := rfl
 
 theorem hN_succ (d k : Nat) :
-    hN T K d (k + 1) = (nextC T K).eval (vcons (hN T K d k) (val2 k d)) := rfl
+    hN T K d (k + 1) = (nextC K (qC T)).eval (vcons (hN T K d k) (val2 k d)) := rfl
 
 theorem hN_le (d : Nat) : ∀ k, hN T K d k ≤ K.N
   | 0 => Nat.zero_le _
@@ -254,7 +250,7 @@ theorem hN_le (d : Nat) : ∀ k, hN T K d k ≤ K.N
     rw [hN_succ]
     rcases eval_nextC (T := T) (K := K) (vcons (hN T K d k) (val2 k d)) with h | h
     · rw [h]; exact hN_le d k
-    · by_cases e : (nextC T K).eval (vcons (hN T K d k) (val2 k d)) = hN T K d k
+    · by_cases e : (nextC K (qC T)).eval (vcons (hN T K d k) (val2 k d)) = hN T K d k
       · rw [e]; exact hN_le d k
       · exact (K.le (h e).1).2
 
@@ -274,7 +270,7 @@ theorem hN_move {d k : Nat} (h : hN T K d (k + 1) ≠ hN T K d k) :
 
 theorem lvM_eval {a d k : Nat} (h : (lvM T K a).eval (val2 k d) = 0) :
     hN T K d k = a ∧ hN T K d (k + 1) ≠ a := by
-  simp only [lvM, eval_ifz_eqz, eval_num, PR.eval] at h
+  simp only [lvM, lvC, eval_ifz_eqz, eval_num, PR.eval] at h
   rw [hN_succ]
   split at h
   · split at h
