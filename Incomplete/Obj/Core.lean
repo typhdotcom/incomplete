@@ -225,6 +225,13 @@ theorem allE (h : Thm env Γ (all P)) (ht : env.HasType 0 Γ t nat) : Thm env Γ
 theorem weak (h : Thm env Γ P) : Thm env (A :: Γ) P.lift :=
   let ⟨_, hp⟩ := h; ⟨_, weakTy hp⟩
 
+theorem weakL : ∀ (Δ : List VExpr) {Γ : List VExpr} {P : VExpr}, Thm env Γ P →
+    Thm env (Δ ++ Γ) (P.liftN Δ.length)
+  | [], _, _, h => by simpa only [List.nil_append, List.length_nil, liftN_zero] using h
+  | A :: Δ, _, _, h => by
+    have := (weakL Δ h).weak (A := A)
+    rwa [VExpr.lift, liftN_liftN] at this
+
 theorem weak0 (h : Thm env [] P) : Thm env Γ P :=
   let ⟨_, hp⟩ := h; ⟨_, closedTy hp⟩
 

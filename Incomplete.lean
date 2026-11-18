@@ -33,3 +33,5 @@ import Incomplete.Obj.Tactic
 import Incomplete.Obj.Rec
 import Incomplete.Obj.Arith
 import Incomplete.Obj.Code
+import Incomplete.Obj.Iota
+import Incomplete.Obj.Logic

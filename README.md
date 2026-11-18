@@ -197,11 +197,16 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `Thm env Γ P` (a proof of `P` in context `Γ`), the formulas `imp`, `all` and
   Leibniz equality `EqN`, and the rules, with induction by `Nat.rec` into
   `Prop`. `Obj/Tactic`: `otype` for typing side conditions, `orw` for
-  rewriting by object equations, `ointro`, `oind`, `ospec`, and `∀ₒ x y, P`
-  statements with named variables. `Obj/Rec`: binary functions by primitive
-  recursion and their computation rules. `Obj/Arith`: `add` and `mul`,
-  commutativity and associativity, closed in `natEnv` and at arbitrary terms.
-  `Obj/Code`: the compiled codes `fn f` as closed atoms; `add` is `fn PR.addC`.
+  rewriting by object equations in the goal or a hypothesis, `ointro`, `oind`,
+  `ospec`, `olift`, and `∀ₒ x y, P` statements with named variables.
+  `Obj/Iota`: the iota rules and `Nat.rec` congruence in every context.
+  `Obj/Logic`: impredicative `⊥`, `¬`, `∧`, `∨`, `↔` and `∃` over `Nat`, their
+  rules and tactics (`ocases`, `osplit`, `oleft`, `oright`, `oexists`),
+  `0 ≠ S n`, injectivity of `S`, and `n = 0 ∨ ∃ m, n = S m`. `Obj/Rec`: binary
+  functions by primitive recursion and their computation rules. `Obj/Arith`:
+  `add` and `mul`, commutativity and associativity, closed in `natEnv` and at
+  arbitrary terms. `Obj/Code`: the compiled codes `fn f` as closed atoms; `add`
+  is `fn PR.addC`.
 
 ## License
 
