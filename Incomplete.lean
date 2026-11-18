@@ -28,6 +28,7 @@ import Incomplete.Induct
 import Incomplete.Rosser
 import Incomplete.Second
 import Incomplete.Obj.Attr
+import Incomplete.Obj.Typing
 import Incomplete.Obj.Core
 import Incomplete.Obj.Tactic
 import Incomplete.Obj.Rec
@@ -61,6 +62,9 @@ import Incomplete.Obj.Template
 import Incomplete.Obj.Reduce
 import Incomplete.Obj.Holes
 import Incomplete.Obj.Chain
+import Incomplete.Obj.Leaf
+import Incomplete.Obj.Checker
+import Incomplete.Obj.BChecker
 import Incomplete.Obj.Graph
 import Incomplete.Obj.Sigma
 import Incomplete.Obj.Second
@@ -75,3 +79,5 @@ import Incomplete.Obj.SolovayLemmas
 import Incomplete.Obj.Solovay
 import Incomplete.Modal.Letterless
 import Incomplete.Obj.Letterless
+import Incomplete.ClEnv
+import Incomplete.BProvLogic

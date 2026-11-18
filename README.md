@@ -10,6 +10,11 @@ GL is also shown sound and complete for finite transitive irreflexive Kripke
 models, and on letterless formulas it is decided by a level tower on `ω`, which
 also gives their provability and truth in the object theory.
 
+For `clEnv`, `natEnv` with a double-negation axiom, GL is the provability logic
+of its `Prop`/`Type` fragment with no hypotheses: soundness and consistency of
+the fragment come from a set model, and `□` is read as provability in the
+fragment.
+
 Provability is defined directly against the typing judgment
 `VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`. The results
 concern that formal specification, not lean4lean's kernel implementation or
@@ -35,6 +40,47 @@ With no hypotheses, the projection-free `Prop`/`Type` fragment of `natEnv` is
 consistent, sound for `halts`, and neither proves nor refutes the true
 non-halting sentence of some machine on its own code
 (`Incomplete/ModelSound.lean`, `Incomplete/Unconditional.lean`).
+
+### Provability logic of the classical fragment
+
+```lean
+def clEnv : VEnv := withConst natEnv dneName ⟨0, dneS⟩
+
+noncomputable def BProv (P : VExpr) : VExpr := ProvC (bchkT clT) P
+
+theorem GL_iff_bprovable {A : Modal} :
+    Modal.GL A ↔ ∀ σ : Nat → VExpr, (∀ n, BDefEq clEnv [] (σ n) (σ n) (.sort .zero)) →
+      BProvable clEnv (A.breal σ)
+
+theorem bprovable_iff_lvl {A : Modal} (hA : A.Letterless) (σ : Nat → VExpr) :
+    BProvable clEnv (A.breal σ) ↔ ∀ n, Modal.lvl n A = true
+
+theorem btr_iff_lim : ∀ {A : Modal}, A.Letterless → (A.btr ↔ Modal.lim A = true)
+
+theorem bcon_iterated (σ : Nat → VExpr) (n : Nat) :
+    ¬BProvable clEnv ((Modal.boxBot n).breal σ) ∧
+      (Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).btr ∧
+      ¬BProvable clEnv ((Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).breal σ)
+```
+
+`clEnv` adds to `natEnv` one axiom constant `Classical.dne : dneS`. It is well formed and extends
+`natEnv` (`clEnv_wf`, `natEnv_le_clEnv`), its fragment proves `dneS` (`clEnv_dne`), and the set
+model interprets the axiom, so the fragment is consistent and `halts`-sound (`clEnv_bconsistent`,
+`clEnv_bhaltsSound`) (`Incomplete/ClEnv.lean`). `BProv P` says that some certificate passes the
+fragment's checker `bchkT clT`, which accepts what `chkT clT` accepts within the bounds of
+`BDefEq`, as a proof of `P`; `A.breal σ` realizes `□` as `BProv`. Then GL is exactly the
+provability logic of the fragment (`GL_iff_bprovable`), a letterless sentence is provable iff it
+holds at every level (`bprovable_iff_lvl`), and true, with `□B` read as provability of `B`'s
+realization (`Modal.btr`), iff its limit is `true` (`btr_iff_lim`); so the iterated consistency
+statements `□ⁿ⁺¹⊥ → □ⁿ⊥` are true and unprovable at every level (`bcon_iterated`)
+(`Incomplete/BProvLogic.lean`).
+
+The object-level development behind these runs over any judgment closed under the rules it uses
+(`ObjEnv`), with full typing and the fragment as instances (`Incomplete/Obj/Typing.lean`), and
+the provability logic over any proof-checking code the theory reasons about (`IsChecker`), with
+the full checker and the fragment's checker as instances (`Incomplete/Obj/Checker.lean`,
+`Incomplete/Obj/BChecker.lean`). The fragment's checker stays within the bounds through internal
+modus ponens and instantiation at numerals (`Incomplete/Obj/Leaf.lean`).
 
 ### First incompleteness (full theory)
 
@@ -331,8 +377,13 @@ well-formed declarations that include `Nat`. They replace the binders
 - `Prov T P`, `provM T P`: `Prov T P` is `∃ k, chkT T (⌜P⌝, k) = 0` as an
   object proposition with an impredicative `∃`; `provM T P` runs `chkT T` on the
   number of `P`, so `conM T = provM T falseS`.
+- `Typing`, `full env`, `bounded env`, `ObjEnv`: a `Typing` is an environment with a
+  judgment `IsDefEq Γ e₁ e₂ A`; `full env` is `env.IsDefEq 0`, also written `env` by coercion,
+  and `bounded env` is `BDefEq env`; `ObjEnv J` lists the rules the object-level development
+  uses.
 - `Thm env Γ P`, `prfT T s k`: `Thm env Γ P` holds when some term `e`
-  satisfies `env.HasType 0 Γ e P`, so `Provable env P` is `Thm env [] P`;
+  satisfies `env.HasType Γ e P` in the judgment `env`, so for `env : VEnv`,
+  `Provable env P` is `Thm env [] P`, and `BProvable env P` is `Thm (bounded env) [] P`;
   `prfT T s k` is the object term evaluating `chkT T` at `(s, k)`, and
   `numT (encExpr P)` and `lit k` are numerals for `⌜P⌝` and `k`.
 - `Modal`, `Modal.Deriv`, `Modal.GL`, `Modal.iGL`, `Modal.real`: modal formulas
@@ -343,6 +394,15 @@ well-formed declarations that include `Nat`. They replace the binders
   `GL := Deriv true`, `iGL := Deriv false`. `A.real T σ` replaces each variable
   `n` by `σ n`, `⊥` by `falseS`, `→` by `.forallE`, and `□` by `Prov T`.
 - `dneS`: `∀ p : Prop, ¬¬p → p`.
+- `clEnv`, `clT`: `natEnv` with the axiom `Classical.dne : dneS`, and its tables.
+- `IsChecker env T`, `ProvC T P`, `Modal.realC T σ`: a code `T` read as a proof
+  checker that the judgment `env` reasons about; `∃ k, T(⌜P⌝, k) = 0`; the
+  realization with `□` read as `ProvC T`, so `Prov T = ProvC (chkT T)` and
+  `Modal.real T = Modal.realC (chkT T)`.
+- `bchkT T`, `BProv`, `Modal.breal`, `Modal.btr`: the checker of the fragment,
+  `chkT T` together with the bounds of `BDefEq` on the certificate (`leafC`);
+  `ProvC (bchkT clT)`; `Modal.realC (bchkT clT)`; truth with `□B` read as
+  `BProvable clEnv (B.breal fun _ => falseS)`.
 - `Modal.Kripke`, `Modal.FinModel n`, `Forces`, `Rooted`: a Kripke model is
   an accessibility relation and a valuation on a type of worlds; a
   `FinModel n` is a transitive irreflexive one on `Fin n` with Boolean
@@ -366,7 +426,8 @@ full type theory. Löb's theorem, the derivability conditions, formalized Löb,
 `iGL_sound`, and `fairbot` assume neither; `GL_sound` assumes only that the
 theory proves `dneS`; `GL_arith_complete` and `GL_iff_provable` assume that
 and `HaltsSound env`, as do `provable_iff_lvl` and `tr_iff_lim`; `boxBot_unprovable` and
-`boxBot_succ_imp_unprovable` assume only `HaltsSound env`.
+`boxBot_succ_imp_unprovable` assume only `HaltsSound env`. For the fragment of `clEnv`,
+`GL_iff_bprovable`, `bprovable_iff_lvl`, `btr_iff_lim`, and `bcon_iterated` assume nothing.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -454,6 +515,14 @@ open Incomplete
 #print axioms con_unprovable_letterless
 #print axioms bconsistent
 #print axioms bhaltsSound
+#print axioms clEnv_wf
+#print axioms clEnv_bconsistent
+#print axioms clEnv_bhaltsSound
+#print axioms GL_iff_bprovable
+#print axioms bprovable_iff_lvl
+#print axioms bprovable_iff_dec
+#print axioms btr_iff_lim
+#print axioms bcon_iterated
 ```
 
 Each theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`.
@@ -475,11 +544,15 @@ results.
   `Second`): abstract diagonal arguments, Gödel–Kleene and Rosser theorems, and
   reduction of the second theorem to an object-theory proof of `Con T → G0 T`.
 - **Bounded fragment and set model** (`Bounded`, `BArith`, `BSigma`, `ZF`,
-  `ZFUniv`, `Model`, `ModelSound`, `Unconditional`): `BDefEq`, its set model,
-  and `incomplete_unconditional`.
+  `ZFUniv`, `Model`, `ModelSound`, `Unconditional`, `ClEnv`): `BDefEq`, its set model over
+  environments whose constants have values (`ModelEnv`), `incomplete_unconditional`, and the
+  classical environment `clEnv`.
+- **Provability logic of the classical fragment** (`BProvLogic`): `GL_iff_bprovable` and its
+  letterless corollaries.
 - **Object-theory formalization (`Obj/`)**: internal development over any
-  ordered environment containing `Nat` (`ObjEnv`):
-  - *Logic and proof mode* (`Attr`, `Core`, `Tactic`, `Iota`, `Logic`): natural
+  judgment with the rules of `ObjEnv` (`Typing`), full typing or the fragment, of an ordered
+  environment containing `Nat`:
+  - *Logic and proof mode* (`Attr`, `Typing`, `Core`, `Tactic`, `Iota`, `Logic`): natural
     deduction `Thm env Γ P`, Leibniz equality, impredicative connectives and
     quantifiers, `Nat.rec` induction into `Prop`, `0 ≠ S n`, injectivity of
     `S`, `n = 0 ∨ ∃ m, n = S m`, and custom object-level tactics (`otype`,
@@ -497,6 +570,9 @@ results.
     instantiation on encoded terms, symbolic certificate verification (`certT`,
     `chkT`), closed certificate adequacy, multi-hole expression templates, and
     internal instantiation and modus ponens.
+  - *Checking codes* (`Leaf`, `Checker`, `BChecker`): the bounds of `BDefEq` at symbolic
+    certificates, the interface `IsChecker` of a proof checker the theory reasons about, and
+    its instances `chkT T` and `bchkT T`.
   - *Internal Σ₁-completeness, second theorem and Löb's theorem* (`Graph`,
     `Sigma`, `Reduce`, `Second`, `Loeb`, `Omega`): internal graph proofs
     (`ok_exists`) showing every `PR` code provably computes its values on
@@ -505,7 +581,8 @@ results.
     of `haltsE d ⌜d⌝ → P`, `loeb`; and the ω-inconsistent context `[Prov T ⊥]`
     (`omega_inconsistent`).
   - *Provability logic* (`Derivability`, `GL`): the derivability conditions,
-    formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`.
+    formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`, for any checking
+    code.
   - *Arithmetical completeness* (`SolovayCode`, `SolovayStep`,
     `SolovayLemmas`, `Solovay`): Solovay's walk on a finite frame, as a `PR`
     code that finds the numbers of the sentences about itself from its input
