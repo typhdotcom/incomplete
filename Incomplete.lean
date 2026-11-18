@@ -81,3 +81,5 @@ import Incomplete.Modal.Letterless
 import Incomplete.Obj.Letterless
 import Incomplete.ClEnv
 import Incomplete.BProvLogic
+import Incomplete.Obj.Chaitin
+import Incomplete.Chaitin
