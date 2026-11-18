@@ -94,6 +94,25 @@ certificate checks as a proof of `P` (`ProvT`). Related results
 - `con_iff_not_prov`: the theory proves `Con T ↔ ¬Prov T ⊥`.
 - `con_unprovable_of_loeb`: `con_unprovable`, from `loeb` at `P := ⊥`.
 
+### A consistent, ω-inconsistent context
+
+```lean
+theorem omega_inconsistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hC : Consistent env) :
+    ¬Thm env [Prov T falseS] falseS ∧
+    Thm env [Prov T falseS] (Prov T falseS) ∧
+    ∀ k : Nat, Thm env [Prov T falseS] (neg (prfT T (numT (encExpr falseS)) (lit k) =ₒ zero))
+```
+
+For every consistent well-formed extension of `natEnv` and every `T` with
+`TablesFor env T`, the context `[Prov T ⊥]` is consistent, proves that some
+certificate checks as a proof of `⊥`, and refutes each numeral `k` as that
+certificate. `Prov T ⊥` speaks of `env`'s own checker: the context is a
+hypothesis over `env`, not a new environment. Consistency is `loeb` at
+`P := ⊥`; each refutation holds already in the empty context
+(`not_prf_false_lit`). `omega_inconsistent_exists` states the same for tables
+that every well-formed `env` admits (`Incomplete/Obj/Omega.lean`).
+
 ### Declaration-list variants
 
 `incomplete_rosser'`, `incomplete_of_wf'`, and `second_incompleteness'` prove
@@ -133,6 +152,10 @@ well-formed declarations that include `Nat`. They replace the binders
 - `Prov T P`, `provM T P`: `Prov T P` is `∃ k, chkT T (⌜P⌝, k) = 0` as an
   object proposition with an impredicative `∃`; `provM T P` runs `chkT T` on the
   number of `P`, so `conM T = provM T falseS`.
+- `Thm env Γ P`, `prfT T s k`: `Thm env Γ P` holds when some term `e`
+  satisfies `env.HasType 0 Γ e P`, so `Provable env P` is `Thm env [] P`;
+  `prfT T s k` is the object term evaluating `chkT T` at `(s, k)`, and
+  `numT (encExpr P)` and `lit k` are numerals for `⌜P⌝` and `k`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -205,6 +228,8 @@ open Incomplete
 #print axioms loeb
 #print axioms loeb_halts
 #print axioms con_unprovable_of_loeb
+#print axioms omega_inconsistent
+#print axioms omega_inconsistent_exists
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -251,11 +276,12 @@ results.
     `chkT`), closed certificate adequacy, multi-hole expression templates, and
     internal instantiation and modus ponens.
   - *Internal Σ₁-completeness, second theorem and Löb's theorem* (`Graph`,
-    `Sigma`, `Reduce`, `Second`, `Loeb`): internal graph proofs (`ok_exists`)
-    showing every `PR` code provably computes its values on numerals, yielding
-    `Con T → G0 T` (`con_imp_G0_provable`) and `second_incompleteness`, and,
-    for the Löb machine `loebM` searching for proofs of `haltsE d ⌜d⌝ → P`,
-    `loeb`.
+    `Sigma`, `Reduce`, `Second`, `Loeb`, `Omega`): internal graph proofs
+    (`ok_exists`) showing every `PR` code provably computes its values on
+    numerals, yielding `Con T → G0 T` (`con_imp_G0_provable`) and
+    `second_incompleteness`; for the Löb machine `loebM` searching for proofs
+    of `haltsE d ⌜d⌝ → P`, `loeb`; and the ω-inconsistent context `[Prov T ⊥]`
+    (`omega_inconsistent`).
 
 ## License
 
