@@ -68,4 +68,4 @@ import Incomplete.Obj.Loeb
 import Incomplete.Obj.Omega
 import Incomplete.Obj.Derivability
 import Incomplete.Obj.GL
-import Incomplete.Modal.Kripke
+import Incomplete.Modal.Complete

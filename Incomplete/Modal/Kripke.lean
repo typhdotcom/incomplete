@@ -113,7 +113,8 @@ theorem countP_lt {α : Type} {p q : α → Bool} :
 /-- The converse of `M.R` is well-founded: the number of successors drops along `M.R`. -/
 theorem wf : WellFounded fun a b => M.R b a = true := by
   let f : Fin n → Nat := fun a => (List.finRange n).countP (M.R a ·)
-  refine Subrelation.wf (r := InvImage (· < ·) f) (fun {a b} h => ?_) (InvImage.wf f Nat.lt_wfRel.wf)
+  refine Subrelation.wf (r := InvImage (· < ·) f) (fun {a b} h => ?_)
+    (InvImage.wf f Nat.lt_wfRel.wf)
   exact countP_lt (fun x _ hx => M.trans h hx) ⟨a, List.mem_finRange a, h, by simp [M.irrefl]⟩
 
 /-- **Soundness of GL for finite transitive irreflexive models.** -/
