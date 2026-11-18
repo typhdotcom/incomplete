@@ -59,3 +59,5 @@ import Incomplete.Obj.Free
 import Incomplete.Obj.NumCert
 import Incomplete.Obj.Template
 import Incomplete.Obj.Reduce
+import Incomplete.Obj.Holes
+import Incomplete.Obj.Chain

@@ -88,6 +88,8 @@ def termArgs (fn : Expr) (args : Array Expr) : MetaM (Option (Array Bool)) := do
   if let .const c _ := fn then
     if c == ``VExpr.liftN || c == ``VExpr.lift || c == ``VExpr.inst || c == ``VExpr.subst then
       return none
+    -- a template's holes are terms; its expression is a fixed parameter
+    if c == `Incomplete.Obj.tmplH && args.size == 3 then return some #[true, false, false]
   let vexpr := mkConst ``VExpr
   let list := mkApp (mkConst ``List [.zero]) vexpr
   forallTelescopeReducing (← inferType fn) fun xs body => do
