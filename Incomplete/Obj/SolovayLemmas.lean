@@ -262,6 +262,195 @@ theorem reach_lim (hdne : Provable env dneS) (a : Nat) (ha : a ≤ K.N) :
 termination_by (K.succL a).length
 decreasing_by exact succL_lt hb
 
+omit hq hs in
+/-- **Internal Σ₁-completeness for `Pa`**: a code `σ` turns, provably, every `k` at which the walk
+is at `i` into a certificate `σ k` of `Pa i`. -/
+theorem sigma_Pa (hTb : TablesFor env T) (i : Nat) :
+    ∃ σ : PR, Thm env [] (∀ₒ k, ev (eqz f (num i)) [k, lit d] =ₒ zero →ₒ
+      prfT T (numT (encExpr (Pa f d i))) (ev σ [k]) =ₒ zero) := by
+  have hR : (ex (app2 (fn f) (.bvar 2) (.bvar 0) =ₒ lit i)).inst (lit d) 1 = Pa f d i := by
+    simp only [Pa, Obj.hT, obj_simp]
+  have hG : Thm env [] (allN 2 (imp ((valF (eqz f (num i)) 2).inst zero 0)
+      (ex (app2 (fn f) (.bvar 2) (.bvar 0) =ₒ lit i)))) := by
+    rw [valF_fin_eq]
+    refine allN_intro (env := env) 2 (Γ := []) ?_
+    simp only [List.replicate]
+    ointro h
+    have h' := (ev_eqz_zero (p := f) (q := num i) (by otype)).mp h
+    oexists .bvar 1
+    orw [fn_ev]
+    simpa only [obj_simp] using h'
+  obtain ⟨z, hz⟩ := closed_cert hTb (E.hasNat.zeroT (U := 0) (Γ := []))
+  obtain ⟨s, hs⟩ := closed_cert hTb (E.hasNat.succT (U := 0) (Γ := []))
+  have hz1 := (hz (env := env) (Γ := [])).1
+  have hz2 := (hz (env := env) (Γ := [])).2
+  have hs1 := (hs (env := env) (Γ := [])).1
+  have hs2 := (hs (env := env) (Γ := [])).2
+  obtain ⟨τ, hτ⟩ := ok_exists hz1 hz2 hs1 hs2 hTb (eqz f (num i)) 2
+  obtain ⟨c, hc⟩ := closed_prf hTb hG
+  refine ⟨mpP (instC z s c [num d, var 0]) (.push (num d) (ren swap01 τ)), ?_⟩
+  ointro
+  ointro h
+  have hk : Tm env [ev (eqz f (num i)) [.bvar 0, lit d] =ₒ zero, nat] (.bvar 1) := by otype
+  exact prf_fin hz1 hz2 hs1 hs2 hτ hR (Pa_closed i) hc hk h
+
+omit hq hs in
+/-- A step at which the walk is at `i` proves that it reaches `i`, provably. -/
+theorem prov_Pa (hTb : TablesFor env T) {Γ : List VExpr} {i : Nat} {k : VExpr}
+    (hk : Tm env Γ k) (h : Thm env Γ (hT f d k =ₒ lit i)) : Thm env Γ (Prov T (Pa f d i)) := by
+  obtain ⟨σ, hσ⟩ := sigma_Pa (f := f) (d := d) hTb i
+  have hl : Tms env Γ [k, lit d] := by otype
+  have e1 : Thm env Γ (ev f [k, lit d] =ₒ ev (num i) [k, lit d]) := by
+    simp only [obj_simp]
+    unfold hT at h
+    exact Thm.trans (by otype) (by otype) (by otype) (Thm.symm (by otype) (by otype)
+      (fn_ev (litTy d) hk)) h
+  have hs := Thm.allE (hσ.weak0 (Γ := Γ)) hk
+  onorm at hs
+  exact prov_intro (by otype) (hs.mp (ev_eqz_of_eq hl e1))
+
+include hq hs h0 in
+/-- Entering `i` at `k + 1` from elsewhere is reading a proof of `¬S_i`. -/
+theorem prov_neg_core {Γ : List VExpr} {i : Nat} {k : VExpr} (hk : Tm env Γ k)
+    (hk1 : Thm env Γ (¬ₒ (hT f d k =ₒ lit i))) (hk2 : Thm env Γ (hT f d (S k) =ₒ lit i)) :
+    Thm env Γ (Prov T (neg (Ss f d i))) := by
+  refine bigOr_elim (by otype) (props_map fun _ => by otype) (range hq hs h0 hk)
+    fun p hp kp => ?_
+  obtain ⟨a, ha, rfl⟩ := List.mem_map.1 hp
+  onorm at kp ⊢
+  have hk1' := hk1.weak (A := hT f d k =ₒ lit a)
+  have hk2' := hk2.weak (A := hT f d k =ₒ lit a)
+  onorm at hk1' hk2'
+  by_cases hai : a = i
+  · subst hai
+    exact Thm.exfalso (hk1'.mp kp) (by otype)
+  refine bigOr_elim (by otype) (props_cons (by otype) (props_map fun _ => by otype))
+    (step hq hs ((K.mem_worlds).1 ha) (by otype) kp) fun p' hp' kp' => ?_
+  onorm at kp' ⊢
+  have hk2'' := hk2'.weak (A := p')
+  onorm at hk2''
+  rcases List.mem_cons.1 hp' with rfl | hp'
+  · onorm at kp'
+    exact Thm.exfalso ((lit_ne hai).mp (Thm.trans (by otype) (by otype) (by otype)
+      (Thm.symm (by otype) (by otype) kp') hk2'')) (by otype)
+  · obtain ⟨b, -, rfl⟩ := List.mem_map.1 hp'
+    onorm at kp'
+    have e1 := Thm.conjE1 (by otype) (by otype) kp'
+    have e2 := Thm.conjE2 (by otype) (by otype) kp'
+    by_cases hbi : b = i
+    · subst hbi
+      unfold Qt at e2
+      exact prov_intro (by otype) e2
+    · exact Thm.exfalso ((lit_ne hbi).mp (Thm.trans (by otype) (by otype) (by otype)
+        (Thm.symm (by otype) (by otype) e1) hk2'')) (by otype)
+
+theorem bigOr_Ss_closed (bs : List Nat) : (bigOr (bs.map (Ss f d))).ClosedN :=
+  (bigOrTy (env := natEnv) (Γ := []) (props_map fun _ => SsTy _)).closedN natEnv_ordered trivial
+
+include hq hs h0 in
+/-- **`S_i → Prov(⋁_{i R j} S_j)` for `i ≠ 0`.** The walk entered `i` along a proof of `¬S_i`,
+and it provably reaches `i`; and `Pa i ∧ ¬S_i → ⋁_{i R j} S_j` (`reach_lim`). -/
+theorem Ss_prov (hTb : TablesFor env T) (hdne : Provable env dneS) {Γ : List VExpr} {i : Nat}
+    (hi0 : i ≠ 0) (hiN : i ≤ K.N) (h : Thm env Γ (Ss f d i)) :
+    Thm env Γ (Prov T (bigOr ((K.succL i).map (Ss f d)))) := by
+  have hBc := bigOr_Ss_closed (f := f) (d := d) (K.succL i)
+  have hB : env.HasType 0 [] (bigOr ((K.succL i).map (Ss f d))) (.sort .zero) := by otype
+  have hD := reach_lim hq hs hdne i hiN
+  have hNB : (imp (neg (Ss f d i)) (bigOr ((K.succL i).map (Ss f d)))).ClosedN :=
+    (impTy (negTy (SsTy (env := env) (Γ := []) i)) hB).closedN E.ordered trivial
+  have hDimp : Thm env [] (imp (Pa f d i) (imp (neg (Ss f d i)) (bigOr ((K.succL i).map (Ss f d))))) := by
+    refine Thm.intro (PaTy i) ?_
+    rw [hNB.lift_eq]
+    refine Thm.intro (negTy (SsTy i)) ?_
+    rw [hBc.lift_eq]
+    have hP : Thm env [neg (Ss f d i), Pa f d i] (Pa f d i) := (Thm.hyp (.succ .zero)).cast
+      (by simp only [obj_simp])
+    have hn : Thm env [neg (Ss f d i), Pa f d i] (neg (Ss f d i)) := (Thm.hyp .zero).cast
+      (by simp only [obj_simp])
+    refine bigOr_elim (closedTy hB) (props_map fun _ => by otype) (hD.weak0.mp hP)
+      fun p hp kp => ?_
+    rw [hBc.lift_eq]
+    obtain ⟨b, hb, rfl⟩ := List.mem_map.1 hp
+    rcases List.mem_cons.1 hb with rfl | hb
+    · exact Thm.exfalso (Thm.absurd (hn.weak.cast (by simp only [obj_simp]))
+        (kp.cast Ss_liftN)) (by otype)
+    · exact bigOr_intro (props_map fun _ => by otype) (List.mem_map_of_mem hb) (kp.cast Ss_liftN)
+  have hP1 : Thm env [] (Prov T (imp (Pa f d i) (imp (neg (Ss f d i))
+      (bigOr ((K.succL i).map (Ss f d)))))) :=
+    prov_of_provable E.hasNat E.ordered hTb hDimp.provable
+  unfold Ss at h
+  have hPa := Thm.conjE1 (by otype) (by otype) h
+  unfold Pa at hPa
+  refine Thm.exEHT (by otype) (by otype) hPa fun hmT hm => ?_
+  onorm at hm ⊢
+  have hPP := prov_Pa hTb hmT hm
+  have hE := entry h0 hi0 hmT hm
+  refine Thm.exEHT (by otype) (by otype) hE fun hkT hk => ?_
+  onorm at hk ⊢
+  have hk1 := Thm.conjE1 (by otype) (by otype) hk
+  have hk2 := Thm.conjE2 (by otype) (by otype) hk
+  have hPN := prov_neg_core hq hs h0 hkT hk1 hk2
+  exact prov_mp_ctx hBc (prov_mp_ctx hNB hP1.weak0
+    ((hPP.weak.weak).cast (by simp only [obj_simp]))) hPN
+
+end
+
+/-! ### Leaving a world -/
+
+section
+variable {env : VEnv} [E : ObjEnv env] {f nx : PR} {d : Nat}
+  (hs : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
+    Thm env Γ (hT f d (S k) =ₒ ev nx [hT f d k, k, lit d]))
+include hs
+
+theorem lv_zero {Γ : List VExpr} {a : Nat} {k : VExpr} (hk : Tm env Γ k)
+    (h1 : Thm env Γ (hT f d k =ₒ lit a)) (h2 : Thm env Γ (¬ₒ (hT f d (S k) =ₒ lit a))) :
+    Thm env Γ (ev (lvC f nx a) [k, lit d] =ₒ zero) := by
+  have hl : Tms env Γ [k, lit d] := by otype
+  have e1 : Thm env Γ (ev f [k, lit d] =ₒ hT f d k) := by
+    unfold hT; exact Thm.symm (by otype) (by otype) (fn_ev (litTy d) hk)
+  have z1 : Thm env Γ (ev (eqz f (num a)) [k, lit d] =ₒ zero) :=
+    ev_eqz_of_eq hl (by simp only [obj_simp]; exact Thm.trans (by otype) (by otype) (by otype) e1 h1)
+  have r1 := ev_ifz_zero (f := lvC f nx a) rfl hl z1
+  refine Thm.trans (by otype) (by otype) (by otype) r1 ?_
+  refine Thm.disjEH (by otype) (by otype) (by otype) (ifz_cases (c := eqz (push f nx) (num a))
+    (a := num 1) (b := .zero) hl) (fun c1 => ?_) (fun c2 => ?_)
+  · onorm at c1 ⊢
+    oexfalso
+    ocases c1 with c11 c12
+    have e := (ev_eqz_zero (p := push f nx) (q := num a) (by otype)).mp c12
+    olift e1
+    olift h2
+    orw [ev_push (f := push f nx) rfl (by otype), e1, ← hs (by otype)] at e
+    exact h2.mp (by simpa only [obj_simp] using e)
+  · onorm at c2 ⊢
+    exact Thm.conjE1 (by otype) (by otype) c2
+
+/-- **Leaving `a`, as a halting sentence**: a refutation of `Stay a` proves that `lvC f nx a`
+halts on `d`. -/
+theorem halts_lv {a : Nat} (h : Thm env [] (neg (Stay f d a))) :
+    Thm env [] (halts (lvC f nx a) d) := by
+  show Thm env [] (imp (all (imp (isZero (app2 (fn (lvC f nx a)) (lit d) (.bvar 0))) falseS))
+    falseS)
+  ointro hn
+  refine (h.weak0).mp ?_
+  unfold Stay
+  ointro
+  ointro hk
+  refine Thm.disjEH (by otype) (by otype) (by otype)
+    (eq_or_ne (a := hT f d (S (.bvar 1))) (b := lit a) (by otype) (by otype)) (fun e => ?_)
+    (fun n => ?_)
+  · onorm at e ⊢; exact e
+  · onorm at n ⊢
+    oexfalso
+    olift hn
+    olift hk
+    have hz := Thm.allE hn (t := .bvar 2) (by otype)
+    onorm at hz
+    refine hz.mp (isZero_of_eq_zero (by otype) ?_)
+    orw [fn_ev (litTy d) (by otype)]
+    exact lv_zero hs (by otype) hk n
+
 end
 
 end Incomplete.Obj
