@@ -64,6 +64,10 @@ theorem add_succ_c : Thm env [] (∀ₒ a b, add a (S b) =ₒ S (add a b)) := by
     (.bvar (.succ .zero)) (.bvar .zero) (env := env))
   onorm at this; exact this
 
+theorem add_zero (ha : Tm env Γ a) : Thm env Γ (EqN (add a zero) a) := by ospec add_zero_c ha
+theorem add_succ (ha : Tm env Γ a) (hb : Tm env Γ b) :
+    Thm env Γ (EqN (add a (S b)) (S (add a b))) := by ospec add_succ_c ha hb
+
 theorem mul_zero_c : Thm env [] (∀ₒ a, mul a zero =ₒ zero) := by
   ointro
   have := Thm.ofDefEq (rec2_zero (onCtx_nats 1) zeroTy
@@ -76,9 +80,9 @@ theorem mul_succ_c : Thm env [] (∀ₒ a b, mul a (S b) =ₒ add (mul a b) a) :
     (addTy (.bvar .zero) (.bvar (.succ (.succ .zero)))) (.bvar (.succ .zero)) (.bvar .zero) (env := env))
   onorm at this; exact this
 
-theorem add_zero (ha : Tm env Γ a) : Thm env Γ (EqN (add a zero) a) := by ospec add_zero_c ha
-theorem add_succ (ha : Tm env Γ a) (hb : Tm env Γ b) :
-    Thm env Γ (EqN (add a (S b)) (S (add a b))) := by ospec add_succ_c ha hb
+theorem mul_zero (ha : Tm env Γ a) : Thm env Γ (EqN (mul a zero) zero) := by ospec mul_zero_c ha
+theorem mul_succ (ha : Tm env Γ a) (hb : Tm env Γ b) :
+    Thm env Γ (EqN (mul a (S b)) (add (mul a b) a)) := by ospec mul_succ_c ha hb
 
 /-! ### Addition -/
 
@@ -112,10 +116,6 @@ theorem add_assoc_c : Thm env [] (∀ₒ a b c, add (add a b) c =ₒ add a (add 
 
 theorem add_assoc (ha : Tm env Γ a) (hb : Tm env Γ b) (hc : Tm env Γ c) :
     Thm env Γ (EqN (add (add a b) c) (add a (add b c))) := by ospec add_assoc_c ha hb hc
-
-theorem mul_zero (ha : Tm env Γ a) : Thm env Γ (EqN (mul a zero) zero) := by ospec mul_zero_c ha
-theorem mul_succ (ha : Tm env Γ a) (hb : Tm env Γ b) :
-    Thm env Γ (EqN (mul a (S b)) (add (mul a b) a)) := by ospec mul_succ_c ha hb
 
 /-! ### Multiplication -/
 

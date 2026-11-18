@@ -1,10 +1,11 @@
 import Incomplete.Obj.Arith
+import Incomplete.PRLib
 
 /-!
 # Primitive recursive codes as atoms
 
 `fn f` is closed for every code `f`, so object-level proofs can mention it for an arbitrary `f`
-and reason about it through lemmas, without unfolding it.
+and reason about it through lemmas, without unfolding it. `add` is literally `fn PR.addC`.
 -/
 
 namespace Incomplete.Obj
@@ -22,6 +23,9 @@ theorem fnTy {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} (f : PR) :
   (fnT E.hasNat E.ordered f).weak0 E.ordered
 
 macro_rules | `(tactic| otype) => `(tactic| exact fnTy _)
+
+/-- `add` is the compiled addition code of `PRLib`, so its lemmas are about `fn PR.addC`. -/
+theorem addF_eq_fn : addF = fn PR.addC := rfl
 
 /-- An instance of commutativity at an arbitrary code. -/
 theorem fn_add_comm_c {env : VEnv} [ObjEnv env] (f : PR) :

@@ -201,7 +201,7 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   statements with named variables. `Obj/Rec`: binary functions by primitive
   recursion and their computation rules. `Obj/Arith`: `add` and `mul`,
   commutativity and associativity, closed in `natEnv` and at arbitrary terms.
-  `Obj/Code`: the compiled codes `fn f` as closed atoms.
+  `Obj/Code`: the compiled codes `fn f` as closed atoms; `add` is `fn PR.addC`.
 
 ## License
 
