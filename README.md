@@ -181,6 +181,8 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   consistency.
 - `Induct`, `Rosser`: induction in the object theory, the Rosser machine, and
   Rosser's theorem.
+- `Second`: the consistency sentence `Con`, and the second theorem reduced to
+  proving `Con → G0` in the object theory.
 - `PR`, `PRLib`: the machine model. `Sentences`, `Arith`, `Adequacy`: halting
   sentences and Σ₁-completeness.
 - `Cert*`, `Check*`, `Encode`, `*PR`, `Rules*`, `ProjRules`: the proof checker as
