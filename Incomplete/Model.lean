@@ -50,9 +50,20 @@ noncomputable def recV (u : Nat) : ZS :=
   lam (pi omega fun n => pi (app M n) fun _ => app M (app succV n)) fun s =>
   lam omega fun n => recN z s (natOf n)
 
+/-- The name of the classical axiom constant of `clEnv`. -/
+def dneName : Lean.Name := `Classical.dne
+
+/-- `False` as a set: `∀ p : Prop, p`. -/
+noncomputable def falseV : ZS := pi two fun p => p
+
+/-- The value of `dneName`: a function into the true propositions; at a false one its
+domain `¬¬p` is empty. -/
+noncomputable def dneV : ZS :=
+  lam two fun p => lam (pi (pi p fun _ => falseV) fun _ => falseV) fun _ => empty
+
 noncomputable def constV (c : Lean.Name) (ls : List Nat) : ZS :=
   if c = ``Nat then omega else if c = ``Nat.zero then num 0 else if c = ``Nat.succ then succV
-  else if c = ``Nat.rec then recV (ls.headD 0) else empty
+  else if c = ``Nat.rec then recV (ls.headD 0) else if c = dneName then dneV else empty
 
 noncomputable def interp (ζ : List Nat) : VExpr → (Nat → ZS) → ZS
   | .bvar i, ρ => ρ i

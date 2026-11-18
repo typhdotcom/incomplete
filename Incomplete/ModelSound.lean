@@ -3,9 +3,11 @@ import Incomplete.Model
 /-!
 # Soundness of the fragment for the set model
 
-Every `BDefEq natEnv` judgment holds in the model: at any values of the context's variables in
-their types, the two sides denote the same set, a member of the type. So the fragment does not
-prove `False`, and it proves `halts f n` only when `f` halts on `n`.
+Every `BDefEq env` judgment holds in the model, for every `ModelEnv env`: an environment whose
+rules are `natEnv`'s and whose constants are `natEnv`'s or monomorphic constants with a value of
+their type. At any values of the context's variables in their types, the two sides denote the
+same set, a member of the type. So the fragment does not prove `False`, and it proves `halts f n`
+only when `f` halts on `n`.
 -/
 
 namespace Incomplete
@@ -113,8 +115,18 @@ theorem iotaSucc_sound (u : Nat) (ρ : Nat → ZS) :
 
 /-! ### Soundness -/
 
+/-- The environments the set model interprets: the rules of `natEnv`, and the constants of
+`natEnv` or monomorphic ones whose value `constV` lies in their type. -/
+structure ModelEnv (env : VEnv) : Prop where
+  const : ∀ {c ci}, env.constants c = some ci → natEnv.constants c = some ci ∨
+    (ci.uvars = 0 ∧ ∀ ρ, constV c [] ∈ interp [] ci.type ρ)
+  defeq : ∀ {df}, env.defeqs df → natEnv.defeqs df
+
+theorem modelEnv_natEnv : ModelEnv natEnv := ⟨.inl, id⟩
+
 /-- **Soundness** of the fragment for the set model. -/
-theorem BDefEq.sound {Γ : List VExpr} {e1 e2 A : VExpr} (H : BDefEq natEnv Γ e1 e2 A) :
+theorem BDefEq.sound {env : VEnv} (hM : ModelEnv env) {Γ : List VExpr} {e1 e2 A : VExpr}
+    (H : BDefEq env Γ e1 e2 A) :
     ∀ ρ, Sat Γ ρ → interp [] e1 ρ = interp [] e2 ρ ∧ interp [] e1 ρ ∈ interp [] A ρ := by
   induction H with
   | bvar h => exact fun ρ hρ => ⟨rfl, hρ _ _ h⟩
@@ -129,6 +141,10 @@ theorem BDefEq.sound {Γ : List VExpr} {e1 e2 A : VExpr} (H : BDefEq natEnv Γ e
     intro ρ _
     simp only [interp, interp_instL, map_eval_eq he]
     refine ⟨by first | rfl | trivial, ?_⟩
+    rcases (hM.const hc).symm with ⟨hu, hv⟩ | hc
+    · obtain rfl : ls' = [] := List.eq_nil_of_length_eq_zero
+        ((List.Forall₂.length_eq he).symm.trans (hlen.trans hu))
+      exact hv ρ
     rcases natEnv_const hc with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
     · obtain ⟨l, hl⟩ : ∃ l, ls' = [l] := by
         have h1 : ls'.length = 1 := (List.Forall₂.length_eq he).symm.trans hlen
@@ -199,7 +215,7 @@ theorem BDefEq.sound {Γ : List VExpr} {e1 e2 A : VExpr} (H : BDefEq natEnv Γ e
   | @extra df ls Γ hd _ hlen _ =>
     intro ρ _
     simp only [interp_instL]
-    rcases natEnv_defeq hd with rfl | rfl
+    rcases natEnv_defeq (hM.defeq hd) with rfl | rfl
     · obtain ⟨l, rfl⟩ : ∃ l, ls = [l] := match ls, hlen with | [l], _ => ⟨l, rfl⟩
       exact iotaSucc_sound _ ρ
     · obtain ⟨l, rfl⟩ : ∃ l, ls = [l] := match ls, hlen with | [l], _ => ⟨l, rfl⟩
@@ -214,21 +230,21 @@ theorem interp_falseS (ρ : Nat → ZS) (y : ZS) : ¬y ∈ interp [] falseS ρ :
   exact not_mem_empty _ this
 
 /-- **Consistency** of the fragment: it does not prove `False`. -/
-theorem bconsistent : ¬BProvable natEnv falseS := fun ⟨_, h⟩ =>
-  interp_falseS (fun _ => empty) _ ((h.sound _ (Sat.nil _)).2)
+theorem ModelEnv.bconsistent {env : VEnv} (hM : ModelEnv env) : ¬BProvable env falseS :=
+  fun ⟨_, h⟩ => interp_falseS (fun _ => empty) _ ((h.sound hM _ (Sat.nil _)).2)
+
+theorem bconsistent : ¬BProvable natEnv falseS := modelEnv_natEnv.bconsistent
 
 /-- `isZero` of a successor numeral is `False`, in the fragment. -/
-theorem bisZero_succ (j : Nat) :
-    BDefEq natEnv [] (isZero (lit (j + 1))) falseS (.sort .zero) := by
-  have H := hasNat_natEnv
-  have henv := natEnv_ordered
+theorem bisZero_succ {env : VEnv} (H : HasNat env) (henv : env.Ordered) (j : Nat) :
+    BDefEq env [] (isZero (lit (j + 1))) falseS (.sort .zero) := by
   have hS := bisZeroStepT H (Γ := [])
   have hR := H.bnatRecT Inert.sort (fun _ => .sort0) btrueT hS (H.blitT j) (Γ := [])
   have h1 := H.biota_succ henv Inert.sort (fun _ => .sort0) btrueT hS (H.blitT j)
-  have b1 : BDefEq natEnv [] (.app (.lam nat (.lam (.sort .zero) falseS)) (lit j))
+  have b1 : BDefEq env [] (.app (.lam nat (.lam (.sort .zero) falseS)) (lit j))
       (.lam (.sort .zero) falseS) (.forallE (.sort .zero) (.sort .zero)) :=
     BDefEq.beta (.lamDF .sort0 bfalseT) (H.blitT j)
-  have b2 : BDefEq natEnv [] (.app (.lam (.sort .zero) falseS) (natRec (.sort .zero) trueS
+  have b2 : BDefEq env [] (.app (.lam (.sort .zero) falseS) (natRec (.sort .zero) trueS
       (.lam nat (.lam (.sort .zero) falseS)) (lit j))) falseS (.sort .zero) :=
     BDefEq.beta bfalseT hR
   exact h1.trans ((BDefEq.appDF b1 hR).trans b2)
@@ -238,12 +254,11 @@ theorem interp_lit_inst {e : VExpr} {m : Nat} (ρ : Nat → ZS) :
   rw [interp_inst, interp_lit]
 
 /-- **Soundness for `halts`**: the fragment proves `halts f n` only when `f` halts on `n`. -/
-theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.Halts n := by
-  have H := hasNat_natEnv
-  have henv := natEnv_ordered
+theorem ModelEnv.bhaltsSound {env : VEnv} (hM : ModelEnv env) (H : HasNat env)
+    (henv : env.Ordered) {f : PR} {n : Nat} (hp : BProvable env (halts f n)) : f.Halts n := by
   obtain ⟨e, h⟩ := hp
   let ρ : Nat → ZS := fun _ => empty
-  have m := (h.sound ρ (Sat.nil _)).2
+  have m := (h.sound hM ρ (Sat.nil _)).2
   simp only [halts, interp] at m
   -- the interpretation of `notHalts f n` is empty
   have hN : ∀ x, ¬x ∈ interp [] (notHalts f n) ρ := fun x hx =>
@@ -263,7 +278,7 @@ theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.H
         .app (.app (fn f) (lit n)) (lit k) := by
       simp [VExpr.inst, hfc.instN_eq (Nat.zero_le _), (Inert.lit n).inst]
     rw [e1] at hy
-    have hfnT : BDefEq natEnv [] (.app (.app (fn f) (lit n)) (lit k))
+    have hfnT : BDefEq env [] (.app (.app (fn f) (lit n)) (lit k))
         (.app (.app (fn f) (lit n)) (lit k)) nat :=
       .app' (.app' (bfnT H henv f) (H.blitT n) rfl) (H.blitT k) rfl
     have hc := bisZero_congr H hfnT (bfn_adequate H henv f n k)
@@ -272,7 +287,7 @@ theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.H
       | 0 => absurd ⟨k, hv⟩ hnh
       | j + 1 => ⟨j, rfl⟩
     rw [hj] at hc
-    have := ((hc.trans (bisZero_succ j)).sound ρ (Sat.nil _)).1
+    have := ((hc.trans (bisZero_succ H henv j)).sound hM ρ (Sat.nil _)).1
     rw [this] at hy
     exact interp_falseS _ _ hy
   have : interp [] (.forallE (isZero (.app (.app (fn f) (lit n)) (.bvar 0))) falseS)
@@ -281,5 +296,8 @@ theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.H
   rw [← lam_eq_empty (A := interp [] (isZero (.app (.app (fn f) (lit n)) (.bvar 0)))
     (zcons (num k) ρ)) (f := fun _ => empty) fun y hy => absurd hy (hIZ y)]
   exact lam_mem_pi fun y hy => absurd hy (hIZ y)
+
+theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.Halts n :=
+  modelEnv_natEnv.bhaltsSound hasNat_natEnv natEnv_ordered hp
 
 end Incomplete
