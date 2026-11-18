@@ -1,71 +1,106 @@
-State: COMPLETE
-Turn: none
-Candidate: xmurwyrlqospkkzzvztzmkummnykwkvt / 68cb58bf0c4d090c90f3070d3d7a6bade922c418
+State: RETURNED
+Turn: worker
+Candidate: wvyqrvqrxptmnnkxvrrqyzyqopxtpvsw / a9192d26a3bd47573d9a3f67fcb217e0511df091
 
-# Pre-publication review
+# Rosser and second incompleteness review
 
 ## Objective and meaning
 
-Assess the extracted, independently namespaced `Incomplete` library for
-publication: whether its proofs establish the advertised incompleteness
-results, whether the README states their assumptions accurately, and whether
-the package builds with its pinned dependencies.
+Review the changes since the previous candidate `68cb58bf0c4d`: Rosser's
+incompleteness theorem from consistency alone, internal arithmetic and proof
+manipulation in `Incomplete/Obj`, the second incompleteness theorem for the
+actual certificate checker, and their public documentation and tactics.
 
 ## Accepted foundation
 
-- The object theory is lean4lean's formal `VEnv.HasType` / `VEnv.IsDefEq`
-  judgment, as defined in the pinned dependency, rather than a kernel
-  implementation. The public scope is stated in `README.md`.
-- The unconditional result concerns `BProvable natEnv`, the bounded,
-  projection-free fragment defined in `Incomplete/Bounded.lean`.
-- For the full judgment, `incomplete_of_wf` and `incomplete_of_wf'` assume
-  consistency; the additional irrefutability conclusion assumes
-  `HaltsSound`. Full-theory consistency and halting soundness are not claimed.
+- The proof system remains the pinned lean4lean fork's formal
+  `VEnv.HasType` / `VEnv.IsDefEq` judgment. The upstream/fork distinction and
+  specific dependencies are documented in `README.md`; preserve that account.
+- Preserve the previously reviewed unconditional result for
+  `BProvable natEnv`, the bounded, projection-free fragment, and the
+  conditional full-theory Gödel–Kleene results.
+- The new full-theory Rosser and second incompleteness statements assume
+  consistency of a well-formed extension of `natEnv`. They do not establish
+  full-theory consistency or kernel implementation correctness.
+- `Con T` uses the existing checker `chkC T (fun _ => true)` through `conM T`.
+  `con_true_iff` identifies its external non-halting interpretation with
+  `Consistent env` for `TablesFor env T`.
 - The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
 
-Accepted for publication. No blocking correctness, packaging, or public-scope
-finding was identified. No worker action remains for this review.
-
-The review followed the definitions of machines, compilation, halting
-sentences, provability, certificate checking, finite environments, the
-diagonal construction, and the bounded set model through to the public
-theorems. The advertised conclusions and hypotheses match the elaborated
-statements. This verdict concerns the candidate above and its pinned formal
-theory; it does not establish implementation-level kernel correctness.
+Returned for D1. The formal headline results passed the build, axiom audit,
+and statement/dependency inspection. The new exported `ohyp` tactic fails a
+routine valid context despite advertising hypothesis search; this behavior
+needs correction before accepting the submitted toolkit.
 
 ## Current drawers
 
-None.
+### D1 — P2: `ohyp` stops before reaching a matching hypothesis
+
+Status: open
+
+`Incomplete/Obj/Tactic.lean:67–75` returns after `evalTactic` accepts an
+attempt, without ensuring that its deferred elaboration obligations succeed.
+The following ordinary context reproduces the failure:
+
+```lean
+import Incomplete
+open Incomplete Incomplete.Obj
+
+example : Thm natEnv [nat, nat, falseS] falseS := by
+  ohyp
+```
+
+Lean exits with an unsolved goal `nat.lift.lift = falseS`. The same judgment
+passes with `exact Thm.hyp (i := 2) (by olookup)`. Targets at indices 0 and 1
+also pass with `ohyp`; the sweep of contexts
+`List.replicate n nat ++ [falseS]` fails for every tested `n` in `2…16`.
+The explicit-index controls establish that these are valid judgments.
+
+The separate `List.range 16` cutoff also excludes valid hypotheses at index
+16 and beyond; explicit lookup at index 16 passes. Repair hypothesis search
+so an unsuccessful candidate is fully rejected before moving on, and search
+the available context rather than imposing that undocumented fixed limit.
+Keep the fix confined to hypothesis search and its verification.
+
+Closure evidence: small regression checks for successful lookup at indices
+0, 1, 2 and 16, including the reproducer above; a no-match case that fails
+without leaving a partial proof or deferred obligations; the library build;
+and the public theorem axiom audit. Exercise `ohyp` itself in these checks,
+rather than substituting explicit lookup.
 
 ## Verification
 
-- `nix develop -c lake build` passed (90 jobs).
-- A fresh temporary package containing the candidate's Lean sources and
-  package configuration built successfully (90 jobs), recompiling every
-  project module and reusing the installed dependency artifacts.
-- `nix develop -c lake env lean --trust=0` on a temporary file importing
-  `Incomplete` and auditing the five README theorems passed. Each of
-  `incomplete_unconditional`, `incomplete_of_wf`, `incomplete_of_wf'`,
-  `bconsistent`, and `bhaltsSound` reported exactly
-  `[propext, Classical.choice, Quot.sound]`.
+- `nix develop -c lake build` passed (131 jobs).
+- A fresh temporary copy of all project Lean sources and package
+  configuration built successfully (131 jobs), recompiling every project
+  module and reusing the installed dependency artifacts.
+- `nix develop -c lake env lean --trust=0` on an audit importing `Incomplete`
+  passed. All ten README theorems report exactly
+  `[propext, Classical.choice, Quot.sound]`: `incomplete_unconditional`,
+  `incomplete_rosser`, `incomplete_rosser'`, `incomplete_of_wf`,
+  `incomplete_of_wf'`, `second_incompleteness`, `second_incompleteness'`,
+  `con_unprovable`, `bconsistent`, and `bhaltsSound`. The same audit passed
+  for `con_imp_G0_provable`, `sigma_dg`, and `Obj.ok_exists`.
+- Inspected the definitions of `ObjEnv`, `Thm`, object equality, symbolic
+  evaluation, proof and certificate predicates, templates, and consistency.
+  Traced Rosser's finite-prefix/tail induction and the second theorem's
+  internal graph certificates, instantiation, modus ponens, `sigma_dg`, and
+  `Con T → G0 T`. The headline statements have the documented hypotheses;
+  the internal implication is proved rather than assumed. The base
+  certificate premises of `Obj.ok_exists` are discharged in `sigma_of`.
 - Source inspection found no proof holes, native decision proofs, or added
-  axiom declarations. The `axiom` pattern in `Extend.lean` matches the object
-  theory's declaration constructor.
-- The installed lean4lean and Batteries revisions match
-  `lake-manifest.json`; the lean4lean revision also matches `lakefile.toml`,
-  and both packages specify the same Lean toolchain.
-- `nix flake check` passed. Because its summary reported zero checks to run,
-  all seven `checks.x86_64-linux` derivations were also explicitly realized
-  with `nix build --no-link`; that command passed.
+  axiom declarations. The new partial definitions are elaborator helpers.
+- `nix flake check` passed for the candidate. Existing unused-variable and
+  unused-simp-argument warnings remain nonblocking.
+- The isolated D1 reproducer failed; its explicit-index controls passed.
 
-## Nonblocking polish
+## Worker completion requirement
 
-- The build emits unused-variable and unused-simp-argument warnings in the
-  project and in the dependency. They do not affect the checked conclusions.
-- `Incomplete/Final.lean`'s module heading and theorem docstring, and the
-  docstring for `incomplete_of_wf` in `Incomplete/Extend.lean`, call the true,
-  unprovable sentence a "halting sentence." Use "non-halting sentence" for
-  precision: the true sentence is `notHalts d d.code`. The theorem statements
-  and README already distinguish these correctly.
+Work from this `REVIEW.md`, resolve D1, and rewrite this file as the next
+`READY FOR REVIEW` submission with the exact finalized candidate identity
+and evidence for the drawer. Follow `AGENTS.md`: run the relevant Lean
+checks and `nix flake check`, commit the candidate, then record its identity
+and commit the review submission. Merely replying in chat is not a
+submission.
