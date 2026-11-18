@@ -213,7 +213,13 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `selC`, `ifz` and `andz` on codes. `Obj/Order`: `a ≤ₒ b` as `a - b = 0`, its
   equivalence with `∃ c, a + c = b`, the laws of truncated subtraction,
   `fn mulC = mul`, and what `leq` and `eqz` test. `Obj/Closed`: these as closed
-  theorems, and so `Provable natEnv`.
+  theorems, and so `Provable natEnv`. `Obj/Ring`: distributivity, associativity
+  of `mul` and cancellation; `ONat env Γ`, the terms of `Nat` in `Γ` up to
+  provable equality, as a `Lean.Grind` commutative semiring; and `oring [h, …]`,
+  which proves an equation from equations by `grind` in it. `Obj/Ineq`:
+  `a <ₒ b` as `S a ≤ₒ b`; reflexivity, transitivity, totality, trichotomy,
+  monotonicity and cancellation of `+` and `*`, and truncated subtraction; and
+  `ole c [h, …]`, which proves `a ≤ₒ b` from `a + c = b` by `oring`.
 
 ## License
 

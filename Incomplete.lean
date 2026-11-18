@@ -39,3 +39,5 @@ import Incomplete.Obj.Eval
 import Incomplete.Obj.Codes
 import Incomplete.Obj.Order
 import Incomplete.Obj.Closed
+import Incomplete.Obj.Ring
+import Incomplete.Obj.Ineq
