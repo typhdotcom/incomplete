@@ -80,8 +80,8 @@ macro "orefl" : tactic => `(tactic| (refine Thm.refl ?_; otype))
 def isBinder (c : Name) : Bool := c == ``Obj.all || c == `Incomplete.Obj.ex
 
 /-- For `fn` applied to `args` returning an object term or a list of them, which arguments are
-object terms or lists of them (`true`) and which are codes or numbers (`false`); `none` if some
-argument is neither. Such a function is taken to keep its term arguments at its own depth, so
+object terms or lists of them (`true`) and which are codes, numbers or other parameters whose
+types do not mention terms (`false`); `none` if some argument is neither. Such a function is taken to keep its term arguments at its own depth, so
 lifting and instantiation are excluded. -/
 def termArgs (fn : Expr) (args : Array Expr) : MetaM (Option (Array Bool)) := do
   if args.isEmpty then return none
@@ -97,7 +97,9 @@ def termArgs (fn : Expr) (args : Array Expr) : MetaM (Option (Array Bool)) := do
     for x in xs do
       let t ← inferType x
       if (← isDefEq t vexpr) || (← isDefEq t list) then ks := ks.push true
-      else if (← isDefEq t (mkConst `Incomplete.PR)) || (← isDefEq t (mkConst ``Nat)) then
+      else if (← isDefEq t (mkConst `Incomplete.PR)) || (← isDefEq t (mkConst ``Nat)) ||
+          !(← instantiateMVars t).hasAnyFVar (fun _ => true) &&
+            ((← instantiateMVars t).find? (·.isConstOf ``VExpr)).isNone then
         ks := ks.push false
       else return none
     return some ks

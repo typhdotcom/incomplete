@@ -256,7 +256,13 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `jT c`, the number of the judgment; the `appDF` certificate `appT …` checks
   when its children do and certifies `f a ≡ f' a' : B[a]`, with `B[a]` the code
   `instT B a 0`; and `chkT T` accepts a checking certificate of `[] ⊢ e ≡ e : s`
-  as a proof of the sentence numbered `s` (`prfT`).
+  as a proof of the sentence numbered `s` (`prfT`). `Obj/Free`: every derivable
+  closed judgment has a certificate number that the object theory proves to
+  check and to certify it, by adequacy alone (`closed_cert`, `provable_cert`).
+  `Obj/NumCert`: the code `numCertC` of certificates of `⊢ lit k : Nat`, built
+  by `appDF` from closed ones and proved by induction on `k` to check; and
+  internal instantiation: for a closed provable `∀ x : Nat, Q` a code `σ` with
+  `∀ k, Prf(instT ⌜Q⌝ (litT k) 0, σ k)` provable (`internal_inst`).
 
 ## License
 

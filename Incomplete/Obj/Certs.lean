@@ -36,6 +36,25 @@ def appT (g A B f f' a a' c₁ c₂ : VExpr) : VExpr :=
   tagT 16 5 (pair (judgT g (tagT 7 3 (pair f a)) (tagT 7 3 (pair f' a')) (instT B a zero))
     (pair A (pair B (pair f (pair f' (pair a (pair a' (pair c₁ c₂))))))))
 
+@[obj_simp] theorem appT_liftN {g A B f f' a a' c₁ c₂ : VExpr} {n k : Nat} :
+    (appT g A B f f' a a' c₁ c₂).liftN n k = appT (g.liftN n k) (A.liftN n k) (B.liftN n k)
+      (f.liftN n k) (f'.liftN n k) (a.liftN n k) (a'.liftN n k) (c₁.liftN n k) (c₂.liftN n k) := by
+  simp only [appT, obj_simp]
+
+@[obj_simp] theorem appT_inst {g A B f f' a a' c₁ c₂ e : VExpr} {k : Nat} :
+    (appT g A B f f' a a' c₁ c₂).inst e k = appT (g.inst e k) (A.inst e k) (B.inst e k)
+      (f.inst e k) (f'.inst e k) (a.inst e k) (a'.inst e k) (c₁.inst e k) (c₂.inst e k) := by
+  simp only [appT, obj_simp]
+
+theorem appTTy {env : VEnv} [ObjEnv env] {Γ : List VExpr} {g A B f f' a a' c₁ c₂ : VExpr}
+    (hg : Tm env Γ g) (hA : Tm env Γ A) (hB : Tm env Γ B) (hf : Tm env Γ f) (hf' : Tm env Γ f')
+    (ha : Tm env Γ a) (ha' : Tm env Γ a') (hc₁ : Tm env Γ c₁) (hc₂ : Tm env Γ c₂) :
+    Tm env Γ (appT g A B f f' a a' c₁ c₂) := by
+  unfold appT; otype
+
+macro_rules
+  | `(tactic| otype_rules) => `(tactic| ((with_reducible refine appTTy ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_) <;> otype))
+
 /-- The code of the `appDF` certificate from codes of its parts. -/
 def appC (g A B f f' a a' c₁ c₂ : PR) : PR :=
   tagC 16 5 (cpair (judgC g (tagC 7 3 (cpair f a)) (tagC 7 3 (cpair f' a')) (instP B a (num 0)))
