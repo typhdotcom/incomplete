@@ -15,6 +15,10 @@ of its `Prop`/`Type` fragment with no hypotheses: soundness and consistency of
 the fragment come from a set model, and `□` is read as provability in the
 fragment.
 
+Chaitin's incompleteness theorem holds for every consistent well-formed extension of `natEnv`,
+and for the fragment of `clEnv` with no hypotheses: for some `L`, the theory proves of no
+number that its description complexity exceeds `L`, though all but at most `L + 1` numbers do.
+
 Provability is defined directly against the typing judgment
 `VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`. The results
 concern that formal specification, not lean4lean's kernel implementation or
@@ -338,6 +342,48 @@ hypothesis over `env`, not a new environment. Consistency is `loeb` at
 (`not_prf_false_lit`). `omega_inconsistent_exists` states the same for tables
 that every well-formed `env` admits (`Incomplete/Obj/Omega.lean`).
 
+### Chaitin's incompleteness theorem
+
+```lean
+def PR.Outputs (f : PR) (x n : Nat) : Prop :=
+  ∃ k, f.eval (val2 k x) = 0 ∧ (∀ j < k, f.eval (val2 j x) ≠ 0) ∧ unpair1 k = n
+
+def Describes (c n : Nat) : Prop := ∃ f : PR, f.code = c ∧ f.Outputs c n
+
+def IsComplex (L n : Nat) : Prop := ∀ c ≤ L, ¬Describes c n
+
+noncomputable def Complex (L n : Nat) : VExpr := bigAnd ((List.range (L + 1)).map (cplxC n))
+
+theorem chaitin (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hC : Consistent env) :
+    ∃ L, (∀ n, env.HasType 0 [] (Complex L n) (.sort .zero)) ∧
+      (∀ ns : List Nat, ns.Nodup → (∀ n ∈ ns, ¬IsComplex L n) → ns.length ≤ L + 1) ∧
+      (∃ N, ∀ n, N ≤ n → IsComplex L n) ∧ ∀ n, ¬Provable env (Complex L n)
+
+theorem chaitin_unconditional :
+    ∃ L, (∀ n, BDefEq clEnv [] (Complex L n) (Complex L n) (.sort .zero)) ∧
+      (∀ ns : List Nat, ns.Nodup → (∀ n ∈ ns, ¬IsComplex L n) → ns.length ≤ L + 1) ∧
+      (∃ N, ∀ n, N ≤ n → IsComplex L n) ∧ ∀ n, ¬BProvable clEnv (Complex L n)
+```
+
+A number `c` describes `n` when it is the code of a machine that, run on `c`, outputs `n`: the
+first component of its least halting witness. The size of a description is its code. `n` is
+`L`-complex when no code `c ≤ L` describes it. Codes with the same number compute the same
+function, so each code describes at most one number (`describes_unique`): at most `L + 1`
+numbers are not `L`-complex, and every number from some point on is (`isComplex_eventually`).
+Every number has a description (`describes_exists`).
+
+`Complex L n` is the conjunction over `c ≤ L` of `¬Desc(⌜c⌝, c, n)`, with `⊤` at numbers that
+are not codes; `Desc(F, D, N)` is the Σ₁ sentence that the least `k` with `F D k = 0` has first
+component `N`, with `F` the term numbered by `c`. It expresses `IsComplex L n`: in a consistent
+extension of `natEnv` a proof of it makes it true (`complex_true_of_provable`), and a
+description `c ≤ L` of `n` refutes it (`complex_refute`). The bound `L` is the code of
+`chaitinM T`, which at its own code `e` searches for a proof of `¬Desc(⌜e⌝, e, n)` for some `n`.
+A proof of some `Complex e n` contains one, so the machine halts; its output `n₀` makes
+`Desc(⌜e⌝, e, n₀)` true and hence provable, against the proof of its negation that it found.
+Only consistency is used (`chaitin_core`, `Incomplete/Obj/Chaitin.lean`,
+`Incomplete/Chaitin.lean`).
+
 ### Declaration-list variants
 
 `incomplete_rosser'`, `incomplete_of_wf'`, and `second_incompleteness'` prove
@@ -411,6 +457,9 @@ well-formed declarations that include `Nat`. They replace the binders
   `Modal.tr`: `A` has no variables; `A`'s value at level `n`; box depth; `lvl (bd A) A`, the
   eventual value; the conjunction of `lvl n A` over `n ≤ bd A`; `□ⁿ⊥`; truth with `□B` read as
   `Provable env (B.real T fun _ => falseS)`.
+- `descS F D N`, `cplxC n c`, `chaitinM T`: `Desc(F, D, N)`; the conjunct
+  `¬Desc(⌜c⌝, c, n)` of `Complex`, or `⊤` if `c` is not a code; the machine that at input `x`
+  and step `⟨n, p⟩` runs the checker `T` on the number of `¬Desc(⌜x⌝, x, n)` and `p`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -428,6 +477,7 @@ theory proves `dneS`; `GL_arith_complete` and `GL_iff_provable` assume that
 and `HaltsSound env`, as do `provable_iff_lvl` and `tr_iff_lim`; `boxBot_unprovable` and
 `boxBot_succ_imp_unprovable` assume only `HaltsSound env`. For the fragment of `clEnv`,
 `GL_iff_bprovable`, `bprovable_iff_lvl`, `btr_iff_lim`, and `bcon_iterated` assume nothing.
+`chaitin` assumes only `Consistent env`, and `chaitin_unconditional` nothing.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -523,6 +573,8 @@ open Incomplete
 #print axioms bprovable_iff_dec
 #print axioms btr_iff_lim
 #print axioms bcon_iterated
+#print axioms chaitin
+#print axioms chaitin_unconditional
 ```
 
 Each theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`.
@@ -549,6 +601,8 @@ results.
   classical environment `clEnv`.
 - **Provability logic of the classical fragment** (`BProvLogic`): `GL_iff_bprovable` and its
   letterless corollaries.
+- **Chaitin's theorem** (`Chaitin`): descriptions and their counting, `chaitin` and
+  `chaitin_unconditional`.
 - **Object-theory formalization (`Obj/`)**: internal development over any
   judgment with the rules of `ObjEnv` (`Typing`), full typing or the fragment, of an ordered
   environment containing `Nat`:
@@ -591,6 +645,8 @@ results.
     `GL_arith_complete`.
   - *Letterless sentences* (`Letterless`): provability decided by the level tower, truth by its
     limit, and iterated consistency.
+  - *Chaitin's theorem* (`Chaitin`): the sentence `Complex`, Chaitin's machine with its
+    three-hole template, provability of true descriptions, and `chaitin_core`.
 - **Modal logic (`Modal/`)**, independent of the object theory: `Modal`,
   `GL` and `iGL` (`Basic`); derivations from hypotheses, the deduction
   theorem, the 4 axiom and the Lindenbaum step (`Deduction`); Kripke models,
