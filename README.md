@@ -208,7 +208,12 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   arbitrary terms. `Obj/Code`: the compiled codes `fn f` as closed atoms; `add`
   is `fn PR.addC`. `Obj/Eval`: `ev f l`, the code `f` at symbolic arguments
   `l`, with `fn f x y` equal to `ev f [y, x]`, and the computation rules of each
-  constructor and of `ren`, `comp2` and `comp3` in every context.
+  constructor and of `ren`, `comp2` and `comp3` in every context. `Obj/Codes`:
+  the defining equations of `mulC`, `predC` and `subC`, and of `leq`, `eqz`,
+  `selC`, `ifz` and `andz` on codes. `Obj/Order`: `a ≤ₒ b` as `a - b = 0`, its
+  equivalence with `∃ c, a + c = b`, the laws of truncated subtraction,
+  `fn mulC = mul`, and what `leq` and `eqz` test. `Obj/Closed`: these as closed
+  theorems, and so `Provable natEnv`.
 
 ## License
 
