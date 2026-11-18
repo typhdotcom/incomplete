@@ -1,7 +1,8 @@
 # incomplete
 
 Lean 4 proofs of the Gödel–Kleene, Rosser, and second incompleteness theorems
-and of Löb's theorem for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
+and of Löb's theorem, together with the derivability conditions and
+arithmetical soundness of the provability logic GL, for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
 extended with concrete inductives and primitive projections from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
 
@@ -94,6 +95,59 @@ certificate checks as a proof of `P` (`ProvT`). Related results
 - `con_iff_not_prov`: the theory proves `Con T ↔ ¬Prov T ⊥`.
 - `con_unprovable_of_loeb`: `con_unprovable`, from `loeb` at `P := ⊥`.
 
+### Derivability conditions and formalized Löb
+
+```lean
+theorem prov_mp_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    {P Q : VExpr} (hQ : env.HasType 0 [] Q (.sort .zero)) :
+    Provable env (.forallE (Prov T (.forallE P Q)) (.forallE (Prov T P) (Prov T Q)))
+
+theorem prov_prov_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (P : VExpr) :
+    Provable env (.forallE (Prov T P) (Prov T (Prov T P)))
+
+theorem loeb_formalized (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero)) :
+    Provable env (.forallE (Prov T (.forallE (Prov T P) P)) (Prov T P))
+```
+
+Together with necessitation (`prov_of_provable`, D1), these are the
+Hilbert–Bernays–Löb derivability conditions D2 and D3 and Löb's theorem, all
+proved inside the theory without consistency or soundness hypotheses
+(`Incomplete/Obj/Derivability.lean`). D2 is internal modus ponens on
+certificates. D3 is internal Σ₁-completeness for `Prov`: a `PR` code `σ` turns,
+provably, each certificate `k` of `P` into a certificate `σ k` of
+`Prov T P` (`sigma_prov`). Formalized Löb follows from D2, D3, and `loeb`
+applied to `Prov T (Prov T P → P) → Prov T P`.
+
+### Arithmetical soundness of GL
+
+```lean
+theorem GL_sound (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) {σ : Nat → VExpr}
+    (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) {A : Modal} (h : Modal.GL A) :
+    Provable env (A.real T σ)
+
+theorem iGL_sound (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) {σ : Nat → VExpr} (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero))
+    {A : Modal} (h : Modal.iGL A) : Provable env (A.real T σ)
+
+theorem fairbot (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) {A B : VExpr} (hA : env.HasType 0 [] A (.sort .zero))
+    (hB : env.HasType 0 [] B (.sort .zero)) (hAB : Provable env (A ↔ₒ Prov T B))
+    (hBA : Provable env (B ↔ₒ Prov T A)) : Provable env A ∧ Provable env B
+```
+
+Every theorem of the provability logic GL is provable under every
+realization that sends propositional variables to closed propositions and `□`
+to `Prov T`, provided the theory proves double-negation elimination `dneS`.
+The object logic is intuitionistic, so this hypothesis is needed for GL's
+classical tautologies only: the theorems of `iGL`, GL without
+double-negation elimination, are provable under every realization in every
+well-formed extension of `natEnv` (`Incomplete/Obj/GL.lean`). `fairbot`: two
+closed propositions, each equivalent to the provability of the other, are both
+provable.
+
 ### A consistent, ω-inconsistent context
 
 ```lean
@@ -156,6 +210,14 @@ well-formed declarations that include `Nat`. They replace the binders
   satisfies `env.HasType 0 Γ e P`, so `Provable env P` is `Thm env [] P`;
   `prfT T s k` is the object term evaluating `chkT T` at `(s, k)`, and
   `numT (encExpr P)` and `lit k` are numerals for `⌜P⌝` and `k`.
+- `Modal`, `Modal.Deriv`, `Modal.GL`, `Modal.iGL`, `Modal.real`: modal formulas
+  over variables, `⊥`, `→`, and `□`; `Deriv cl` is the Hilbert system with
+  axioms `A → B → A`, `(A → B → C) → (A → B) → A → C`, `⊥ → A`, K
+  `□(A → B) → □A → □B`, and Löb `□(□A → A) → □A`, rules modus ponens and
+  necessitation, and double-negation elimination `¬¬A → A` when `cl = true`;
+  `GL := Deriv true`, `iGL := Deriv false`. `A.real T σ` replaces each variable
+  `n` by `σ n`, `⊥` by `falseS`, `→` by `.forallE`, and `□` by `Prov T`.
+- `dneS`: `∀ p : Prop, ¬¬p → p`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -167,7 +229,9 @@ via a set model (`Incomplete/Model.lean`, `Incomplete/ModelSound.lean`). For
 the full theory and its well-formed extensions, Rosser's theorem and the second
 incompleteness theorem assume `Consistent`, and Gödel–Kleene irrefutability
 additionally assumes `HaltsSound`; neither hypothesis is proved here for the
-full type theory. Löb's theorem assumes neither.
+full type theory. Löb's theorem, the derivability conditions, formalized Löb,
+`iGL_sound`, and `fairbot` assume neither; `GL_sound` assumes only that the
+theory proves `dneS`. Arithmetical completeness of GL is not proved.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -230,6 +294,12 @@ open Incomplete
 #print axioms con_unprovable_of_loeb
 #print axioms omega_inconsistent
 #print axioms omega_inconsistent_exists
+#print axioms prov_mp_provable
+#print axioms prov_prov_provable
+#print axioms loeb_formalized
+#print axioms GL_sound
+#print axioms iGL_sound
+#print axioms fairbot
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -282,6 +352,8 @@ results.
     `second_incompleteness`; for the Löb machine `loebM` searching for proofs
     of `haltsE d ⌜d⌝ → P`, `loeb`; and the ω-inconsistent context `[Prov T ⊥]`
     (`omega_inconsistent`).
+  - *Provability logic* (`Derivability`, `GL`): the derivability conditions,
+    formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`.
 
 ## License
 

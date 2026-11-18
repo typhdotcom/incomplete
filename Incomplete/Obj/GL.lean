@@ -12,8 +12,8 @@ propositions; `A.real T σ` sends `⊥` to `falseS`, `→` to the object implica
 `Prov T`.
 
 Every `iGL` theorem is provable under every realization (`iGL_sound`); every `GL` theorem is, when
-the theory proves double-negation elimination `dneS` (`GL_sound`). K is D2 (`prov_mp`), the Löb
-axiom is formalized Löb (`loeb_int`), and necessitation is D1 (`prov_of_provable`).
+the theory proves double-negation elimination `dneS` (`GL_sound`). K is D2 (`prov_mp`), Löb's
+axiom formalized Löb (`loeb_int`), and necessitation D1 (`prov_of_provable`).
 
 `fairbot`: two closed propositions `A ↔ Prov T B` and `B ↔ Prov T A` are both provable.
 -/
@@ -76,6 +76,10 @@ end Modal
 namespace Obj
 section
 variable {env : VEnv} [E : ObjEnv env] {X Y Z : VExpr}
+
+/-- `dneS` is a closed proposition. -/
+theorem dneTy {Γ : List VExpr} : env.HasType 0 Γ dneS (.sort .zero) := by
+  unfold dneS; exact forallE_prop propTy (by otype)
 
 theorem lookup_closed (hX : X.ClosedN) :
     ∀ {Γ : List VExpr} {i : Nat}, Γ[i]? = some X → Lookup Γ i X
