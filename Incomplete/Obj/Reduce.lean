@@ -119,6 +119,26 @@ theorem Con_eq (T : Tables) : Con T =
 theorem halts_eq (f : PR) (n : Nat) : halts f n = imp (notHalts f n) falseS := rfl
 
 section
+variable {env : VEnv} [E : ObjEnv env] {Γ : List VExpr} {T : Tables}
+
+/-- **Internal modus ponens on proofs**, for closed `B`: proofs `c₁` of `A → B` and `c₂` of `A`
+give the proof `mpT A B p q c₁ c₂` of `B`, with `p` and `q` the terms they prove. -/
+theorem prf_mpT {A B c₁ c₂ : VExpr} (hB : B.ClosedN) (hc₁ : Tm env Γ c₁) (hc₂ : Tm env Γ c₂)
+    (h₁ : Thm env Γ (prfT T (numT (encExpr (imp A B))) c₁ =ₒ zero))
+    (h₂ : Thm env Γ (prfT T (numT (encExpr A)) c₂ =ₒ zero)) :
+    Thm env Γ (prfT T (numT (encExpr B)) (mpT A B (fldT 1 (jT c₁)) (fldT 1 (jT c₂)) c₁ c₂) =ₒ
+      zero) := by
+  have hpT : Tm env Γ (fldT 1 (jT c₁)) := by otype
+  have hqT : Tm env Γ (fldT 1 (jT c₂)) := by otype
+  obtain ⟨k₁, j₁⟩ := prfT_inv (by otype) hc₁ h₁
+  obtain ⟨k₂, j₂⟩ := prfT_inv (by otype) hc₂ h₂
+  have hm := certT_mp (A := A) (B := B) rfl hB hpT hqT hc₁ hc₂ k₁ j₁ k₂ j₂
+  have jm := jT_mp (A := A) hB hpT hqT hc₁ hc₂
+  exact prfT_of_cert (by otype) (mpTTy hpT hqT hc₁ hc₂) (by otype) hm jm
+
+end
+
+section
 variable {env : VEnv} [E : ObjEnv env] {T : Tables} {σ cm f : PR} {d : Nat} {A : VExpr}
 
 /-- The argument of `con_imp_G0` over arbitrary codes `cm` and `f`, which `Prf` reads: if
@@ -147,15 +167,9 @@ theorem con_imp_of_prf
   simp only [obj_simp] at hk
   have hk := hk.mp hz'
   have hsT : Tm env Δ (ev σ [.bvar 1]) := by otype
-  obtain ⟨c₁, j₁⟩ := prfT_inv (by otype) hkT hz'
-  obtain ⟨c₂, j₂⟩ := prfT_inv (by otype) hsT hk
-  have hpT : Tm env Δ (fldT 1 (jT (.bvar 1))) := by otype
-  have hqT : Tm env Δ (fldT 1 (jT (ev σ [.bvar 1]))) := by otype
-  have hm := certT_mp (A := A) (B := falseS) rfl falseS_closed hqT hpT hsT hkT c₂ j₂ c₁ j₁
-  have jm := jT_mp (A := A) falseS_closed hqT hpT hsT hkT
+  have hf' := prf_mpT falseS_closed hsT hkT hk hz'
   have hmT : Tm env Δ (mpT A falseS (fldT 1 (jT (ev σ [.bvar 1]))) (fldT 1 (jT (.bvar 1)))
-      (ev σ [.bvar 1]) (.bvar 1)) := mpTTy hqT hpT hsT hkT
-  have hf' := prfT_of_cert (by otype) hmT (by otype) hm jm
+      (ev σ [.bvar 1]) (.bvar 1)) := mpTTy (by otype) (by otype) hsT hkT
   orw [← hcm hmT] at hf'
   have hc := Thm.allE hcon (t := mpT A falseS (fldT 1 (jT (ev σ [.bvar 1]))) (fldT 1 (jT (.bvar 1)))
     (ev σ [.bvar 1]) (.bvar 1)) hmT

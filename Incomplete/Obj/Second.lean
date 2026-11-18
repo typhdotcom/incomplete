@@ -74,13 +74,13 @@ variable {z s : Nat}
     judgT zero (numT (encExpr succ)) (numT (encExpr succ)) (numT (encExpr (.forallE nat nat)))))
 include hz jz hs js
 
-/-- From `f` at `[k, lit d]` being `0`, a proof of `halts f d`. -/
-theorem prf_halts {f τ : PR} {d c : Nat} {k : VExpr} (hτ : Ok env T f 2 τ)
-    (hc : Thm env Γ (prfT T
-      (tmplH [] (allN 2 (imp ((valF f 2).inst zero 0) (haltsV f (.bvar 1)))) 0)
-      (numT c) =ₒ zero))
+/-- From `f` at `[k, lit d]` being `0`, a proof of `B`, given a proof `c` of a closed graph lemma
+`∀ k x, f(k, x) = 0 → R` with `R[lit d]` the closed `B`. -/
+theorem prf_fin {f τ : PR} {d c : Nat} {k R B : VExpr} (hτ : Ok env T f 2 τ)
+    (hR : R.inst (lit d) 1 = B) (hB : B.ClosedN)
+    (hc : Thm env Γ (prfT T (tmplH [] (allN 2 (imp ((valF f 2).inst zero 0) R)) 0) (numT c) =ₒ zero))
     (hk : Tm env Γ k) (h0 : Thm env Γ (ev f [k, lit d] =ₒ zero)) :
-    Thm env Γ (prfT T (numT (encExpr (halts f d)))
+    Thm env Γ (prfT T (numT (encExpr B))
       (ev (mpP (instC z s c [num d, var 0]) (.push (num d) (ren swap01 τ))) [k]) =ₒ zero) := by
   have hd : Tm env Γ (lit d) := litTy d
   have hv : Tm env Γ (ev f [k, lit d]) := evTy (.cons hk (.cons hd .nil))
@@ -102,35 +102,43 @@ theorem prf_halts {f τ : PR} {d c : Nat} {k : VExpr} (hτ : Ok env T f 2 τ)
     List.cons_append, ev_var, ev_num, List.getD_cons_zero] at h1
   have h3 := prf_mpH (ys := [k, lit d]) (.cons hk (.cons hd .nil)) (by otype) (by otype) h1 p2
   simp only [List.map_cons, List.map_nil] at h3
-  have E4 : Thm env Γ (tmplH [litT k, litT (lit d)] (haltsV f (.bvar 1)) 0 =ₒ
-      tmplH [litT k, tmplH [] (lit d) 0] (haltsV f (.bvar 1)) 0) :=
+  have E4 : Thm env Γ (tmplH [litT k, litT (lit d)] R 0 =ₒ tmplH [litT k, tmplH [] (lit d) 0] R 0) :=
     tmplH_congr1 (hs₁ := [litT k]) (.cons (by otype) .nil) .nil (by otype) (by otype)
       (Thm.trans (by otype) (by otype) (by otype) (litT_lit d)
         (Thm.symm (by otype) (by otype) (tmplH_nil (lit d) 0))) _ 0
   have h4 := prf_congr (by otype) (by otype) (by otype) E4 h3
-  have e5 : tmplH [litT k] ((haltsV f (.bvar 1)).inst (lit d) 1) 0 =
-      tmplH [litT k, tmplH [] (lit d) 0] (haltsV f (.bvar 1)) 0 :=
+  have e5 : tmplH [litT k] (R.inst (lit d) 1) 0 = tmplH [litT k, tmplH [] (lit d) 0] R 0 :=
     tmplH_inst_insert [litT k] [] (e := lit d) (lit_closed d) _ 0
   rw [← e5] at h4
-  have e6 : (haltsV f (.bvar 1)).inst (lit d) 1 = halts f d := by
-    rw [← haltsV_lit]; simp only [haltsV, obj_simp]
-  rw [e6, tmplH_closed [litT k] _ 0 (halts_closed f d)] at h4
-  have h5 := prf_congr (by otype) (by otype) (by otype) (tmplH_nil (halts f d) 0) h4
+  rw [hR, tmplH_closed [litT k] _ 0 hB] at h4
+  have h5 := prf_congr (by otype) (by otype) (by otype) (tmplH_nil B 0) h4
   refine prf_congr_c (by otype) (by otype) (by otype) ?_ h5
   orw [ev_mpP (.cons hk .nil), ev_push (f := .push (num d) (ren swap01 τ)) rfl (.cons hk .nil),
     ev_ren_eq (f := τ) swap01 (.cons hd (.cons hk .nil)) (l' := [k, lit d]) (valS_swap01 _ _)]
 
+/-- From `f` at `[k, lit d]` being `0`, a proof of `halts f d`. -/
+theorem prf_halts {f τ : PR} {d c : Nat} {k : VExpr} (hτ : Ok env T f 2 τ)
+    (hc : Thm env Γ (prfT T
+      (tmplH [] (allN 2 (imp ((valF f 2).inst zero 0) (haltsV f (.bvar 1)))) 0)
+      (numT c) =ₒ zero))
+    (hk : Tm env Γ k) (h0 : Thm env Γ (ev f [k, lit d] =ₒ zero)) :
+    Thm env Γ (prfT T (numT (encExpr (halts f d)))
+      (ev (mpP (instC z s c [num d, var 0]) (.push (num d) (ren swap01 τ))) [k]) =ₒ zero) :=
+  prf_fin hz jz hs js hτ (by rw [← haltsV_lit]; simp only [haltsV, obj_simp]) (halts_closed f d) hc
+    hk h0
+
 end
 
-/-- **Internal Σ₁-completeness for a machine reading proofs.** If `f` at `d` and `k` is
-`Prf(⌜A⌝, k)`, then for some code `σ` the theory proves
-`∀ k, Prf(⌜A⌝, k) → Prf(⌜halts f d⌝, σ k)`. -/
-theorem sigma_of {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env T) {f : PR}
-    {d : Nat} {A : VExpr}
+/-- **Internal Σ₁-completeness for a machine reading proofs**, for a closed graph lemma
+`∀ k x, f(k, x) = 0 → R` with `R[lit d]` the closed `B`: if `f` at `d` and `k` is `Prf(⌜A⌝, k)`,
+then for some code `σ` the theory proves `∀ k, Prf(⌜A⌝, k) → Prf(⌜B⌝, σ k)`. -/
+theorem sigma_of_fin {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env T) {f : PR}
+    {d : Nat} {A R B : VExpr} (hR : R.inst (lit d) 1 = B) (hB : B.ClosedN)
+    (hG : Thm env [] (allN 2 (imp ((valF f 2).inst zero 0) R)))
     (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
       Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr A)) k)) :
     ∃ σ : PR, Thm env [] (∀ₒ k, prfT T (numT (encExpr A)) k =ₒ zero →ₒ
-      prfT T (numT (encExpr (halts f d))) (ev σ [k]) =ₒ zero) := by
+      prfT T (numT (encExpr B)) (ev σ [k]) =ₒ zero) := by
   obtain ⟨z, hz⟩ := closed_cert hT (E.hasNat.zeroT (U := 0) (Γ := []))
   obtain ⟨s, hs⟩ := closed_cert hT (E.hasNat.succT (U := 0) (Γ := []))
   have hz1 := (hz (env := env) (Γ := [])).1
@@ -138,9 +146,6 @@ theorem sigma_of {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env 
   have hs1 := (hs (env := env) (Γ := [])).1
   have hs2 := (hs (env := env) (Γ := [])).2
   obtain ⟨τ, hτ⟩ := ok_exists hz1 hz2 hs1 hs2 hT f 2
-  have hG : Thm env [] (allN 2 (imp ((valF f 2).inst zero 0) (haltsV f (.bvar 1)))) := by
-    rw [valF_fin_eq]
-    exact allN_intro (env := env) 2 (Γ := []) (gp_fin (bvar_rep (by omega)) (bvar_rep (by omega)))
   obtain ⟨c, hc⟩ := closed_prf hT hG
   refine ⟨mpP (instC z s c [num d, var 0]) (.push (num d) (ren swap01 τ)), ?_⟩
   ointro
@@ -151,7 +156,21 @@ theorem sigma_of {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env 
     have e := hf hk
     orw [← fn_ev (litTy d) hk, e]
     exact h
-  exact prf_halts hz1 hz2 hs1 hs2 hτ hc hk h0
+  exact prf_fin hz1 hz2 hs1 hs2 hτ hR hB hc hk h0
+
+/-- **Internal Σ₁-completeness for a machine reading proofs.** If `f` at `d` and `k` is
+`Prf(⌜A⌝, k)`, then for some code `σ` the theory proves
+`∀ k, Prf(⌜A⌝, k) → Prf(⌜halts f d⌝, σ k)`. -/
+theorem sigma_of {env : VEnv} [E : ObjEnv env] {T : Tables} (hT : TablesFor env T) {f : PR}
+    {d : Nat} {A : VExpr}
+    (hf : ∀ {Γ : List VExpr} {k : VExpr}, Tm env Γ k →
+      Thm env Γ (app2 (fn f) (lit d) k =ₒ prfT T (numT (encExpr A)) k)) :
+    ∃ σ : PR, Thm env [] (∀ₒ k, prfT T (numT (encExpr A)) k =ₒ zero →ₒ
+      prfT T (numT (encExpr (halts f d))) (ev σ [k]) =ₒ zero) := by
+  have hG : Thm env [] (allN 2 (imp ((valF f 2).inst zero 0) (haltsV f (.bvar 1)))) := by
+    rw [valF_fin_eq]
+    exact allN_intro (env := env) 2 (Γ := []) (gp_fin (bvar_rep (by omega)) (bvar_rep (by omega)))
+  exact sigma_of_fin hT (by rw [← haltsV_lit]; simp only [haltsV, obj_simp]) (halts_closed f d) hG hf
 
 end Incomplete.Obj
 
