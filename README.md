@@ -72,7 +72,7 @@ fragment's checker `bchkT clT`, which accepts what `chkT clT` accepts within the
 provability logic of the fragment (`GL_iff_bprovable`), a letterless sentence is provable iff it
 holds at every level (`bprovable_iff_lvl`), and true, with `□B` read as provability of `B`'s
 realization (`Modal.btr`), iff its limit is `true` (`btr_iff_lim`); so the iterated consistency
-statements `□ⁿ⁺¹⊥ → □ⁿ⊥` are true and unprovable at every level (`bcon_iterated`)
+statements `□ⁿ⁺¹⊥ → □ⁿ⊥` are true and unprovable for every `n` (`bcon_iterated`)
 (`Incomplete/BProvLogic.lean`).
 
 The object-level development behind these runs over any judgment closed under the rules it uses

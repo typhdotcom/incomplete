@@ -1,103 +1,111 @@
 State: COMPLETE
 Turn: none
-Candidate: ymkzmtqqllvswpulyxzulsynptxtyowy / 452a6c3140ca3bff8fcfeab52b382209f9c0e731
+Candidate: lkmszzkpkzuwknksqmqkxrzvzqqlzosn / 9deb50bc684448f50b72689a073c74a4b3f59bb1
 
-# Letterless-fragment review
+# Classical bounded provability-logic review
 
 ## Objective and meaning
 
-Review the classification and finite decision of letterless GL formulas by a
-level tower, the height lemma for finite Kripke models, and the corresponding
-object-theory provability and truth results. Review the true-but-unprovable
-iterated-consistency examples and the separation from the intuitionistic
-fragment.
+Review the unconditional identification of GL with the provability logic of
+the projection-free `Prop`/`Type` fragment of `clEnv`, the extension of
+`natEnv` by a DNE constant. Verify the fragment's set-model consistency and
+halting soundness, its actual bounded checker, the generalization of the proof
+kit and checker-dependent arguments, and the letterless corollaries.
 
-The candidate comprises the three commits after `5bb1ee99`, adding
-`Modal/Letterless.lean`, `Obj/Letterless.lean`, their public imports, README
-statements and version `0.9.0`.
+The candidate is the development after `6cf13244`, ending at version
+`0.10.0`. It adds `ClEnv`, `BProvLogic`, `Obj/Typing`, `Obj/Leaf`, `Obj/Checker`
+and `Obj/BChecker`, generalizes the object-level modules, and extends the set
+model's environment interface.
 
 ## Accepted foundation
 
 - The formal judgment and upstream/fork dependencies remain as documented in
   `README.md`. These results establish no kernel implementation correctness.
-- Preserve all accepted incompleteness, bounded-model, Löb, derivability,
-  FairBot, finite Kripke and Solovay results. Their sources and statements are
-  unchanged in this candidate.
-- `Prov T P` is the actual certificate-checker proposition, tied to the formal
-  typing judgment by `TablesFor env T`. Host provability remains distinct
-  from this object sentence.
-- The full object theory's halting soundness and proof of `dneS` remain
-  explicit assumptions where used; they are not proved here. The source and
-  axiom constraints in `AGENTS.md` remain in force.
+- Preserve the accepted incompleteness, bounded-model, Löb, derivability,
+  FairBot, finite Kripke, Solovay and letterless results. The full-theory
+  headline statements retain their original hypotheses and actual typing
+  judgment, through specializations of the generalized development.
+- `BDefEq` and `BProvable` remain the original bounded judgment and its closed
+  theoremhood predicate. The new abstract interface does not redefine them.
+- `clEnv` contains an object-theory axiom constant for DNE. Its interpretation
+  is proved valid in the set model; no new Lean axiom is introduced.
+- The unconditional result concerns bounded theoremhood with `BProv` read
+  through `bchkT clT`. It does not prove consistency or halting soundness of
+  the full typing judgment of `clEnv`.
+- The source and axiom constraints in `AGENTS.md` remain in force.
 
 ## Verdict
 
-Accepted. No blocking finding was identified. This review is complete, and
-no worker action remains for the submitted milestone.
+Accepted. No blocking proof or implementation finding was identified. The
+review is complete, and no worker action remains for this milestone.
 
-`Letterless` excludes every occurrence of a variable. The level evaluator
-uses classical implication and boxes ranging over all smaller levels.
-Stabilization at box depth follows structurally, and checking levels through
-that depth includes the eventual value. The public decision theorem retains
-its letterless premise; assigning all variables false does not decide GL for
-arbitrary formulas.
+`Typing` keeps the underlying environment and chosen equality judgment
+separate. `ObjEnv` supplies the actual inference rules, substitution,
+weakening and primitive-recursive adequacy needed by the proof kit. Its
+bounded instance is proved directly from `BDefEq`; the map to full typing
+supports syntactic closure arguments without replacing bounded derivations
+by full ones. Iota is derived from the available equality rules in the chosen
+judgment.
 
-The height interface requires both decrease along accessibility and a
-successor at every smaller height. Finite transitive irreflexive models
-satisfy both properties with longest-chain height. These conditions justify
-both box directions of the height lemma, including branching frames. Chains
-realize every height, so finite completeness yields the all-level criterion
-and the Boolean decision theorem.
+`IsChecker` packages internal closed certificates, modus ponens and numeral
+instantiation. These properties support the generalized derivability and Löb
+arguments. Generic Solovay completeness additionally requires external
+checker soundness and halting soundness; these remain explicit premises of
+the generic result, rather than being inferred from internal closure alone.
 
-Realization independence holds even for arbitrary, untyped variable
-assignments because letterless formulas never use them. Provability follows
-from all levels using accepted GL soundness and `dneS`; the converse uses
-Solovay and the documented halting-soundness premise. The truth predicate is
-defined recursively with boxes read as host provability of the body's closed
-realization. Structural induction identifies this predicate with the
-eventual value; the proof does not assert a semantic model of arbitrary
-object-theory sentences.
+The bounded checker conjoins the full certificate check with the original
+leaf-bound check. Its external soundness and completeness use the existing
+certificate correspondence for `BDefEq`. Internal bounds are preserved by
+application certificates, modus ponens and numeral certificates, establishing
+the bounded `IsChecker` instance used in the new result.
 
-Halting soundness implies consistency by excluding a halting proof for a
-constant nonzero machine. Repeated provability soundness then excludes every
-`boxBot n`. Löb excludes each downward implication between consecutive
-iterations, while its truth is vacuous because the preceding iteration is
-unprovable. These results need no object DNE premise. The base case is proved
-equivalent to `Con T`, whose unprovability needs only consistency. The
-three-element algebra validates all intuitionistic calculus rules and refutes
-the letterless DNE instance; the README correctly limits its claim to the
-failure of removing DNE via that fragment.
+The set-model extension permits only the original constants or monomorphic
+constants with a proved interpretation in their types, and only the original
+extra equality rules. The new DNE constant has such an interpretation.
+`clEnv` is well formed, extends `natEnv`, has the stated concrete tables, and
+has a bounded DNE proof. Model soundness then discharges bounded consistency
+and halting soundness. The new public GL completeness theorem has no residual
+model, checker, soundness, DNE or abstract-judgment assumptions. Its realizations
+are propositions of the bounded fragment and its boxes use that fragment's
+checker. The letterless consequences use this theorem and the accepted level
+classification.
 
-The README, version and imports match these results and their assumptions.
+One README wording ambiguity was corrected during review: the downward
+consistency implications are true and unprovable *for every n*, rather than
+*at every level*. Their tower evaluations fail at one finite level, so the
+previous wording obscured the accepted truth/provability distinction. No Lean
+implementation changes were made by the reviewer.
 
 ## Current drawers
 
-None. D1 remains closed; the accepted hypothesis-search fix is unchanged.
+None. D1 remains closed; hypothesis search was not changed in this round.
 
 ## Verification
 
-- `nix develop -c lake build` passed (145 jobs).
-- Independently re-elaborated both new modules with
-  `lake env lean --trust=0`; both passed without warnings.
-- A separate audit passed for all 38 README headline theorems. Each reports
-  exactly `[propext, Classical.choice, Quot.sound]`. Additional audits covered
-  stabilization, the finite height interface, algebra soundness, realization
-  independence, halting soundness implying consistency, and the weaker
-  one-direction and consistency corollaries; their dependencies are subsets
-  of that set. Explicit public types confirm the documented assumptions.
-- Disposable probes computed the heights of a branching frame with an extra
-  terminal successor and checked its equivalence with a chain at the same
-  height for every letterless formula.
-- Boundary probes checked the exact level values of `boxBot 3`, the false
-  level of `boxBot 3 → boxBot 2`, its true eventual value and false decision,
-  the provable upward implication, and stabilization far beyond box depth.
-- A concrete countermodel showed that `dec (neg (var 0)) = true` does not imply
-  GL derivability, testing the need for the letterless guard. Object-theory
-  specializations checked independence from an untyped variable assignment,
-  the DNE-only provability direction, and a true-but-unprovable downward
-  implication under halting soundness alone. A definitional probe checked
-  the intended provability reading of nested boxes in `Modal.tr`.
-- Source inspection found no proof holes, native decision proofs, custom
-  axiom declarations, or unsafe definitions in the new modules.
-- `nix flake check` passed. Existing warnings in unchanged modules remain
-  nonblocking. Disposable probes were removed after use.
+- `nix develop -c lake build` passed (151 jobs).
+- A fresh temporary package containing every project source and the pinned
+  package configuration built successfully (151 jobs), recompiling project
+  modules while reusing only installed dependency artifacts.
+- Independent `lake env lean --trust=0` audits passed against both the working
+  package and freshly rebuilt artifacts. All 46 README headline theorems
+  report exactly `[propext, Classical.choice, Quot.sound]`. Additional audits
+  of the concrete DNE proof, bounded checker instance and adequacy, bounded
+  judgment instance, generic model soundness, and new GL soundness and
+  completeness report subsets of that set.
+- Inspected explicit theorem types: unconditional bounded GL results have
+  no residual theory assumptions, and the full-theory Löb and Solovay public
+  statements retain their original hypotheses and typing judgment.
+- Disposable probes checked exact bounded-checker adequacy for every sentence,
+  existence of an accepted DNE certificate, and rejection of every certificate
+  of bottom. A valid full sort certificate for `Type : Type 1` fails the leaf
+  check and is rejected by `bchkNum`; the set model independently rules out
+  the corresponding bounded judgment.
+- Probes checked the exact bounded box translation, compatibility of full
+  and generic realizations, an unconditional bounded counter-realization of
+  reflection, a bounded proof from a positive letterless decision, and
+  unconditional true-but-unprovable consistency iterations.
+- Source inspection found no proof holes, native decision proofs, custom Lean
+  axiom declarations, or unsafe definitions in project sources.
+- `nix flake check` passed. Unused-section-variable and unused-simp-argument
+  warnings remain nonblocking. Temporary probes and the fresh package were
+  removed after verification.
