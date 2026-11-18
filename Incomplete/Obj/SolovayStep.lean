@@ -86,7 +86,7 @@ theorem props_cons {p : VExpr} {ps : List VExpr} (hp : env.HasType 0 Γ p (.sort
   · exact hps r hr
 
 omit E in
-theorem props_map {g : Nat → VExpr} {bs : List Nat}
+theorem props_map {α : Type} {g : α → VExpr} {bs : List α}
     (h : ∀ b, env.HasType 0 Γ (g b) (.sort .zero)) : Props env Γ (bs.map g) := by
   intro r hr
   obtain ⟨b, -, rfl⟩ := List.mem_map.1 hr
