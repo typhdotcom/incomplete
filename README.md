@@ -6,6 +6,9 @@ arithmetical soundness of the provability logic GL, for the formal type theory o
 extended with concrete inductives and primitive projections from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
 
+GL is also shown sound and complete for finite transitive irreflexive Kripke
+models.
+
 Provability is defined directly against the typing judgment
 `VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`. The results
 concern that formal specification, not lean4lean's kernel implementation or
@@ -148,6 +151,36 @@ well-formed extension of `natEnv` (`Incomplete/Obj/GL.lean`). `fairbot`: two
 closed propositions, each equivalent to the provability of the other, are both
 provable.
 
+### Kripke semantics of GL
+
+```lean
+structure Modal.FinModel (n : Nat) where
+  R : Fin n → Fin n → Bool
+  V : Fin n → Nat → Bool
+  trans : ∀ {a b c}, R a b = true → R b c = true → R a c = true
+  irrefl : ∀ a, R a a = false
+
+theorem Modal.FinModel.GL_sound {n : Nat} (M : FinModel n) {A : Modal} (h : GL A) (w : Fin n) :
+    M.Forces w A
+
+theorem Modal.GL_complete {A : Modal} (h : ¬GL A) :
+    ∃ (n : Nat) (M : FinModel (n + 1)), M.Rooted ∧ (∀ i k, M.V i k = true → var k ∈ sub A) ∧
+      ¬M.Forces 0 A
+
+theorem Modal.GL_iff {A : Modal} :
+    GL A ↔ ∀ (n : Nat) (M : FinModel n) (w : Fin n), M.Forces w A
+```
+
+GL is sound and complete for finite transitive irreflexive Kripke models.
+`M.Forces w A` is forcing, with `□A` forced at `w` when `A` is forced at
+every world `w` sees; `M.eval` decides it (`FinModel.eval_iff`).
+`M.Rooted` says world `0` sees every other world. Soundness holds more
+generally for every transitive model whose accessibility relation is
+conversely well-founded (`Modal.Kripke.GL_sound`). Completeness builds the
+countermodel from the consistent sets of literals over the subformulas of
+`A` (`Incomplete/Modal/`). This part is ordinary Lean mathematics about
+`Modal` and does not involve the object theory.
+
 ### A consistent, ω-inconsistent context
 
 ```lean
@@ -218,6 +251,10 @@ well-formed declarations that include `Nat`. They replace the binders
   `GL := Deriv true`, `iGL := Deriv false`. `A.real T σ` replaces each variable
   `n` by `σ n`, `⊥` by `falseS`, `→` by `.forallE`, and `□` by `Prov T`.
 - `dneS`: `∀ p : Prop, ¬¬p → p`.
+- `Modal.Kripke`, `Modal.FinModel n`, `Forces`, `Rooted`: a Kripke model is
+  an accessibility relation and a valuation on a type of worlds; a
+  `FinModel n` is a transitive irreflexive one on `Fin n` with Boolean
+  relation and valuation; `Modal.sub A` lists the subformulas of `A`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -300,6 +337,10 @@ open Incomplete
 #print axioms GL_sound
 #print axioms iGL_sound
 #print axioms fairbot
+#print axioms Modal.Kripke.GL_sound
+#print axioms Modal.FinModel.GL_sound
+#print axioms Modal.GL_complete
+#print axioms Modal.GL_iff
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -354,6 +395,11 @@ results.
     (`omega_inconsistent`).
   - *Provability logic* (`Derivability`, `GL`): the derivability conditions,
     formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`.
+- **Modal logic (`Modal/`)**, independent of the object theory: `Modal`,
+  `GL` and `iGL` (`Basic`); derivations from hypotheses, the deduction
+  theorem, the 4 axiom and the Lindenbaum step (`Deduction`); Kripke models,
+  forcing and soundness (`Kripke`); and completeness for finite rooted models
+  (`Complete`).
 
 ## License
 
