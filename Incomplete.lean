@@ -44,3 +44,8 @@ import Incomplete.Obj.Ineq
 import Incomplete.Obj.Pair
 import Incomplete.Obj.Bnd
 import Incomplete.Obj.DivMod
+import Incomplete.Obj.Strong
+import Incomplete.Obj.Cases
+import Incomplete.Obj.Cov
+import Incomplete.Obj.Reads
+import Incomplete.Obj.Lift

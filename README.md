@@ -231,6 +231,18 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `y = k * div y + mod y` with `mod y < k`, uniqueness, and
   `div (k * p + t) = p`, `mod (k * p + t) = t` for `t < k`. Both as schematic
   `Thm env Γ` lemmas and as `Provable natEnv`.
+  `Obj/Strong`: strong induction `(∀ n, (∀ m < n, P m) → P n) → ∀ n, P n` for an
+  open motive in any context (`Thm.sind`, tactic `osind`), and the measures the
+  encodings decrease: `a, b < S (pair a b)`, `p < k * p + S t`, and `pair` along
+  a smaller sum. `Obj/Cases`: `casc`, a cascade of tests of a code's value
+  against `j, j+1, …`, its branch at a known numeral in one step, and the
+  checker's `dispC` as such a cascade (`ev_certStep`). `Obj/Cov`: `iterC`,
+  `nthC`, `histC`/`covC` and `histPC`/`covPC` with the step symbolic:
+  `hist (S n) = S (pair (cov n) (hist n))`, and `cov j` read back from the
+  history at `n` for `j < n`. `Obj/Reads`: `obnd`, bounds on the variables a
+  composed code reads, by its structure. `Obj/Lift`: the code `liftC` one
+  constructor of `encExpr` at a time, at symbolic components: variables below
+  and above the cutoff, sorts, constants, `app`, `lam`, `forallE`, `proj`.
 
 ## License
 

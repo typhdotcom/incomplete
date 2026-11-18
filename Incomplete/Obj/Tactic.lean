@@ -274,6 +274,20 @@ def orwCore (stx : Term) (symm : Bool) (loc : Option FVarId := none) : TacticM U
     let n := mkIdent (← x.getUserName)
     evalTactic (← `(tactic| try simp only [obj_simp] at $n:ident))
 
+/-- Close the goal by `orefl` when that is cheap: up to reducible unfolding, or else within a
+small heartbeat budget, so that a failing attempt does not unfold large codes. -/
+def cheapRefl : TacticM Unit := do
+  let s ← saveState
+  try
+    evalTactic (← `(tactic| with_reducible orefl))
+    return
+  catch _ => s.restore
+  let ok ← tryCatchRuntimeEx
+    (withCurrHeartbeats <| withTheReader Core.Context (fun c => { c with maxHeartbeats := 20000000 })
+      do try evalTactic (← `(tactic| orefl)); pure true catch _ => pure false)
+    (fun _ => pure false)
+  unless ok do s.restore
+
 syntax "orw " "[" Lean.Parser.Tactic.rwRule,* "]" (" at " ident)? : tactic
 
 elab_rules : tactic
@@ -284,7 +298,7 @@ elab_rules : tactic
       | `(Lean.Parser.Tactic.rwRule| ← $t:term) => orwCore t true loc
       | `(Lean.Parser.Tactic.rwRule| $t:term) => orwCore t false loc
       | _ => throwUnsupportedSyntax
-    if x.isNone then evalTactic (← `(tactic| try orefl))
+    if x.isNone then cheapRefl
 
 /-! ### Statements with named variables -/
 
