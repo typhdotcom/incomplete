@@ -1,11 +1,13 @@
 # incomplete
 
-A Lean 4 proof of Gödel–Kleene incompleteness for the formal type theory in
-[the author's lean4lean fork](https://github.com/typhdotcom/lean4lean), based on
-[digama0/lean4lean](https://github.com/digama0/lean4lean): the typing judgment
-`VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`, taken as a proof
-system for sentences about `Nat`. It is about that formal judgment, not about
-the kernel implementation in lean4lean or Lean's own kernel.
+A Lean 4 proof of Gödel–Kleene incompleteness for the formal type theory of
+[lean4lean](https://github.com/digama0/lean4lean), with the inductive and
+primitive projection extensions from
+[typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean) described below.
+The proof system is the typing judgment `VEnv.HasType` / `VEnv.IsDefEq` of
+`Lean4Lean.Theory.Typing`, for sentences about `Nat`. It is about that formal
+judgment, not about the kernel implementation in lean4lean or Lean's own
+kernel.
 
 ## Theorems
 
@@ -84,10 +86,39 @@ and irrefutability on `HaltsSound`, neither of which is proved here.
 
 ## Dependency
 
-`lakefile.toml` pins the author's fork at commit
+`lakefile.toml` pins [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean),
+a fork of [digama0/lean4lean](https://github.com/digama0/lean4lean), at commit
 [`979fe59306db`](https://github.com/typhdotcom/lean4lean/commit/979fe59306db077bc2c681319a53b4f521791603).
-The results concern this revision of the fork's formal judgment. The library
-imports only
+The core typing and definitional-equality rules are inherited from upstream.
+The proof uses the following additions from the fork:
+
+- **Concrete inductive declarations and environments** (`Theory/VEnv.lean`,
+  `Theory/Inductive.lean`, `Theory/Typing/Env.lean`). The fork defines
+  `VInductDecl.WF`, recursor and iota-rule generation, and `VEnv.addInduct`,
+  filling the inductive-specification placeholders in its upstream base.
+  `Incomplete/NatEnv.lean` identifies the explicit `Nat` environment with this
+  construction. The fork's `VDecl.WF.induct` also requires `GeneratedWF`:
+  evidence that the generated recursors and iota rules are well typed.
+  `Incomplete/NatDeclWF.lean` proves both obligations directly for `Nat`.
+- **Primitive projections and structure eta** (`Theory/Typing/Basic.lean`).
+  The fork adds `VExpr.proj`, the inductive-block table `VEnv.inducts`, and the
+  rules `IsDefEq.projDF`, `projIota` and `projEta`, with their `ProjAllowed`
+  conditions. `Incomplete/Cert.lean` and `Incomplete/ProjRules.lean` include
+  these rules in the proof enumeration used for the full-theory results.
+  The unconditional theorem's `BDefEq` fragment omits them.
+- **Supporting environment and telescope lemmas** (`Theory/Typing/EnvLemmas.lean`,
+  `Projection.lean`, `Telescope.lean`, and their dependencies). These include
+  `VEnv.WF.ordered` for the concrete inductive specification, `VDecl.WF.le`
+  for environment extensions, and `IsDefEq.appN_substT` and `IsDefEq.lams_beta`
+  for the `Nat.rec` computations in `Incomplete/Arith.lean`.
+
+Thus the full-theory statements use the judgment including the fork's
+projection rules and its definition of well-formed environments. The proofs
+do not depend on the fork's kernel-verification theorem, runtime-model axioms,
+or open injectivity assumptions; the axiom audit below checks the resulting
+theorems.
+
+The direct lean4lean imports are
 `Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`.
 Batteries comes transitively at lean4lean's pin; `lean-toolchain` matches
 lean4lean's.
