@@ -240,9 +240,12 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `nthC`, `histC`/`covC` and `histPC`/`covPC` with the step symbolic:
   `hist (S n) = S (pair (cov n) (hist n))`, and `cov j` read back from the
   history at `n` for `j < n`. `Obj/Reads`: `obnd`, bounds on the variables a
-  composed code reads, by its structure. `Obj/Lift`: the code `liftC` one
-  constructor of `encExpr` at a time, at symbolic components: variables below
-  and above the cutoff, sorts, constants, `app`, `lam`, `forallE`, `proj`.
+  composed code reads, by its structure. `Obj/Key`: the recursion of `liftC`
+  and `instC` on the capped key `pair e (min k (e + 1))`, one equation per
+  constructor of `encExpr` for any step of their shape. `Obj/Lift`, `Obj/Inst`:
+  `liftC` and `instC` one constructor at a time at symbolic components:
+  variables below, at and above the cutoff, sorts, constants, `app`, `lam`,
+  `forallE`, `proj`.
 
 ## License
 

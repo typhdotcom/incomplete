@@ -103,7 +103,7 @@ elab "obnd_core" : tactic => do obndCore (← Lean.Elab.Tactic.getMainGoal)
 
 /-- Prove `bnd f ≤ m` for a code `f` composed from `PRLib`'s combinators. -/
 macro "obnd" : tactic => `(tactic| (
-  simp only [ifz, leq, eqz, cpair, fstC, fstC.sndC, sndC, modC, divC, tagC, histK, keyC, minP, nthC,
+  try simp only [ifz, leq, eqz, cpair, fstC, fstC.sndC, sndC, modC, divC, tagC, histK, keyC, minP, nthC,
     addP, liftP, instP, covPC, histPC, covC, histC]
   obnd_core))
 
