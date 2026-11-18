@@ -1,7 +1,7 @@
 # incomplete
 
 Lean 4 proofs of the Gödel–Kleene, Rosser, and second incompleteness theorems
-for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
+and of Löb's theorem for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
 extended with concrete inductives and primitive projections from
 [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
 
@@ -67,6 +67,33 @@ is true iff `Consistent env` (`con_true_iff`) and unprovable in `env`. Both
 theorems rest on proving `Con T → G0 T` inside the theory
 (`con_imp_G0_provable`, `Incomplete/Obj/Second.lean`).
 
+### Löb's theorem
+
+```lean
+theorem loeb (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero))
+    (h : Provable env (.forallE (Prov T P) P)) : Provable env P
+```
+
+For every well-formed extension of `natEnv`, every `T` with `TablesFor env T`,
+and every closed proposition `P`: if the theory proves `Prov T P → P`, it proves
+`P`. No consistency hypothesis is needed. `Prov T P` is the closed proposition
+`∃ k, chkT T (⌜P⌝, k) = 0` with an impredicative `∃` over numbers: some
+certificate checks as a proof of `P` (`ProvT`). Related results
+(`Incomplete/Obj/Loeb.lean`):
+
+- `prov_of_provable`: `Provable env P → Provable env (Prov T P)`.
+- `prov_lit_iff`: under `Consistent env`, the theory proves
+  `chkT T (⌜P⌝, k) = 0` for some numeral `k` iff `Provable env P`. Externally,
+  `chkNum_eq_zero`: some `k` has `chkNumFor T _ ⌜P⌝ k = 0` iff `Provable env P`.
+- `prov_sound`: under `HaltsSound env`, `Provable env (Prov T P)` implies
+  `Provable env P`.
+- `loeb_halts`: the same conclusion from a proof of
+  `halts (provM T P) 0 → P`, the double-negation provability sentence, which
+  the theory derives from `Prov T P` (`prov_imp_halts`).
+- `con_iff_not_prov`: the theory proves `Con T ↔ ¬Prov T ⊥`.
+- `con_unprovable_of_loeb`: `con_unprovable`, from `loeb` at `P := ⊥`.
+
 ### Declaration-list variants
 
 `incomplete_rosser'`, `incomplete_of_wf'`, and `second_incompleteness'` prove
@@ -103,6 +130,9 @@ well-formed declarations that include `Nat`. They replace the binders
   `falseS`, defining `Con T := notHalts (conM T) 0`. `dg T` runs `chkT T` on
   the number of the diagonal sentence of its input, defining
   `G0 T := notHalts (dg T) ⌜dg T⌝`.
+- `Prov T P`, `provM T P`: `Prov T P` is `∃ k, chkT T (⌜P⌝, k) = 0` as an
+  object proposition with an impredicative `∃`; `provM T P` runs `chkT T` on the
+  number of `P`, so `conM T = provM T falseS`.
 - `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
   well-formedness predicates and environment extension order.
 
@@ -114,7 +144,7 @@ via a set model (`Incomplete/Model.lean`, `Incomplete/ModelSound.lean`). For
 the full theory and its well-formed extensions, Rosser's theorem and the second
 incompleteness theorem assume `Consistent`, and Gödel–Kleene irrefutability
 additionally assumes `HaltsSound`; neither hypothesis is proved here for the
-full type theory.
+full type theory. Löb's theorem assumes neither.
 
 Refuting `halts` for the Rosser machine requires universal reasoning inside the
 object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
@@ -172,6 +202,9 @@ open Incomplete
 #print axioms second_incompleteness
 #print axioms second_incompleteness'
 #print axioms con_unprovable
+#print axioms loeb
+#print axioms loeb_halts
+#print axioms con_unprovable_of_loeb
 #print axioms bconsistent
 #print axioms bhaltsSound
 ```
@@ -217,10 +250,12 @@ results.
     instantiation on encoded terms, symbolic certificate verification (`certT`,
     `chkT`), closed certificate adequacy, multi-hole expression templates, and
     internal instantiation and modus ponens.
-  - *Internal Σ₁-completeness and second theorem* (`Graph`, `Sigma`, `Reduce`,
-    `Second`): internal graph proofs (`ok_exists`) showing every `PR` code
-    provably computes its values on numerals, yielding `Con T → G0 T`
-    (`con_imp_G0_provable`) and `second_incompleteness`.
+  - *Internal Σ₁-completeness, second theorem and Löb's theorem* (`Graph`,
+    `Sigma`, `Reduce`, `Second`, `Loeb`): internal graph proofs (`ok_exists`)
+    showing every `PR` code provably computes its values on numerals, yielding
+    `Con T → G0 T` (`con_imp_G0_provable`) and `second_incompleteness`, and,
+    for the Löb machine `loebM` searching for proofs of `haltsE d ⌜d⌝ → P`,
+    `loeb`.
 
 ## License
 
