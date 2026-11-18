@@ -1,5 +1,5 @@
-State: COMPLETE
-Turn: none
+State: RETURNED
+Turn: worker
 Candidate: qkxrkslrkqpoqqrtwywxnuylnpouyuon / b567dcd48eb8ca09fde9d26bfd0dd3baed7230e8
 
 # Whole-repository publication review
@@ -36,21 +36,26 @@ reading of every arithmetic proof. Every project module was freshly elaborated.
   defines this description system; no binary program-length or invariance
   theorem is claimed.
 - Source and axiom constraints remain those of `AGENTS.md`. Dependency pins,
-  toolchain and package version remain those of the candidate.
+  toolchain and package version identify the candidate. Change a dependency
+  pin when required to repair the imported fork, following `AGENTS.md`.
+- Problems identified in this review are repair obligations. Do not accept
+  the publication review while leaving them as optional polish or using a
+  passing proof check to waive documentation or build-quality defects.
 
 ## Verdict
 
-Accepted for sharing. No blocking correctness, public-scope or packaging
-finding was identified. All review areas below are complete; no worker action
-remains for this cycle. This verdict applies to the pinned candidate and the
-formal specification it imports.
+Returned for D2 and D3. The formal verification below remains valid for the
+candidate, but the publication review is not complete: misleading theorem
+documentation and the build's warning backlog require repair. The previous
+acceptance verdict is withdrawn.
 
 ## Review progress and evidence
 
-Every row is complete. Proof checking, semantic inspection and boundary probes
-are different evidence: successful elaboration validates the formal statements;
-inspection connects those statements to the public claims; probes discriminate
-specific boundaries and tactic behavior.
+The table records completed inspection and evidence, not acceptance of areas
+with outstanding findings. D2 and D3 own the remaining work. Successful
+elaboration validates the formal statements; inspection connects those
+statements to the public claims; probes discriminate specific boundaries and
+tactic behavior.
 
 | Area | Surface reviewed | Evidence and conclusion |
 | --- | --- | --- |
@@ -68,27 +73,81 @@ specific boundaries and tactic behavior.
 
 ## Current drawers
 
-None. D1 remains closed: hypothesis search passes at indices 0, 1, 2, 16 and
+### D2 — Theorem documentation reverses the halting interpretation
+
+Status: open
+
+`Final.lean:10,24–26` and `Extend.lean:214–216` call the true assertion a
+"halting sentence," although the conclusion is `notHalts d d.code` and
+`¬d.Halts d.code`. They also describe it as "undecided" before introducing
+the additional `HaltsSound` hypothesis needed for irrefutability.
+`Rosser.lean:350–352,429–430` similarly calls the sentence a halting sentence;
+the former says it is false of the machine while the returned `notHalts`
+sentence is true. `Second.lean:7,24` calls `Con T` a halting sentence even
+though it is `notHalts (conM T) 0`.
+
+These comments are the reader's explanation of the public formal objects.
+They must state the same polarity and hypotheses as the theorems. Correct
+all these descriptions; distinguish truth and unprovability under consistency
+from irrefutability under the additional hypothesis in the Gödel–Kleene
+results. Update the second-theorem module introduction to identify its role
+as the reduction and point to the completed internal proof in `Obj/Second`.
+Keep the formal statements and proofs unchanged for this drawer.
+
+Closure evidence: inspect the corrected comments against their definitions
+and theorem types, search the source documentation for the same misuse, and
+run the library build. Do not replace every occurrence of "halting sentence"
+mechanically: descriptions of `halts` itself can be correct.
+
+### D3 — The supported build emits 307 Lean warnings
+
+Status: open
+
+`nix develop -c lake build` succeeds but currently emits the following
+warning inventory on Lean `v4.34.1`, including replayed diagnostics:
+
+| Owner | Deprecated lemmas | Unused variables | Unused simp arguments | Unused section variables | Total |
+| --- | --- | --- | --- | --- | --- |
+| `Incomplete` | 242 | 4 | 20 | 4 | 270 |
+| Imported lean4lean theory | 35 | 1 | 1 | 0 | 37 |
+
+The project warnings span 40 modules. Examples include obsolete `if_pos` /
+`if_neg` uses in `NatEnv` and `PRLib`, `dif_pos` / `dif_neg` in `Encode`,
+unused simp arguments in `Rules2` and `Obj/BChecker`, and unused section
+variables in `Obj/Chain` and `Obj/SolovayStep`. The fork warnings are in
+`Lean4Lean/Theory/VExpr.lean` (35 deprecations) and
+`Lean4Lean/Theory/Typing/Projection.lean` (two unused-item warnings).
+
+The advertised toolchain upgrade left obsolete proof scripts and noisy
+diagnostics throughout the production build. Resolve the entire inventory:
+use supported lemma names, remove redundant simp inputs, and correct unused
+bindings and section-variable inclusion. Repair the imported theory in the
+maintained lean4lean fork, commit that repair, and update this repository's
+pin and manifest together. Do not patch `.lake/packages` as the delivered
+fix, disable warning/linter reporting, or use the dependency boundary as a
+reason to leave its diagnostics unresolved. Preserve the formal results and
+their documented hypotheses; update version and dependency documentation
+where the repair makes them stale.
+
+Closure evidence: a fresh project build and recompilation of the affected
+imported theory emit no warnings on the supported toolchain, and the ordinary
+documented build also passes without warnings. Repeat the 48-headline axiom
+audit, the whole-namespace allowed-axiom audit, and README statement conformance
+checks after the proof-script and dependency edits. Run `nix flake check`.
+
+## Closed drawers
+
+D1 remains closed: hypothesis search passes at indices 0, 1, 2, 16 and
 32, and an unsuccessful search permits a fallback proof without a partial
 proof or deferred errors. As in the accepted correction, search covers the
 explicit context prefix; computed `List.replicate` contexts are normalized
 before these probes.
 
-## Nonblocking observations
-
-- Some theorem/module comments in `Final.lean`, `Extend.lean`, `Rosser.lean`
-  and `Second.lean` call a `notHalts` assertion a "halting sentence." In
-  particular, the Gödel–Kleene sentence asserted true is the non-halting
-  sentence. The formal statements and README distinguish these correctly;
-  this is terminology polish, not a proof or headline-scope defect.
-- The build emits deprecation, unused-variable, unused-section-variable and
-  unused-simp-argument warnings, including warnings in the pinned dependency.
-  They do not prevent either project build or alter the axiom audit.
-- `nix flake check` covers repository hygiene and formatting. The Lean build
-  is a separate required command; a successful Nix check alone is not
-  evidence that the mathematical library elaborates.
-
 ## Verification
+
+The evidence below concerns the judged candidate. It does not close D2 or
+D3. `nix flake check` covers hygiene and formatting; the Lean build is a
+separate required command.
 
 - `nix develop -c lake build` passed: 153 jobs.
 - A fresh temporary package containing copies of every project Lean source,
@@ -141,3 +200,14 @@ run_cmd do
       count := count + 1
   logInfo m!"Audited {count} Incomplete theorems; all axiom dependencies are allowed."
 ```
+
+## Worker completion requirement
+
+Work from this `REVIEW.md`, resolve D2 and D3, and rewrite this file as the
+next `READY FOR REVIEW` submission. Supply exact evidence for each drawer
+and identify the finalized candidate as `change / commit`. Follow
+`AGENTS.md`: update stale README/version information, run the required Lean
+verification and `nix flake check`, commit the candidate, then record its
+identity and commit the review submission. Merely replying in chat is not a
+submission. The next reviewer must judge both repairs before accepting this
+publication cycle.
