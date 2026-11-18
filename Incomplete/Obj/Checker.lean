@@ -41,10 +41,6 @@ structure IsChecker (env : Typing) [ObjEnv env] (T : PR) : Prop where
   allH : ∃ z s : Nat, AllH env T z s
   mpT : MpT env T
 
-/-- `T` accepts only theorems of `env`. -/
-def CheckSound (env : Typing) (T : PR) : Prop :=
-  ∀ (P : VExpr) (k : Nat), T.eval (vcons (encExpr P) (vcons k fun _ => 0)) = 0 → Thm env [] P
-
 section
 variable {env : Typing} [E : ObjEnv env] {Γ l : List VExpr} {T : PR}
 

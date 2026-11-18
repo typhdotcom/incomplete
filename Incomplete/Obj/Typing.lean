@@ -7,9 +7,10 @@ import Incomplete.BSigma
 
 The object-level development runs over a judgment `env : Typing`, an environment with a relation
 `env.IsDefEq Γ e₁ e₂ A`, through the rules of `ObjEnv env`: the typing rules restricted to sorts
-`Prop` and `Type`, weakening and instantiation, the iota rules of `Nat.rec` at a constant motive
-in `Type`, and adequacy of `PR.tr`. Full typing `full env` (`env.IsDefEq 0`) has them for every
-ordered `env` with `Nat` (`ObjEnv.full`). The derived rules below are proved from these alone.
+`Prop` and `Type`, weakening and instantiation, the environment's definitional-equality rules at
+universe levels at most `1`, and adequacy of `PR.tr`. Full typing `full env` (`env.IsDefEq 0`) and the fragment
+`bounded env` (`BDefEq env`) have them for every ordered `env` with `Nat` (`ObjEnv.full`,
+`ObjEnv.bounded`). The derived rules below are proved from these alone.
 -/
 
 namespace Incomplete
