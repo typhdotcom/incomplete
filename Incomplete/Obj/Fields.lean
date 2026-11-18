@@ -49,7 +49,7 @@ end
 macro_rules | `(tactic| otype_rules) => `(tactic| ((with_reducible refine restTTy _ ?_); otype))
 
 section
-variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b x : VExpr}
+variable {env : VEnv} [E : ObjEnv env] {Γ l : List VExpr} {a b x y : VExpr}
 
 theorem ev_restC (hl : Tms env Γ l) : ∀ (i : Nat) (p : PR),
     Thm env Γ (ev (restC i p) l =ₒ restT i (ev p l))
@@ -94,6 +94,32 @@ theorem restT_le : ∀ (i : Nat) {x : VExpr}, Tm env Γ x → Thm env Γ (restT 
 
 theorem fldT_le (i : Nat) (hx : Tm env Γ x) : Thm env Γ (fldT i x ≤ₒ x) :=
   le_trans (by otype) (by otype) hx (fst_le (by otype)) (restT_le i hx)
+
+/-- The second component is at most the root: `y - tri r ≤ r` for `r = triRoot y`. -/
+theorem snd_le_triRoot (hy : Tm env Γ y) : Thm env Γ (snd y ≤ₒ triRoot y) := by
+  ocases (triRoot_spec hy) with h1 h2
+  orw [tri_succ (by otype)] at h2
+  orw [snd_eq hy]
+  ole (sub (add (tri (triRoot y)) (S (triRoot y))) (S y)) [h1, h2]
+
+/-- **Surjective pairing.** -/
+theorem pair_fst_snd (hy : Tm env Γ y) : Thm env Γ (pair (fst y) (snd y) =ₒ y) := by
+  have h1 := Thm.conjE1 (by otype) (by otype) (triRoot_spec hy)
+  have hs := snd_le_triRoot hy
+  have e1 : Thm env Γ (add (fst y) (snd y) =ₒ triRoot y) := by
+    orw [fst_eq hy]; exact sub_add_of_le (by otype) (by otype) hs
+  orw [pair_eq (by otype) (by otype), e1, snd_eq hy]
+  exact add_sub_of_le (by otype) hy h1
+
+theorem restT_succ' : ∀ (i : Nat) (y : VExpr), restT (i + 1) y = snd (restT i y)
+  | 0, _ => rfl
+  | i + 1, y => restT_succ' i (snd y)
+
+/-- A tuple is its field `i` paired with the rest. -/
+theorem restT_split (i : Nat) (hy : Tm env Γ y) :
+    Thm env Γ (restT i y =ₒ pair (fldT i y) (restT (i + 1) y)) := by
+  rw [restT_succ']
+  exact Thm.symm (by otype) (by otype) (pair_fst_snd (by otype))
 
 /-! ### Codes at numerals -/
 

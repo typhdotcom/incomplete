@@ -130,6 +130,72 @@ theorem prfT_of_cert {T : Tables} {s : VExpr} (hs : Tm env Γ s) (hc : Tm env Γ
     orw [ev_restC hl, hJ, restT_pair_succ zeroTy (by otype), restT_pair_succ he (by otype),
       restT_pair_succ he hs]
 
+/-! ### Reading a verdict back -/
+
+/-- A tuple is its first three fields and the rest. -/
+theorem tuple4_eq {y : VExpr} (hy : Tm env Γ y) :
+    Thm env Γ (y =ₒ judgT (fldT 0 y) (fldT 1 y) (fldT 2 y) (restT 3 y)) := by
+  have a0 := pair_fst_snd hy
+  have a1 := pair_fst_snd (show Tm env Γ (snd y) by otype)
+  have a2 := pair_fst_snd (show Tm env Γ (snd (snd y)) by otype)
+  show Thm env Γ (y =ₒ pair (fst y) (pair (fst (snd y)) (pair (fst (snd (snd y)))
+    (snd (snd (snd y))))))
+  orw [a2, a1, a0]
+
+theorem selC_zero_inv {x y : VExpr} (hx : Tm env Γ x) (hy : Tm env Γ y)
+    (h : Thm env Γ (ev selC [x, y, lit 1] =ₒ zero)) : Thm env Γ (x =ₒ zero) ∧ Thm env Γ (y =ₒ zero) := by
+  have hx0 : Thm env Γ (x =ₒ zero) := by
+    ocases (zero_or_succ (n := x) hx) with hz hs
+    · exact hz
+    · ocases hs with m hm
+      oexfalso
+      olift h
+      orw [hm, ev_selC_succ mT (by otype) (by otype) .nil] at h
+      exact Thm.absurd (succ_ne_zero zeroTy) h
+  refine ⟨hx0, ?_⟩
+  orw [hx0, ev_selC_zero (l := [lit 1]) hy (by otype)] at h
+  exact h
+
+theorem ev_ifz' {c a b : PR} (hl : Tms env Γ l) :
+    Thm env Γ (ev (ifz c a b) l =ₒ ev selC [ev c l, ev a l, ev b l]) := by
+  orw [ev_ifz rfl hl]
+
+theorem andz_zero {p q : PR} (hl : Tms env Γ l) (h : Thm env Γ (ev (andz p q) l =ₒ zero)) :
+    Thm env Γ (ev p l =ₒ zero) ∧ Thm env Γ (ev q l =ₒ zero) := by
+  simp only [andz] at h
+  orw [ev_ifz' hl, ev_ifz' hl] at h
+  obtain ⟨h1, h2⟩ := selC_zero_inv (by otype) (by otype) h
+  exact ⟨h1, (selC_zero_inv (by otype) (by otype) h2).1⟩
+
+theorem eqz_zero {p q : PR} (hl : Tms env Γ l) (h : Thm env Γ (ev (eqz p q) l =ₒ zero)) :
+    Thm env Γ (ev p l =ₒ ev q l) := (ev_eqz_zero hl).mp h
+
+/-- **A proof read back.** A certificate `c` that `chkT T` accepts for the sentence numbered `s`
+checks and has the judgment `[] ⊢ e ≡ e : s`, with `e` the judgment's field `1`. -/
+theorem prfT_inv {T : Tables} {s : VExpr} (hs : Tm env Γ s) (hc : Tm env Γ c)
+    (h : Thm env Γ (prfT T s c =ₒ zero)) :
+    Thm env Γ (certT T (fun _ => true) c =ₒ zero) ∧
+    Thm env Γ (jT c =ₒ judgT zero (fldT 1 (jT c)) (fldT 1 (jT c)) s) := by
+  have hl : Tms env Γ [s, c] := by otype
+  have hJ : Thm env Γ (ev concC [s, c] =ₒ jT c) := by
+    simp only [concC]; orw [ev_fldC hl, ev_divC hl, ← div_eq]
+  simp only [prfT, chkT, chkC] at h
+  obtain ⟨h1, h'⟩ := andz_zero hl h
+  obtain ⟨h2, h''⟩ := andz_zero hl h'
+  obtain ⟨h3, h4⟩ := andz_zero hl h''
+  have h2 := eqz_zero hl h2
+  have h3 := eqz_zero hl h3
+  have h4 := eqz_zero hl h4
+  orw [ev_push rfl hl] at h1
+  rw [ev_take 1 (bnd_certC T _)] at h1
+  orw [ev_fldC hl, hJ] at h2
+  orw [ev_fldC hl, ev_fldC hl, hJ] at h3
+  orw [ev_restC hl, hJ] at h4
+  refine ⟨h1, ?_⟩
+  have t := tuple4_eq (show Tm env Γ (jT c) by otype)
+  orw [h2, ← h3, h4] at t
+  exact t
+
 /-! ### `appDF` -/
 
 theorem tuple9 (h1 : Tm env Γ a) (h2 : Tm env Γ A) (h3 : Tm env Γ B) (h4 : Tm env Γ f)

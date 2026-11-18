@@ -256,7 +256,8 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   `jT c`, the number of the judgment; the `appDF` certificate `appT …` checks
   when its children do and certifies `f a ≡ f' a' : B[a]`, with `B[a]` the code
   `instT B a 0`; and `chkT T` accepts a checking certificate of `[] ⊢ e ≡ e : s`
-  as a proof of the sentence numbered `s` (`prfT`). `Obj/Free`: every derivable
+  as a proof of the sentence numbered `s` (`prfT`), and conversely
+  (`prfT_inv`). `Obj/Free`: every derivable
   closed judgment has a certificate number that the object theory proves to
   check and to certify it, by adequacy alone (`closed_cert`, `provable_cert`).
   `Obj/NumCert`: the code `numCertC` of certificates of `⊢ lit k : Nat`, built
@@ -269,6 +270,10 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   closed `B` is unchanged (`instT_closed`). Hence internal instantiation with
   the sentence `⌜Q[lit k]⌝` (`internal_inst_tmpl`), and internal modus ponens for
   fixed `A` and closed `B` at symbolic certificates (`certT_mp`, `jT_mp`).
+  `Obj/Reduce`: `Con T` and `G0 T` read through the checker, and `Con T → G0 T`
+  from a code `σ` with `∀ k, Prf(⌜G0 T⌝, k) → Prf(⌜halts (dg T) ⌜dg T⌝⌝, σ k)`
+  provable (`con_imp_G0`, over arbitrary codes `con_imp_of_prf`); so the second
+  theorem from that internal Σ₁-completeness (`second_of_sigma`).
 
 ## License
 
