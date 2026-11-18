@@ -489,7 +489,7 @@ inside the object theory (`Incomplete/Obj/`).
 
 `lakefile.toml` pins [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean)
 (a fork of [digama0/lean4lean](https://github.com/digama0/lean4lean)) at
-[`b158604d712c`](https://github.com/typhdotcom/lean4lean/commit/b158604d712c00c8d6df22472b7b870c6b340073).
+[`db323b9f1770`](https://github.com/typhdotcom/lean4lean/commit/db323b9f1770df1bd15c54b01b10eb85a7b0962b).
 Core typing and definitional equality come from upstream; this repository uses
 three additions from the fork:
 
