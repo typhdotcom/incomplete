@@ -57,3 +57,4 @@ import Incomplete.Obj.Check
 import Incomplete.Obj.Certs
 import Incomplete.Obj.Free
 import Incomplete.Obj.NumCert
+import Incomplete.Obj.Template

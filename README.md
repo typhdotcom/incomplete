@@ -263,6 +263,12 @@ Each file in `Incomplete/` opens with a heading saying what it proves.
   by `appDF` from closed ones and proved by induction on `k` to check; and
   internal instantiation: for a closed provable `∀ x : Nat, Q` a code `σ` with
   `∀ k, Prf(instT ⌜Q⌝ (litT k) 0, σ k)` provable (`internal_inst`).
+  `Obj/Template`: for a fixed expression `B`, `instT ⌜B⌝ a (lit j)` as the
+  template `tmplT` assembled from `numT` of `B`'s parts with the hole filled
+  (`instT_tmpl`); at a numeral `litT v` it is the number of `B[lit v]`, and a
+  closed `B` is unchanged (`instT_closed`). Hence internal instantiation with
+  the sentence `⌜Q[lit k]⌝` (`internal_inst_tmpl`), and internal modus ponens for
+  fixed `A` and closed `B` at symbolic certificates (`certT_mp`, `jT_mp`).
 
 ## License
 
