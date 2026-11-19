@@ -2,13 +2,12 @@
 from html.parser import HTMLParser
 import os
 import re
-import secrets
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from markdown_it import MarkdownIt
-from markdown_it.common.utils import unescapeAll
+from markdown_it.rules_inline.link import link as link_rule
 
 DECL_RE = re.compile(
     r"^(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|noncomputable|partial|unsafe|scoped)\s+)*"
@@ -20,6 +19,7 @@ TITLE_PREFIX = "lean:"
 USAGE_HINT = 'use single-line [`symbol`](path.lean) or [text](path.lean "lean:symbol")'
 MANAGED_URL_RE = re.compile(r"^([^\s#?%&\\<>()]+\.lean)(?:#[A-Za-z0-9-]*)?$")
 SYMBOL_RE = re.compile(r"^[^\s`/]+$")
+NEWLINE_RE = re.compile(r"\r\n?|\n")
 
 
 def clean_part(part: str) -> str:
@@ -199,38 +199,50 @@ def lean_target(href: str):
     return parts
 
 
-def is_ascii_punct(ch: str) -> bool:
-    return ch.isascii() and not ch.isalnum() and ch.isprintable() and not ch.isspace()
+def located_link(state, silent: bool) -> bool:
+    start, first = state.pos, len(state.tokens)
+    if not link_rule(state, silent):
+        return False
+    if not silent:
+        end, src = state.pos, state.src
+        opener = next(t for t in state.tokens[first:] if t.type == "link_open")
+        dest = None
+        p = state.md.helpers.parseLinkLabel(state, start, True) + 1
+        if end > p and src[p] == "(":
+            p += 1
+            while p < end and src[p] in " \t\n":
+                p += 1
+            res = state.md.helpers.parseLinkDestination(src, p, end)
+            if res.ok:
+                dest = (p, res.pos)
+        opener.meta["span"] = (start, end)
+        opener.meta["dest"] = dest
+    return True
 
 
-def inline_destinations(text: str) -> list[tuple[int, int]]:
-    spans: list[tuple[int, int]] = []
-    last = 0
-    for m in re.finditer(r"\]\(", text):
-        i, n = m.end(), len(text)
-        while i < n and text[i] in " \t":
-            i += 1
-        if i < last or i >= n or text[i] in "<\n":
-            continue
-        j, depth = i, 0
-        while j < n:
-            ch = text[j]
-            if ch == "\\" and j + 1 < n and is_ascii_punct(text[j + 1]):
+def make_parser() -> MarkdownIt:
+    md = MarkdownIt("commonmark").enable(["table", "strikethrough"])
+    md.inline.ruler.at("link", located_link)
+    return md
+
+
+def align(content: str, line: str, base: int, cursor: int) -> list[int] | None:
+    # Inline content is its source line minus container prefixes and cell
+    # delimiters; table cells also drop the backslash of `\|`.
+    for start in range(cursor, len(line) - len(content) + 1):
+        out, j = [], start
+        for ch in content:
+            if j < len(line) and line[j] == ch:
+                out.append(base + j)
+                j += 1
+            elif ch == "|" and line.startswith("\\|", j):
+                out.append(base + j + 1)
                 j += 2
-                continue
-            if ch.isspace() or ord(ch) < 0x20:
+            else:
                 break
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                if depth == 0:
-                    break
-                depth -= 1
-            j += 1
-        if depth == 0 and j > i:
-            spans.append((i, j))
-            last = j
-    return spans
+        else:
+            return out
+    return None
 
 
 class AnchorHrefs(HTMLParser):
@@ -248,41 +260,31 @@ class AnchorHrefs(HTMLParser):
 def process_md(
     md_path: Path, cache: dict[Path, list[tuple[list[str], int, int]]], write: bool
 ) -> list[str]:
-    text = md_path.read_text(encoding="utf-8")
+    with open(md_path, encoding="utf-8", newline="") as f:
+        text = f.read()
     errors: list[str] = []
     edits: list[tuple[int, int, str]] = []
 
-    def line_of(offset: int) -> int:
-        return text.count("\n", 0, offset) + 1
+    # markdown-it numbers lines after normalizing every line ending to \n.
+    line_spans, pos = [], 0
+    for m in NEWLINE_RE.finditer(text):
+        line_spans.append((pos, m.start()))
+        pos = m.end()
+    line_spans.append((pos, len(text)))
+    cursors: dict[int, int] = {}
 
     def err(line: int, href: str, msg: str) -> None:
         errors.append(f"{md_path}:{line}: {href}: {msg}")
 
-    # Each inline destination is swapped for a unique probe, so the parse
-    # itself says which source spans render as links; literal text keeps its probe.
-    spans = inline_destinations(text)
-    tag = f"lean-anchor-{secrets.token_hex(8)}-"
-    probe_parts, prev = [], 0
-    for idx, (s, e) in enumerate(spans):
-        probe_parts += [text[prev:s], f"{tag}{idx}"]
-        prev = e
-    probe_parts.append(text[prev:])
-    probe = "".join(probe_parts)
-    probe_re = re.compile(re.escape(tag) + r"(\d+)")
-
-    def unprobe(s: str) -> str:
-        return probe_re.sub(lambda m: text[slice(*spans[int(m.group(1))])], s)
-
-    md = MarkdownIt("commonmark").enable(["table", "strikethrough"])
+    md = make_parser()
     env: dict = {}
-    tokens = md.parse(probe, env)
+    tokens = md.parse(text, env)
 
     def_hrefs: set[str] = set()
     for label, ref in env.get("references", {}).items():
-        href = unprobe(ref.get("href", ""))
+        href = ref.get("href", "")
         title = ref.get("title") or ""
-        target = lean_target(href)
-        if target and ("#" in href or title.startswith(TITLE_PREFIX)):
+        if lean_target(href) and ("#" in href or title.startswith(TITLE_PREFIX)):
             def_hrefs.add(href)
             err(
                 (ref.get("map") or [0])[0] + 1,
@@ -292,7 +294,7 @@ def process_md(
 
     def check_html(content: str, line: int) -> None:
         parser = AnchorHrefs()
-        parser.feed(unprobe(content))
+        parser.feed(content)
         parser.close()
         for href in parser.hrefs:
             if lean_target(href) and "#" in href:
@@ -302,20 +304,34 @@ def process_md(
                     f"HTML <a> Lean line links are unsupported; {USAGE_HINT}",
                 )
 
-    def check_link(children, i: int, block_line: int) -> None:
-        tok = children[i]
-        href = tok.attrGet("href") or ""
-        title = tok.attrGet("title")
-        m_probe = probe_re.fullmatch(href)
-        if m_probe:
-            s, e = spans[int(m_probe.group(1))]
-            raw: str | None = text[s:e]
-            href = md.normalizeLink(unescapeAll(raw))
-            line = line_of(s)
-        else:
-            raw, line = None, block_line
+    def locate(tok) -> list[list[int] | None]:
+        out = []
+        for i, cline in enumerate(tok.content.split("\n")):
+            ln = tok.map[0] + i if tok.map else -1
+            if not 0 <= ln < len(line_spans):
+                out.append(None)
+                continue
+            s, e = line_spans[ln]
+            cur = cursors.get(ln, 0)
+            offs = align(cline, text[s:e], s, cur) if cur >= 0 else None
+            if offs is None:
+                cursors[ln] = -1
+            elif offs:
+                cursors[ln] = offs[-1] + 1 - s
+            out.append(offs)
+        return out
+
+    def check_link(tok, children, i: int, offsets) -> None:
+        opener = children[i]
+        href = opener.attrGet("href") or ""
+        title = opener.attrGet("title")
         if lean_target(href) is None:
             return
+        content = tok.content
+        ls, le = opener.meta.get("span", (0, 0))
+        li = content.count("\n", 0, ls)
+        col = ls - (content.rfind("\n", 0, ls) + 1)
+        line = (tok.map[0] if tok.map else 0) + li + 1
         close = next(
             (
                 j
@@ -347,12 +363,28 @@ def process_md(
                 err(line, href, f"unmanaged fragment on .lean link; {USAGE_HINT}")
             return
 
-        m_url = MANAGED_URL_RE.match(raw) if raw is not None else None
+        dest = opener.meta.get("dest")
+        if dest is None:
+            if href not in def_hrefs:
+                err(line, href, f"reference-style Lean symbol/line link; {USAGE_HINT}")
+            return
+        if "\n" in content[ls:le]:
+            err(line, href, f"multiline Lean symbol/line link; {USAGE_HINT}")
+            return
+        line_offs = offsets[li]
+        ds, de = dest
+        if line_offs is None:
+            err(line, href, "cannot locate this link in the source; " + USAGE_HINT)
+            return
+        d0 = col + (ds - ls)
+        s, e = line_offs[d0], line_offs[d0 + (de - ds) - 1] + 1
+        raw = text[s:e]
+        if raw != content[ds:de]:
+            err(line, href, "cannot locate this link in the source; " + USAGE_HINT)
+            return
+        m_url = MANAGED_URL_RE.match(raw)
         if m_url is None:
-            if raw is None and href in def_hrefs:
-                return
-            kind = "reference-style" if raw is None else "unsupported"
-            err(line, href, f"{kind} Lean symbol/line link; {USAGE_HINT}")
+            err(line, href, f"unsupported Lean symbol/line link; {USAGE_HINT}")
             return
 
         rel_path = m_url.group(1)
@@ -375,19 +407,18 @@ def process_md(
         else:
             err(line, raw, f"expected {want} for '{symbol}'")
 
-    def walk(toks, block_line: int = 1) -> None:
-        for tok in toks:
-            line = tok.map[0] + 1 if tok.map else block_line
-            if tok.type in ("html_block", "html_inline"):
-                check_html(tok.content, line)
-            if tok.children:
-                for i, child in enumerate(tok.children):
-                    if child.type == "html_inline":
-                        check_html(child.content, line)
-                    elif child.type == "link_open":
-                        check_link(tok.children, i, line)
-
-    walk(tokens)
+    for tok in tokens:
+        line = tok.map[0] + 1 if tok.map else 1
+        if tok.type == "html_block":
+            check_html(tok.content, line)
+        if tok.type != "inline" or not tok.children:
+            continue
+        offsets = locate(tok)
+        for i, child in enumerate(tok.children):
+            if child.type == "html_inline":
+                check_html(child.content, line)
+            elif child.type == "link_open":
+                check_link(tok, tok.children, i, offsets)
 
     if write and not errors and edits:
         out, prev = [], 0
@@ -395,7 +426,8 @@ def process_md(
             out += [text[prev:s], rep]
             prev = e
         out.append(text[prev:])
-        md_path.write_text("".join(out), encoding="utf-8")
+        with open(md_path, "w", encoding="utf-8", newline="") as f:
+            f.write("".join(out))
     return errors
 
 
