@@ -56,6 +56,14 @@ in
         statix = lint "statix" "${pkgs.statix}/bin/statix check -c ${root} ${root}";
         deadnix = lint "deadnix" "${pkgs.deadnix}/bin/deadnix --fail ${root}";
         gitleaks = lint "gitleaks" "${pkgs.gitleaks}/bin/gitleaks dir --no-banner --redact ${root}";
+        links = lint "links" ''
+          cd ${root}
+          SSL_CERT_FILE="${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
+            ${pkgs.lychee}/bin/lychee --offline --no-progress --include-fragments .
+        '';
+        lean-anchors = lint "lean-anchors" ''
+          ${pkgs.python3}/bin/python3 ${./lean-anchors.py} --check ${root}
+        '';
 
         # `-exec ... +` does not run at all when nothing matches, so a project with
         # no shell scripts passes rather than erroring on an empty argument list.

@@ -9,6 +9,8 @@
           pkgs.curl
           pkgs.elan
           pkgs.git
+          pkgs.lychee
+          pkgs.python3
         ];
 
         shellHook = ''

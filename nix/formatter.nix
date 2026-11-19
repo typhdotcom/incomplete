@@ -20,34 +20,45 @@ in
       treefmt = inputs.treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
 
-        # Files a tool generates and rewrites in its own layout have one
-        # legitimate writer, and it is not treefmt: formatting them means the
-        # two fight on every regeneration, breaking the formatting check.
-        # Global rather than per-formatter so the protection outlives
-        # formatter changes. Most lockfiles (flake.lock, Cargo.lock, ...) are
-        # already safe -- nothing claims the .lock extension; listed here are
-        # the generated files a formatter would claim.
-        settings.global.excludes = [
-          ".copier-answers.yml" # copier
-          "Manifest.toml" # julia
-          "lake-manifest.json"
-          "package-lock.json"
-          "pnpm-lock.yaml"
-          "*.min.js"
-          "*.min.css"
-        ];
-
-        # Neither treefmt-nix nor nixpkgs packages a Julia formatter. Runic is
-        # the configless one, as gofmt is for go; JuliaFormatter has style
-        # knobs and a history of breaking changes between majors.
-        settings.formatter.runic = {
-          command = "${pkgs.julia.withPackages [ "Runic" ]}/bin/julia";
-          options = [
-            "-m"
-            "Runic"
-            "--inplace"
+        settings = {
+          # Files a tool generates and rewrites in its own layout have one
+          # legitimate writer, and it is not treefmt: formatting them means the
+          # two fight on every regeneration, breaking the formatting check.
+          # Global rather than per-formatter so the protection outlives
+          # formatter changes. Most lockfiles (flake.lock, Cargo.lock, ...) are
+          # already safe -- nothing claims the .lock extension; listed here are
+          # the generated files a formatter would claim.
+          global.excludes = [
+            ".copier-answers.yml" # copier
+            "Manifest.toml" # julia
+            "lake-manifest.json"
+            "package-lock.json"
+            "pnpm-lock.yaml"
+            "*.min.js"
+            "*.min.css"
           ];
-          includes = [ "*.jl" ];
+
+          formatter = {
+            # Neither treefmt-nix nor nixpkgs packages a Julia formatter. Runic is
+            # the configless one, as gofmt is for go; JuliaFormatter has style
+            # knobs and a history of breaking changes between majors.
+            runic = {
+              command = "${pkgs.julia.withPackages [ "Runic" ]}/bin/julia";
+              options = [
+                "-m"
+                "Runic"
+                "--inplace"
+              ];
+              includes = [ "*.jl" ];
+            };
+
+            lean-anchors = {
+              command = "${pkgs.python3}/bin/python3";
+              options = [ "${./lean-anchors.py}" ];
+              includes = [ "*.md" ];
+              priority = 0;
+            };
+          };
         };
 
         programs = {
@@ -60,9 +71,15 @@ in
           #
           # `number` keeps ordered lists counting; without it every item is
           # rewritten to "1.", which reads badly in files consumed as raw text.
+          # Runs after lean-anchors so table widths settle in one pass.
           mdformat = {
             enable = true;
-            plugins = ps: [ ps.mdformat-front-matters ];
+            priority = 1;
+            plugins = ps: [
+              ps.mdformat-front-matters
+              ps.mdformat-gfm
+              ps.mdformat-gfm-alerts
+            ];
             settings.number = true;
           };
 
