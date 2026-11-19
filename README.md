@@ -288,7 +288,7 @@ nu tasks.nu check
 
 Every theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`. The codebase contains no `sorry`, `native_decide`, or custom `axiom`.
 
-Markdown links to Lean declarations are managed automatically ([nix/lean-anchors.py](nix/lean-anchors.py)): write single-line `` [`symbol`](Incomplete/File.lean) `` or `[label](Incomplete/File.lean "lean:symbol")` (titles without the `lean:` prefix remain ordinary tooltips on file links). After editing Lean or Markdown sources, run `nu tasks.nu fmt` (`nix fmt`) to refresh `#L` signature spans and table alignment, then `nu tasks.nu check` (`nix flake check`) to verify formatting, symbol spans (`checks.lean-anchors`), and relative file and heading links (`checks.links`). Unmanaged, reference-style, or multiline `.lean#...` line links are rejected.
+Markdown links to Lean declarations are managed automatically ([nix/lean-anchors.py](nix/lean-anchors.py)): write single-line `` [`symbol`](Incomplete/File.lean) `` or `[label](Incomplete/File.lean "lean:symbol")` (titles without the `lean:` prefix remain ordinary tooltips on file links). After editing Lean or Markdown sources, run `nu tasks.nu fmt` (`nix fmt`) to refresh `#L` signature spans and table alignment, then `nu tasks.nu check` (`nix flake check`) to verify formatting, symbol spans (`checks.lean-anchors`), and relative file and heading links (`checks.links`). Any other rendered `.lean#...` line link (unmanaged, reference-style, multiline, HTML, or with a query) is rejected; escaped and code-span examples are left as written.
 
 <details>
 <summary>Full <code>#print axioms</code> audit script (run with <code>nix develop -c lake env lean --trust=0 &lt;file&gt;</code>)</summary>

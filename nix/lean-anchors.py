@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-from collections import Counter
+from html.parser import HTMLParser
 import os
 import re
+import secrets
 import sys
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from markdown_it import MarkdownIt
+from markdown_it.common.utils import unescapeAll
 
 DECL_RE = re.compile(
     r"^(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|noncomputable|partial|unsafe|scoped)\s+)*"
@@ -13,15 +16,10 @@ DECL_RE = re.compile(
 )
 SCOPE_OPEN_RE = re.compile(r"^(namespace|section|mutual)(?:\s+([^\s]+))?\s*$")
 SCOPE_END_RE = re.compile(r"^end(?:\s+([^\s]+))?\s*$")
-FENCE_RE = re.compile(r"^[ \t>]*(`{3,}|~{3,})")
-DEST_RE = re.compile(r'^\s*([^\s<>]+?)(?:\s+"([^"]*)")?\s*$')
-CODE_LABEL_RE = re.compile(r"^`([^`\s/]+)`$")
-HTML_HREF_RE = re.compile(
-    r"""<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I
-)
-
-USAGE_HINT = 'use single-line [`symbol`](path.lean) or [text](path.lean "lean:symbol")'
 TITLE_PREFIX = "lean:"
+USAGE_HINT = 'use single-line [`symbol`](path.lean) or [text](path.lean "lean:symbol")'
+MANAGED_URL_RE = re.compile(r"^([^\s#?%&\\<>()]+\.lean)(?:#[A-Za-z0-9-]*)?$")
+SYMBOL_RE = re.compile(r"^[^\s`/]+$")
 
 
 def clean_part(part: str) -> str:
@@ -192,311 +190,252 @@ def resolve_symbol(
     return None, f"symbol '{symbol}' is ambiguous ({names})"
 
 
-def is_local_lean_url(url: str) -> bool:
-    if not url or url.startswith(("#", "mailto:")) or "://" in url:
-        return False
-    rel_path = url.split("#", 1)[0]
-    return rel_path.endswith(".lean")
+def lean_target(href: str):
+    if not href or href.startswith("#"):
+        return None
+    parts = urlsplit(href)
+    if parts.scheme or parts.netloc or not unquote(parts.path).endswith(".lean"):
+        return None
+    return parts
 
 
-def scan_links_in_line(line: str):
-    i, n = 0, len(line)
-    while i < n:
-        if line[i] == "`":
-            ticks = 1
-            while i + ticks < n and line[i + ticks] == "`":
-                ticks += 1
-            end = line.find("`" * ticks, i + ticks)
-            i = n if end == -1 else end + ticks
+def is_ascii_punct(ch: str) -> bool:
+    return ch.isascii() and not ch.isalnum() and ch.isprintable() and not ch.isspace()
+
+
+def inline_destinations(text: str) -> list[tuple[int, int]]:
+    spans: list[tuple[int, int]] = []
+    last = 0
+    for m in re.finditer(r"\]\(", text):
+        i, n = m.end(), len(text)
+        while i < n and text[i] in " \t":
+            i += 1
+        if i < last or i >= n or text[i] in "<\n":
             continue
-        if line[i] == "[" and (i == 0 or line[i - 1] != "!"):
-            j = i + 1
-            while j < n:
-                if line[j] == "`":
-                    ticks = 1
-                    while j + ticks < n and line[j + ticks] == "`":
-                        ticks += 1
-                    end = line.find("`" * ticks, j + ticks)
-                    if end == -1:
-                        j = n
-                        break
-                    j = end + ticks
-                elif line[j] == "\\":
-                    j += 2
-                elif line[j] == "]":
+        j, depth = i, 0
+        while j < n:
+            ch = text[j]
+            if ch == "\\" and j + 1 < n and is_ascii_punct(text[j + 1]):
+                j += 2
+                continue
+            if ch.isspace() or ord(ch) < 0x20:
+                break
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                if depth == 0:
                     break
-                else:
-                    j += 1
-            if j < n and line[j] == "]" and j + 1 < n and line[j + 1] == "(":
-                k = j + 2
-                paren = 1
-                while k < n and paren > 0:
-                    if line[k] == '"':
-                        k += 1
-                        while k < n:
-                            if line[k] == "\\":
-                                k += 2
-                            elif line[k] == '"':
-                                k += 1
-                                break
-                            else:
-                                k += 1
-                        continue
-                    if line[k] == "(":
-                        paren += 1
-                    elif line[k] == ")":
-                        paren -= 1
-                    k += 1
-                if paren == 0:
-                    yield i, j + 2, k - 1, k, line[i + 1 : j], line[j + 2 : k - 1]
-                    i = k
-                    continue
-        i += 1
+                depth -= 1
+            j += 1
+        if depth == 0 and j > i:
+            spans.append((i, j))
+            last = j
+    return spans
 
 
-def audit_ast_links(
-    md_path: Path, text: str, blessed_by_line: dict[int, Counter[str]]
-) -> list[str]:
-    md = MarkdownIt("commonmark")
-    env: dict = {}
-    tokens = md.parse(text, env)
-    errors: list[str] = []
-    reported_ref_labels: set[str] = set()
+class AnchorHrefs(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.hrefs: list[str] = []
 
-    for ref_label, ref_data in env.get("references", {}).items():
-        href = ref_data.get("href", "")
-        title = ref_data.get("title", "") or ""
-        rmap = ref_data.get("map") or [0, 1]
-        line_no = rmap[0] + 1
-        if is_local_lean_url(href) and ("#" in href or title.startswith(TITLE_PREFIX)):
-            reported_ref_labels.add(ref_label)
-            errors.append(
-                f"{md_path}:{line_no}: [{ref_label}]: {href}: "
-                f"reference-style Lean symbol/line links are unsupported; {USAGE_HINT}"
-            )
+    def handle_starttag(self, tag, attrs) -> None:
+        if tag == "a":
+            self.hrefs.extend(v or "" for k, v in attrs if k == "href")
 
-    def check_html(content: str, line_no: int) -> None:
-        for m in HTML_HREF_RE.finditer(content):
-            href = m.group(1) or m.group(2) or m.group(3) or ""
-            if is_local_lean_url(href) and "#" in href:
-                errors.append(
-                    f"{md_path}:{line_no}: {href}: HTML <a> Lean line links are unsupported; "
-                    f"{USAGE_HINT}"
-                )
-
-    def walk_block(tok) -> None:
-        bmap = tok.map or [0, 1]
-        start_ln, end_ln = bmap[0] + 1, bmap[1]
-        if tok.type in ("html_block", "html_inline"):
-            check_html(tok.content, start_ln)
-        if tok.children:
-            avail: Counter[str] = Counter()
-            for ln in range(start_ln, end_ln + 1):
-                avail.update(blessed_by_line.get(ln, ()))
-            for child in tok.children:
-                if child.type == "html_inline":
-                    check_html(child.content, start_ln)
-                elif child.type == "link_open":
-                    href = child.attrGet("href") or ""
-                    title = child.attrGet("title")
-                    if not is_local_lean_url(href):
-                        continue
-                    rel_path, frag = (href.split("#", 1) + [None])[:2]
-                    lean_file = (md_path.parent / rel_path).resolve()
-                    if not lean_file.is_file():
-                        errors.append(
-                            f"{md_path}:{start_ln}: missing file '{rel_path}'"
-                        )
-                        continue
-                    is_ref = bool(child.meta and "label" in child.meta)
-                    has_lean_title = title is not None and title.startswith(
-                        TITLE_PREFIX
-                    )
-                    if is_ref:
-                        ref_lbl = child.meta["label"]
-                        if (
-                            frag is not None or has_lean_title
-                        ) and ref_lbl not in reported_ref_labels:
-                            errors.append(
-                                f"{md_path}:{start_ln}: {href}: reference-style Lean line links "
-                                f"are unsupported; {USAGE_HINT}"
-                            )
-                        continue
-                    if frag is not None or has_lean_title:
-                        key = f"{href}||{title or ''}"
-                        if avail[key] > 0:
-                            avail[key] -= 1
-                        else:
-                            errors.append(
-                                f"{md_path}:{start_ln}: {href}: unmanaged or multiline Lean "
-                                f"line link; {USAGE_HINT}"
-                            )
-
-    def walk(toks) -> None:
-        for t in toks:
-            walk_block(t)
-
-    walk(tokens)
-    return errors
+    handle_startendtag = handle_starttag
 
 
 def process_md(
     md_path: Path, cache: dict[Path, list[tuple[list[str], int, int]]], write: bool
 ) -> list[str]:
     text = md_path.read_text(encoding="utf-8")
-    lines = text.splitlines(keepends=True)
     errors: list[str] = []
-    out_lines: list[str] = []
-    blessed_by_line: dict[int, Counter[str]] = {}
-    fence: str | None = None
+    edits: list[tuple[int, int, str]] = []
 
-    for line_no, line in enumerate(lines, 1):
-        m_fence = FENCE_RE.match(line)
-        if m_fence:
-            tok = m_fence.group(1)
-            if fence is None:
-                fence = tok
-            elif tok[0] == fence[0] and len(tok) >= len(fence):
-                fence = None
-            out_lines.append(line)
-            continue
-        if fence is not None:
-            out_lines.append(line)
-            continue
+    def line_of(offset: int) -> int:
+        return text.count("\n", 0, offset) + 1
 
-        edits: list[tuple[int, int, str]] = []
-        for _, dest_start, dest_end, _, label, dest in scan_links_in_line(line):
-            m_dest = DEST_RE.match(dest)
-            if not m_dest:
-                continue
-            url, title = m_dest.group(1), m_dest.group(2)
-            if not is_local_lean_url(url):
-                continue
-            rel_path, frag = (url.split("#", 1) + [None])[:2]
-            lean_file = (md_path.parent / rel_path).resolve()
-            if not lean_file.is_file():
-                errors.append(f"{md_path}:{line_no}: missing file '{rel_path}'")
-                continue
+    def err(line: int, href: str, msg: str) -> None:
+        errors.append(f"{md_path}:{line}: {href}: {msg}")
 
-            symbol: str | None = None
-            if title is not None:
-                if title.startswith(TITLE_PREFIX):
-                    symbol = title[len(TITLE_PREFIX) :].strip()
-                    if not symbol:
-                        errors.append(
-                            f"{md_path}:{line_no}: {url}: empty symbol after '{TITLE_PREFIX}'; "
-                            f"{USAGE_HINT}"
-                        )
-                        blessed_by_line.setdefault(line_no, Counter())[
-                            f"{url}||{title}"
-                        ] += 1
-                        continue
-            else:
-                m_lbl = CODE_LABEL_RE.match(label.strip())
-                if m_lbl and not m_lbl.group(1).endswith(".lean"):
-                    symbol = m_lbl.group(1)
+    # Each inline destination is swapped for a unique probe, so the parse
+    # itself says which source spans render as links; literal text keeps its probe.
+    spans = inline_destinations(text)
+    tag = f"lean-anchor-{secrets.token_hex(8)}-"
+    probe_parts, prev = [], 0
+    for idx, (s, e) in enumerate(spans):
+        probe_parts += [text[prev:s], f"{tag}{idx}"]
+        prev = e
+    probe_parts.append(text[prev:])
+    probe = "".join(probe_parts)
+    probe_re = re.compile(re.escape(tag) + r"(\d+)")
 
-            if symbol is None:
-                if frag is not None:
-                    errors.append(
-                        f"{md_path}:{line_no}: {url}: unmanaged fragment on .lean link; "
-                        f"{USAGE_HINT}"
-                    )
-                    blessed_by_line.setdefault(line_no, Counter())[
-                        f"{url}||{title or ''}"
-                    ] += 1
-                continue
+    def unprobe(s: str) -> str:
+        return probe_re.sub(lambda m: text[slice(*spans[int(m.group(1))])], s)
 
-            if lean_file not in cache:
-                cache[lean_file] = parse_lean_decls(lean_file)
-            span, err = resolve_symbol(cache[lean_file], symbol)
-            if err is not None or span is None:
-                errors.append(f"{md_path}:{line_no}: {rel_path}: {err}")
-                blessed_by_line.setdefault(line_no, Counter())[
-                    f"{url}||{title or ''}"
-                ] += 1
-                continue
+    md = MarkdownIt("commonmark").enable(["table", "strikethrough"])
+    env: dict = {}
+    tokens = md.parse(probe, env)
 
-            s_ln, e_ln = span
-            want_frag = f"L{s_ln}" if s_ln == e_ln else f"L{s_ln}-L{e_ln}"
-            new_url = f"{rel_path}#{want_frag}"
-            new_dest = f'{new_url} "{title}"' if title is not None else new_url
-            effective_url = url
-            if dest != new_dest:
-                if write:
-                    edits.append((dest_start, dest_end, new_dest))
-                    effective_url = new_url
-                else:
-                    errors.append(
-                        f"{md_path}:{line_no}: {url} -> expected {new_url} for '{symbol}'"
-                    )
-            blessed_by_line.setdefault(line_no, Counter())[
-                f"{effective_url}||{title or ''}"
-            ] += 1
+    def_hrefs: set[str] = set()
+    for label, ref in env.get("references", {}).items():
+        href = unprobe(ref.get("href", ""))
+        title = ref.get("title") or ""
+        target = lean_target(href)
+        if target and ("#" in href or title.startswith(TITLE_PREFIX)):
+            def_hrefs.add(href)
+            err(
+                (ref.get("map") or [0])[0] + 1,
+                f"[{label}]: {href}",
+                f"reference-style Lean symbol/line links are unsupported; {USAGE_HINT}",
+            )
 
-        if edits:
-            rebuilt = []
-            prev = 0
-            for s, e, rep in edits:
-                rebuilt.append(line[prev:s])
-                rebuilt.append(rep)
-                prev = e
-            rebuilt.append(line[prev:])
-            out_lines.append("".join(rebuilt))
+    def check_html(content: str, line: int) -> None:
+        parser = AnchorHrefs()
+        parser.feed(unprobe(content))
+        parser.close()
+        for href in parser.hrefs:
+            if lean_target(href) and "#" in href:
+                err(
+                    line,
+                    href,
+                    f"HTML <a> Lean line links are unsupported; {USAGE_HINT}",
+                )
+
+    def check_link(children, i: int, block_line: int) -> None:
+        tok = children[i]
+        href = tok.attrGet("href") or ""
+        title = tok.attrGet("title")
+        m_probe = probe_re.fullmatch(href)
+        if m_probe:
+            s, e = spans[int(m_probe.group(1))]
+            raw: str | None = text[s:e]
+            href = md.normalizeLink(unescapeAll(raw))
+            line = line_of(s)
         else:
-            out_lines.append(line)
+            raw, line = None, block_line
+        if lean_target(href) is None:
+            return
+        close = next(
+            (
+                j
+                for j in range(i + 1, len(children))
+                if children[j].type == "link_close"
+            ),
+            len(children),
+        )
+        label = children[i + 1 : close]
 
-    final_text = "".join(out_lines)
-    errors.extend(audit_ast_links(md_path, final_text, blessed_by_line))
+        symbol: str | None = None
+        if title is not None:
+            if title.startswith(TITLE_PREFIX):
+                symbol = title[len(TITLE_PREFIX) :].strip()
+                if not symbol:
+                    err(
+                        line, href, f"empty symbol after '{TITLE_PREFIX}'; {USAGE_HINT}"
+                    )
+                    return
+        elif (
+            len(label) == 1
+            and label[0].type == "code_inline"
+            and SYMBOL_RE.match(label[0].content)
+            and not label[0].content.endswith(".lean")
+        ):
+            symbol = label[0].content
+        if symbol is None:
+            if "#" in href:
+                err(line, href, f"unmanaged fragment on .lean link; {USAGE_HINT}")
+            return
 
-    if write and not errors and final_text != text:
-        md_path.write_text(final_text, encoding="utf-8")
+        m_url = MANAGED_URL_RE.match(raw) if raw is not None else None
+        if m_url is None:
+            if raw is None and href in def_hrefs:
+                return
+            kind = "reference-style" if raw is None else "unsupported"
+            err(line, href, f"{kind} Lean symbol/line link; {USAGE_HINT}")
+            return
+
+        rel_path = m_url.group(1)
+        lean_file = (md_path.parent / rel_path).resolve()
+        if not lean_file.is_file():
+            errors.append(f"{md_path}:{line}: missing file '{rel_path}'")
+            return
+        if lean_file not in cache:
+            cache[lean_file] = parse_lean_decls(lean_file)
+        span, why = resolve_symbol(cache[lean_file], symbol)
+        if why is not None or span is None:
+            errors.append(f"{md_path}:{line}: {rel_path}: {why}")
+            return
+        s_ln, e_ln = span
+        want = f"{rel_path}#L{s_ln}" + ("" if s_ln == e_ln else f"-L{e_ln}")
+        if raw == want:
+            return
+        if write:
+            edits.append((s, e, want))
+        else:
+            err(line, raw, f"expected {want} for '{symbol}'")
+
+    def walk(toks, block_line: int = 1) -> None:
+        for tok in toks:
+            line = tok.map[0] + 1 if tok.map else block_line
+            if tok.type in ("html_block", "html_inline"):
+                check_html(tok.content, line)
+            if tok.children:
+                for i, child in enumerate(tok.children):
+                    if child.type == "html_inline":
+                        check_html(child.content, line)
+                    elif child.type == "link_open":
+                        check_link(tok.children, i, line)
+
+    walk(tokens)
+
+    if write and not errors and edits:
+        out, prev = [], 0
+        for s, e, rep in sorted(edits):
+            out += [text[prev:s], rep]
+            prev = e
+        out.append(text[prev:])
+        md_path.write_text("".join(out), encoding="utf-8")
     return errors
 
 
 def collect_md_files(paths: list[str]) -> list[Path]:
     files: list[Path] = []
     seen: set[Path] = set()
+
+    def add(p: Path) -> None:
+        rp = p.resolve()
+        if not p.is_symlink() and rp not in seen:
+            seen.add(rp)
+            files.append(p)
+
     for raw in paths:
         p = Path(raw)
         if p.is_symlink():
             continue
         if p.is_dir():
             for dirpath, dirnames, filenames in os.walk(p, followlinks=False):
-                dirnames[:] = sorted(
-                    d
-                    for d in dirnames
-                    if not d.startswith(".") and not (Path(dirpath) / d).is_symlink()
-                )
+                dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
                 for fn in sorted(filenames):
                     if fn.endswith(".md"):
-                        fp = Path(dirpath) / fn
-                        if not fp.is_symlink():
-                            rp = fp.resolve()
-                            if rp not in seen:
-                                seen.add(rp)
-                                files.append(fp)
+                        add(Path(dirpath) / fn)
         elif p.is_file() and p.suffix == ".md":
-            rp = p.resolve()
-            if rp not in seen:
-                seen.add(rp)
-                files.append(p)
+            add(p)
     return files
 
 
 def main(argv: list[str]) -> int:
-    check_only = False
     args = argv[1:]
-    if args and args[0] == "--check":
-        check_only = True
+    check_only = bool(args) and args[0] == "--check"
+    if check_only:
         args = args[1:]
     cache: dict[Path, list[tuple[list[str], int, int]]] = {}
     errors: list[str] = []
     for md in collect_md_files(args):
         errors.extend(process_md(md, cache, write=not check_only))
     if errors:
-        for err in errors:
-            print(err, file=sys.stderr)
+        for e in errors:
+            print(e, file=sys.stderr)
         print(f"{len(errors)} Lean anchor error(s).", file=sys.stderr)
         return 1
     return 0

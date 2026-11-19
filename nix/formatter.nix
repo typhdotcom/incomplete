@@ -150,9 +150,9 @@ in
       #
       # Without arguments a project that owns only part of its tree formats
       # just that part, from the repo root so the paths resolve.
-      # Cross-file Markdown symbol anchors depend on the Lean sources they point
-      # into, which treefmt's per-file cache does not track; running lean-anchors
-      # up front refreshes any affected Markdown files before treefmt formats.
+      # lean-anchors output depends on the Lean sources each Markdown file
+      # links into, which treefmt's per-file cache cannot see, so the cache is
+      # off.
       formatter = pkgs.writeShellScriptBin "treefmt" (
         ''
           set -euo pipefail
@@ -171,40 +171,7 @@ in
           fi
         ''
         + ''
-          run_anchors=1
-          anchor_mode=()
-          anchor_paths=()
-          expect_val=0
-          for arg in "$@"; do
-            if [ "$expect_val" -eq 1 ]; then
-              expect_val=0
-              continue
-            fi
-            case "$arg" in
-              -h|--help|-V|--version|--init|--clear-cache)
-                run_anchors=0
-                ;;
-              --fail-on-change)
-                anchor_mode=(--check)
-                ;;
-              --walk|--tree-root|--tree-root-file|--tree-root-cmd|--config-file|--formatters|--excludes|--on-unmatched|-C)
-                expect_val=1
-                ;;
-              -*)
-                ;;
-              *)
-                anchor_paths+=("$arg")
-                ;;
-            esac
-          done
-          if [ "$run_anchors" -eq 1 ]; then
-            if [ "''${#anchor_paths[@]}" -eq 0 ]; then
-              ${python}/bin/python3 ${./lean-anchors.py} "''${anchor_mode[@]}" "''${root:-.}"
-            else
-              ${python}/bin/python3 ${./lean-anchors.py} "''${anchor_mode[@]}" "''${anchor_paths[@]}"
-            fi
-          fi
-          exec ${treefmt.config.build.wrapper}/bin/treefmt --walk "$walk" "$@"
+          exec ${treefmt.config.build.wrapper}/bin/treefmt --walk "$walk" --no-cache "$@"
         ''
       );
 

@@ -65,6 +65,9 @@ in
         lean-anchors = lint "lean-anchors" ''
           ${python}/bin/python3 ${./lean-anchors.py} --check ${root}
         '';
+        lean-anchors-test = lint "lean-anchors-test" ''
+          ${python}/bin/python3 ${./lean-anchors-test.py} ${./lean-anchors.py}
+        '';
 
         # `-exec ... +` does not run at all when nothing matches, so a project with
         # no shell scripts passes rather than erroring on an empty argument list.
