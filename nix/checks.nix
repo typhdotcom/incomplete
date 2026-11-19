@@ -40,6 +40,7 @@ in
     { pkgs, ... }:
     let
       root = cfg.checkRoot;
+      python = pkgs.python3.withPackages (ps: [ ps.markdown-it-py ]);
       lint =
         name: command:
         pkgs.runCommand "lint-${name}" { } ''
@@ -62,7 +63,7 @@ in
             ${pkgs.lychee}/bin/lychee --offline --no-progress --include-fragments .
         '';
         lean-anchors = lint "lean-anchors" ''
-          ${pkgs.python3}/bin/python3 ${./lean-anchors.py} --check ${root}
+          ${python}/bin/python3 ${./lean-anchors.py} --check ${root}
         '';
 
         # `-exec ... +` does not run at all when nothing matches, so a project with

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
+from collections import Counter
+import os
 import re
 import sys
 from pathlib import Path
+
+from markdown_it import MarkdownIt
 
 DECL_RE = re.compile(
     r"^(?:@\[[^\]]*\]\s*)*(?:(?:private|protected|noncomputable|partial|unsafe|scoped)\s+)*"
@@ -10,6 +14,14 @@ DECL_RE = re.compile(
 SCOPE_OPEN_RE = re.compile(r"^(namespace|section|mutual)(?:\s+([^\s]+))?\s*$")
 SCOPE_END_RE = re.compile(r"^end(?:\s+([^\s]+))?\s*$")
 FENCE_RE = re.compile(r"^[ \t>]*(`{3,}|~{3,})")
+DEST_RE = re.compile(r'^\s*([^\s<>]+?)(?:\s+"([^"]*)")?\s*$')
+CODE_LABEL_RE = re.compile(r"^`([^`\s/]+)`$")
+HTML_HREF_RE = re.compile(
+    r"""<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I
+)
+
+USAGE_HINT = 'use single-line [`symbol`](path.lean) or [text](path.lean "lean:symbol")'
+TITLE_PREFIX = "lean:"
 
 
 def clean_part(part: str) -> str:
@@ -140,7 +152,7 @@ def parse_lean_decls(lean_path: Path) -> list[tuple[list[str], int, int]]:
                 if scopes:
                     scopes.pop()
             else:
-                for p in reversed(split_name(arg)):
+                for _ in split_name(arg):
                     if scopes:
                         scopes.pop()
             continue
@@ -162,6 +174,8 @@ def resolve_symbol(
     decls: list[tuple[list[str], int, int]], symbol: str
 ) -> tuple[tuple[int, int] | None, str | None]:
     want = split_name(symbol)
+    if not want:
+        return None, "empty Lean symbol"
     exact = [(s, e) for parts, s, e in decls if parts == want]
     if len(exact) == 1:
         return exact[0], None
@@ -176,6 +190,13 @@ def resolve_symbol(
         return None, f"symbol '{symbol}' not found"
     names = ", ".join(".".join(parts) for parts, _, _ in suffix)
     return None, f"symbol '{symbol}' is ambiguous ({names})"
+
+
+def is_local_lean_url(url: str) -> bool:
+    if not url or url.startswith(("#", "mailto:")) or "://" in url:
+        return False
+    rel_path = url.split("#", 1)[0]
+    return rel_path.endswith(".lean")
 
 
 def scan_links_in_line(line: str):
@@ -233,8 +254,90 @@ def scan_links_in_line(line: str):
         i += 1
 
 
-DEST_RE = re.compile(r'^\s*(\S+?)(?:\s+"([^"]*)")?\s*$')
-CODE_LABEL_RE = re.compile(r"^`([^`\s/]+)`$")
+def audit_ast_links(
+    md_path: Path, text: str, blessed_by_line: dict[int, Counter[str]]
+) -> list[str]:
+    md = MarkdownIt("commonmark")
+    env: dict = {}
+    tokens = md.parse(text, env)
+    errors: list[str] = []
+    reported_ref_labels: set[str] = set()
+
+    for ref_label, ref_data in env.get("references", {}).items():
+        href = ref_data.get("href", "")
+        title = ref_data.get("title", "") or ""
+        rmap = ref_data.get("map") or [0, 1]
+        line_no = rmap[0] + 1
+        if is_local_lean_url(href) and ("#" in href or title.startswith(TITLE_PREFIX)):
+            reported_ref_labels.add(ref_label)
+            errors.append(
+                f"{md_path}:{line_no}: [{ref_label}]: {href}: "
+                f"reference-style Lean symbol/line links are unsupported; {USAGE_HINT}"
+            )
+
+    def check_html(content: str, line_no: int) -> None:
+        for m in HTML_HREF_RE.finditer(content):
+            href = m.group(1) or m.group(2) or m.group(3) or ""
+            if is_local_lean_url(href) and "#" in href:
+                errors.append(
+                    f"{md_path}:{line_no}: {href}: HTML <a> Lean line links are unsupported; "
+                    f"{USAGE_HINT}"
+                )
+
+    def walk_block(tok) -> None:
+        bmap = tok.map or [0, 1]
+        start_ln, end_ln = bmap[0] + 1, bmap[1]
+        if tok.type in ("html_block", "html_inline"):
+            check_html(tok.content, start_ln)
+        if tok.children:
+            avail: Counter[str] = Counter()
+            for ln in range(start_ln, end_ln + 1):
+                avail.update(blessed_by_line.get(ln, ()))
+            for child in tok.children:
+                if child.type == "html_inline":
+                    check_html(child.content, start_ln)
+                elif child.type == "link_open":
+                    href = child.attrGet("href") or ""
+                    title = child.attrGet("title")
+                    if not is_local_lean_url(href):
+                        continue
+                    rel_path, frag = (href.split("#", 1) + [None])[:2]
+                    lean_file = (md_path.parent / rel_path).resolve()
+                    if not lean_file.is_file():
+                        errors.append(
+                            f"{md_path}:{start_ln}: missing file '{rel_path}'"
+                        )
+                        continue
+                    is_ref = bool(child.meta and "label" in child.meta)
+                    has_lean_title = title is not None and title.startswith(
+                        TITLE_PREFIX
+                    )
+                    if is_ref:
+                        ref_lbl = child.meta["label"]
+                        if (
+                            frag is not None or has_lean_title
+                        ) and ref_lbl not in reported_ref_labels:
+                            errors.append(
+                                f"{md_path}:{start_ln}: {href}: reference-style Lean line links "
+                                f"are unsupported; {USAGE_HINT}"
+                            )
+                        continue
+                    if frag is not None or has_lean_title:
+                        key = f"{href}||{title or ''}"
+                        if avail[key] > 0:
+                            avail[key] -= 1
+                        else:
+                            errors.append(
+                                f"{md_path}:{start_ln}: {href}: unmanaged or multiline Lean "
+                                f"line link; {USAGE_HINT}"
+                            )
+
+    def walk(toks) -> None:
+        for t in toks:
+            walk_block(t)
+
+    walk(tokens)
+    return errors
 
 
 def process_md(
@@ -244,6 +347,7 @@ def process_md(
     lines = text.splitlines(keepends=True)
     errors: list[str] = []
     out_lines: list[str] = []
+    blessed_by_line: dict[int, Counter[str]] = {}
     fence: str | None = None
 
     for line_no, line in enumerate(lines, 1):
@@ -266,19 +370,27 @@ def process_md(
             if not m_dest:
                 continue
             url, title = m_dest.group(1), m_dest.group(2)
-            if url.startswith(("#", "mailto:")) or "://" in url:
+            if not is_local_lean_url(url):
                 continue
             rel_path, frag = (url.split("#", 1) + [None])[:2]
-            if not rel_path.endswith(".lean"):
-                continue
             lean_file = (md_path.parent / rel_path).resolve()
             if not lean_file.is_file():
                 errors.append(f"{md_path}:{line_no}: missing file '{rel_path}'")
                 continue
 
             symbol: str | None = None
-            if title is not None and title.strip():
-                symbol = title.strip()
+            if title is not None:
+                if title.startswith(TITLE_PREFIX):
+                    symbol = title[len(TITLE_PREFIX) :].strip()
+                    if not symbol:
+                        errors.append(
+                            f"{md_path}:{line_no}: {url}: empty symbol after '{TITLE_PREFIX}'; "
+                            f"{USAGE_HINT}"
+                        )
+                        blessed_by_line.setdefault(line_no, Counter())[
+                            f"{url}||{title}"
+                        ] += 1
+                        continue
             else:
                 m_lbl = CODE_LABEL_RE.match(label.strip())
                 if m_lbl and not m_lbl.group(1).endswith(".lean"):
@@ -287,9 +399,12 @@ def process_md(
             if symbol is None:
                 if frag is not None:
                     errors.append(
-                        f"{md_path}:{line_no}: {url}: bare fragment on .lean link; "
-                        'use [`symbol`](...) or [text](... "symbol")'
+                        f"{md_path}:{line_no}: {url}: unmanaged fragment on .lean link; "
+                        f"{USAGE_HINT}"
                     )
+                    blessed_by_line.setdefault(line_no, Counter())[
+                        f"{url}||{title or ''}"
+                    ] += 1
                 continue
 
             if lean_file not in cache:
@@ -297,19 +412,27 @@ def process_md(
             span, err = resolve_symbol(cache[lean_file], symbol)
             if err is not None or span is None:
                 errors.append(f"{md_path}:{line_no}: {rel_path}: {err}")
+                blessed_by_line.setdefault(line_no, Counter())[
+                    f"{url}||{title or ''}"
+                ] += 1
                 continue
 
             s_ln, e_ln = span
             want_frag = f"L{s_ln}" if s_ln == e_ln else f"L{s_ln}-L{e_ln}"
             new_url = f"{rel_path}#{want_frag}"
             new_dest = f'{new_url} "{title}"' if title is not None else new_url
+            effective_url = url
             if dest != new_dest:
                 if write:
                     edits.append((dest_start, dest_end, new_dest))
+                    effective_url = new_url
                 else:
                     errors.append(
                         f"{md_path}:{line_no}: {url} -> expected {new_url} for '{symbol}'"
                     )
+            blessed_by_line.setdefault(line_no, Counter())[
+                f"{effective_url}||{title or ''}"
+            ] += 1
 
         if edits:
             rebuilt = []
@@ -323,27 +446,41 @@ def process_md(
         else:
             out_lines.append(line)
 
-    if write and not errors:
-        new_text = "".join(out_lines)
-        if new_text != text:
-            md_path.write_text(new_text, encoding="utf-8")
+    final_text = "".join(out_lines)
+    errors.extend(audit_ast_links(md_path, final_text, blessed_by_line))
+
+    if write and not errors and final_text != text:
+        md_path.write_text(final_text, encoding="utf-8")
     return errors
 
 
 def collect_md_files(paths: list[str]) -> list[Path]:
     files: list[Path] = []
+    seen: set[Path] = set()
     for raw in paths:
         p = Path(raw)
+        if p.is_symlink():
+            continue
         if p.is_dir():
-            files.extend(
-                sorted(
-                    f
-                    for f in p.rglob("*.md")
-                    if not any(part.startswith(".") for part in f.relative_to(p).parts)
+            for dirpath, dirnames, filenames in os.walk(p, followlinks=False):
+                dirnames[:] = sorted(
+                    d
+                    for d in dirnames
+                    if not d.startswith(".") and not (Path(dirpath) / d).is_symlink()
                 )
-            )
-        elif p.suffix == ".md":
-            files.append(p)
+                for fn in sorted(filenames):
+                    if fn.endswith(".md"):
+                        fp = Path(dirpath) / fn
+                        if not fp.is_symlink():
+                            rp = fp.resolve()
+                            if rp not in seen:
+                                seen.add(rp)
+                                files.append(fp)
+        elif p.is_file() and p.suffix == ".md":
+            rp = p.resolve()
+            if rp not in seen:
+                seen.add(rp)
+                files.append(p)
     return files
 
 

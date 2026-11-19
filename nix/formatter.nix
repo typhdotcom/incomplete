@@ -17,6 +17,7 @@ in
   perSystem =
     { pkgs, ... }:
     let
+      python = pkgs.python3.withPackages (ps: [ ps.markdown-it-py ]);
       treefmt = inputs.treefmt-nix.lib.evalModule pkgs {
         projectRootFile = "flake.nix";
 
@@ -53,7 +54,7 @@ in
             };
 
             lean-anchors = {
-              command = "${pkgs.python3}/bin/python3";
+              command = "${python}/bin/python3";
               options = [ "${./lean-anchors.py}" ];
               includes = [ "*.md" ];
               priority = 0;
@@ -149,10 +150,14 @@ in
       #
       # Without arguments a project that owns only part of its tree formats
       # just that part, from the repo root so the paths resolve.
+      # Cross-file Markdown symbol anchors depend on the Lean sources they point
+      # into, which treefmt's per-file cache does not track; running lean-anchors
+      # up front refreshes any affected Markdown files before treefmt formats.
       formatter = pkgs.writeShellScriptBin "treefmt" (
         ''
-          root=$(jj root --ignore-working-copy 2>/dev/null)
-          git=$(git rev-parse --show-toplevel 2>/dev/null)
+          set -euo pipefail
+          root=$(jj root --ignore-working-copy 2>/dev/null || true)
+          git=$(git rev-parse --show-toplevel 2>/dev/null || true)
           if [ -n "$root" ] && [ "''${git#"$root"/}" = "$git" ]; then
             walk=jujutsu
           else
@@ -166,6 +171,39 @@ in
           fi
         ''
         + ''
+          run_anchors=1
+          anchor_mode=()
+          anchor_paths=()
+          expect_val=0
+          for arg in "$@"; do
+            if [ "$expect_val" -eq 1 ]; then
+              expect_val=0
+              continue
+            fi
+            case "$arg" in
+              -h|--help|-V|--version|--init|--clear-cache)
+                run_anchors=0
+                ;;
+              --fail-on-change)
+                anchor_mode=(--check)
+                ;;
+              --walk|--tree-root|--tree-root-file|--tree-root-cmd|--config-file|--formatters|--excludes|--on-unmatched|-C)
+                expect_val=1
+                ;;
+              -*)
+                ;;
+              *)
+                anchor_paths+=("$arg")
+                ;;
+            esac
+          done
+          if [ "$run_anchors" -eq 1 ]; then
+            if [ "''${#anchor_paths[@]}" -eq 0 ]; then
+              ${python}/bin/python3 ${./lean-anchors.py} "''${anchor_mode[@]}" "''${root:-.}"
+            else
+              ${python}/bin/python3 ${./lean-anchors.py} "''${anchor_mode[@]}" "''${anchor_paths[@]}"
+            fi
+          fi
           exec ${treefmt.config.build.wrapper}/bin/treefmt --walk "$walk" "$@"
         ''
       );

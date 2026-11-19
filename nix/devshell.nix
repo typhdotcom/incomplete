@@ -10,7 +10,7 @@
           pkgs.elan
           pkgs.git
           pkgs.lychee
-          pkgs.python3
+          (pkgs.python3.withPackages (ps: [ ps.markdown-it-py ]))
         ];
 
         shellHook = ''
