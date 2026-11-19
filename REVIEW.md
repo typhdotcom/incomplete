@@ -1,6 +1,6 @@
-State: RETURNED
-Turn: worker
-Candidate: mmrrnmvqzrrnntmvxruvowslzlsxrwmm / 05a0eb35cf432b8284792ee8e71838fb3aadd60c
+State: READY FOR REVIEW
+Turn: reviewer
+Candidate: zxlkvmuzwpnotnytyrsqsspnknoozqwt / 34e2e6100271e43218c6a62c003a0165c596f2ad
 
 # Publication review of the README and tooling
 
@@ -26,69 +26,69 @@ and bounded provability results, and the supported build.
 
 ### D6 — Use the original Markdown parse to establish link identity
 
-Status: open
+Status: submitted
 
-The 28 fixtures pass and exercise the previous review's counterexamples.
-The new placeholder scan, however, changes the source before deciding
-which links render. With `alpha` on line 1 of `A.lean`, this ordinary
-Markdown renders a link to line 99:
+The placeholder scan is gone. `process_md` parses the unmodified file, and
+that parse alone decides what renders. `located_link` wraps markdown-it's
+inline `link` rule. On each successful non-silent match, it records the
+link's span within the inline content on the `link_open` token. It also
+records the destination span: the rule's own `parseLinkLabel` and
+`parseLinkDestination` re-run from the match start, and the span is kept
+only for an inline (not reference) link.
 
-```markdown
-`example ](text` and [`alpha`](A.lean#L99)
-```
+`align` maps each inline content line to its source line. It allows only
+deletions: container prefixes, cell delimiters, and the backslash of a
+table-cell `\|`. A per-line cursor keeps table cells in order, and a
+failed alignment disables later lookups on that line. A rendered link
+needs validation when it has a `lean:` title, a single code-span symbol
+label, or a fragment. Such a link is then
 
-The scan treats the closing backtick as part of a potential destination and
-replaces it with a placeholder. This changes how Markdown parses the rest
-of the line and hides the real link. The anchor checker, the built
-formatter with `--ci`, and Lychee all exited 0 and left the stale link intact.
-Removing `#L99` also leaves a managed link that the formatter never anchors.
+- rejected as multiline if its own content span contains a newline;
+- rejected with a location diagnostic if its destination cannot be
+  mapped, or if the mapped source bytes differ from the parsed
+  destination;
+- otherwise validated or rewritten only at that destination's source
+  span.
 
-The scan also records the URL span without establishing whether the whole
-link is on one line. These two rendered links both pass despite the README's
-single-line rule:
+The file is read and written with `newline=""`, so the rewrite keeps every
+byte outside the replaced destinations, line endings included. Parsed-HTML
+`href` checks and decoded-path classification are unchanged.
 
-```markdown
-[`alpha`](A.lean#L1
-)
+`checks.lean-anchors-test` now compares bytes and has 35 cases, each with
+an expected outcome:
 
-[text](A.lean#L1
- "lean:alpha")
-```
+- **ok**: `--check` passes, and the write pass changes nothing.
+- **fix**: `--check` exits 1 and names `README.md:<line>`. The write pass
+  produces exactly the expected bytes, which then pass `--check`.
+- **reject**: `--check` and the write pass both exit 1 and name
+  `README.md:<line>`. The bytes are unchanged.
 
-Finally, the anchor rewrite changes the entire file's CRLF line endings to
-LF when it updates one URL. This violates the promise that edits touch only
-the linked destination. The existing text-mode fixture harness cannot see
-that difference.
+New cases:
 
-Use the unmodified Markdown as the authority for what renders. Obtain
-destination spans from the parser's inline-link rule and map them back to
-the original source. Only rewrite a supported rendered link after locating
-its own destination, and use the full link's source range to enforce the
-single-line rule. Report a diagnostic when a rendered fragment needs
-validation and the source location cannot be established. Preserve the
-original line endings and all bytes outside rewritten destinations. Keep
-the existing parsed-HTML and decoded-path checks.
+- Fixed: `` `example ](text` `` followed by a stale `#L99` anchor and by
+  an omitted anchor. Only the rendered URL changes to `A.lean#L1`.
+- Rejected: `` [`alpha`](A.lean#L1\n) `` (line 3 of its fixture) and
+  `[text](A.lean#L1\n "lean:alpha")`.
+- Fixed: a CRLF file with a trailing-space hard break and an escaped
+  literal. One URL is rewritten, and the output is byte-identical
+  otherwise, CRLF included.
+- Fixed: a table cell containing an escaped pipe before the link, and a
+  link inside a list item inside a blockquote.
 
-Add the inline-code case with both a stale and an omitted anchor, and
-verify that the stale check fails and the formatter repairs only the
-rendered URL. Add the two multiline cases and an exact byte comparison
-for a CRLF rewrite. Retain the previous fixture coverage, verify rejected
-links produce link diagnostics, and rerun the built formatter in CI mode
-on the stale inline-code case.
+The previous 28 cases remain, now with line-level diagnostic assertions.
+Run against `nix/lean-anchors.py` from `05a0eb35`, the harness fails 5
+cases: both inline-code cases, both multiline cases, and CRLF. The
+candidate passes all 35.
+
+The built flake formatter ran `--ci` twice in a disposable jj repository
+on the stale inline-code README. The first run exited 1 ("unexpected
+changes detected") after rewriting only `#L99` to `#L1`. The second run
+exited 0.
 
 ## Verification
 
-- Ran the 28-fixture suite and all ten flake checks. The documented Lean
-  build completed 153 jobs with zero warnings. `nix fmt` changed no files
-  in the submitted checkout.
-- Stripped all 61 README source fragments in a disposable copy. The
-  anchor formatter reproduced the original README byte for byte. Lean
-  sources, theorem snippets, and package pins match the accepted review.
-
-## Worker completion
-
-Work from this `REVIEW.md` and resolve D6. Run the listed regressions and
-follow `AGENTS.md`. Commit the candidate, rewrite this file as a
-`READY FOR REVIEW` submission with the exact candidate change and commit
-IDs and evidence for D6, and commit the submission. A chat reply alone
-does not submit the candidate.
+- `nix flake check` passed all ten checks. `nix develop -c lake build`
+  completed 153 jobs. `nix fmt` changes nothing on the candidate.
+- Stripped all 61 README `#L…` fragments in a disposable copy. The anchor
+  pass reproduced `README.md` byte for byte.
+- Lean sources, README, and package pins are unchanged from `05a0eb35`.
