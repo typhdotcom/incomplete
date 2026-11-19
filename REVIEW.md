@@ -1,6 +1,6 @@
-State: RETURNED
-Turn: worker
-Candidate: rwnxlnsynvsorxwwoxlnoxvoytwwqnqv / c60eb62977ee214609f9c3726110178d0705ecda
+State: READY FOR REVIEW
+Turn: reviewer
+Candidate: mmrrnmvqzrrnntmvxruvowslzlsxrwmm / 05a0eb35cf432b8284792ee8e71838fb3aadd60c
 
 # Publication review of the README and tooling
 
@@ -26,85 +26,93 @@ Preserve the full and bounded provability results and the pinned build.
 
 ### D5 — Refresh anchors within treefmt's selected files
 
-Status: open
+Status: submitted
 
-Two ordinary formatter runs with a Lean-only line insertion between them
-now update the tracked README from `A.lean#L1` to `A.lean#L2`.
-The wrapper's independent directory walk also rewrites ignored Markdown
-and Markdown in nested repositories, including files the jj walker omits.
-An invalid link in an ignored scratch directory blocks an ordinary
-repository format run. Selecting only `nixfmt` still rewrites anchors.
-With a stale anchor, the wrapper's `--ci` invocation rewrites the README
-before treefmt sees it and exits successfully, even though treefmt's CI
-mode enables `--fail-on-change`.
+The wrapper's recursive prepass and argument parser are gone.
+`lean-anchors` stays a treefmt formatter at priority 0, and the wrapper
+runs `treefmt --walk "$walk" --no-cache "$@"`.
 
-Remove the recursive prepass and its argument parser. Keep the anchor
-rewriter in treefmt with its current priority and run treefmt without its
-per-file cache on the normal formatter path. In the disposable jj probe,
-invoking the configured treefmt with `--walk jujutsu --no-cache` refreshed
-the tracked README through the Lean-only change, left ignored and nested
-files alone, and returned exit 1 in CI mode when the README needed an update.
-Verify the same behavior through the flake's formatter and confirm that
-`--formatters nixfmt` leaves Markdown alone. Keep the documented format
-and check commands.
+Probe: a scratch jj repo whose tracked `README.md` links
+`` [`alpha`](A.lean#L1) ``, an ignored `scratch/x.md` with the invalid
+link `[x](A.lean#L5)`, and a nested jj repo with `nested/n.md`. Each run
+used the built flake formatter. Between runs, a blank line was prepended
+to `A.lean`.
+
+| run                                | exit | README anchor | ignored / nested |
+| ---------------------------------- | ---- | ------------- | ---------------- |
+| `fmt` twice (alpha at L1)          | 0, 0 | `#L1`         | unchanged        |
+| `fmt` (alpha at L2)                | 0    | `#L2`         | unchanged        |
+| `fmt --ci` (alpha at L3)           | 1    | `#L3`         | unchanged        |
+| `fmt --ci` again                   | 0    | `#L3`         | unchanged        |
+| `fmt --formatters nixfmt` (L4)     | 0    | `#L3`         | unchanged        |
+| `fmt --fail-on-change`, then rerun | 1, 0 | `#L4`         | unchanged        |
+
+The ignored invalid link no longer blocks the run, and selecting only
+`nixfmt` leaves Markdown alone. The `nu tasks.nu fmt` and
+`nu tasks.nu check` commands are unchanged.
 
 ### D6 — Validate each rendered destination and preserve literal examples
 
-Status: open
+Status: submitted
 
-The `lean:` marker, ordinary title handling, and direct reference and
-multiline rejection probes pass. The checker still correlates rendered
-links with raw text matches by destination and title across a paragraph.
-With `alpha` on line 1 of `A.lean`, this file passes the anchor checker
-and Lychee, although only the second occurrence is a link and it uses the
-unsupported multiline form:
+`process_md` finds every inline destination span that follows `](` and
+replaces each span with a unique probe URL. It parses the probed text once
+with markdown-it (CommonMark with tables and strikethrough). A rendered
+`link_open` whose href is a probe owns exactly that source span. If a probe
+does not render, its span is literal text, and its bytes are never
+validated or edited. Rewrites touch only the URL span of a managed link.
+The symbol comes from the token: a `lean:` title, or a label made of a
+single `code_inline` token.
 
-```markdown
-\[`alpha`](A.lean#L1) [intentionally wrong](
-A.lean#L1)
-```
+Every other rendered link is classified the same way, including
+reference links and probe URLs mapped back through markdown-it's
+`normalizeLink(unescapeAll(raw))`. A link is local Lean when
+`urlsplit(href)` has no scheme or netloc and its percent-decoded path ends
+in `.lean`. The fragment rule applies to that classification. A managed
+link's raw URL must have the form `path.lean[#fragment]` with no query,
+escape, entity, or percent-encoding. Any other rendered Lean
+symbol or line link fails with `USAGE_HINT`. HTML blocks and inline HTML
+go through `html.parser`, so comments are skipped and only real `href`
+attributes are decoded and checked.
 
-Given an escaped example without a fragment, formatting rewrites
-`` \[`alpha`](A.lean) `` and the same example in a four-space-indented code
-block. Both render as text. The HTML regex inspects markup
-inside comments and accepts this rendered stale link because it matches
-`data-href` first:
+`checks.lean-anchors-test` (`nix/lean-anchors-test.py`) runs 28 fixtures
+against `A.lean`. Each fixture checks the `--check` exit status, confirms
+that check mode leaves the bytes alone, and checks the write-pass exit
+status and the exact bytes afterward. Rewritten fixtures must then pass
+`--check`.
 
-```html
-<a data-href="README.md" href="A.lean#L999">alpha</a>
-```
+- These fixtures must fail and stay untouched: the escaped example beside
+  a rendered multiline link; `A.lean?view=1#L999`; `A.le&#97;n#L999`;
+  `<a data-href="README.md" href="A.lean#L999">`; an HTML `href` of
+  `A.le&#97;n#L999`; plain HTML line links; and the original controls
+  (reference with fragment, reference with `lean:` title, multiline,
+  unmanaged fragment, empty `lean:` title, unknown symbol, missing file).
+- These pass with their bytes unchanged: `` \[`alpha`](A.lean) ``, the
+  same example in a four-space indented block, a fenced block holding a
+  stale anchor, inline code spans, an HTML comment holding a stale anchor,
+  an HTML file link with a fragment in another attribute, ordinary
+  tooltips, and plain file links.
+- These are refreshed, and only the rendered span changes: stale and
+  missing anchors in both managed forms, table cells, and an escaped
+  literal beside an identical rendered link.
 
-An HTML destination of `A.le&#97;n#L999` and the Markdown destination
-`A.lean?view=1#L999` also pass both checks. Their parsed URL path is
-`A.lean`, so both belong to the advertised local-line-link rule.
+Run against the previous `nix/lean-anchors.py` from `01579c8c`, the
+harness fails 8 cases: the masked multiline link, the query, the
+`data-href` and entity HTML links, the HTML comment, the escaped and
+indented examples, and the literal beside a rendered link. The new tool
+passes 28 of 28.
 
-Use Markdown tokenization to associate every managed link with its own
-source span before validating or editing it. Use HTML attribute parsing
-for actual anchors and classify local URLs by their decoded path before
-applying the fragment rule. Reject unsupported rendered Lean line links
-with the existing syntax guidance. Demonstrate that the examples above
-fail when they contain a rendered unsupported link. Verify that escaped
-links, code blocks, HTML comments, and ordinary tooltips pass and retain
-their original bytes during the anchor pass. Rerun the original positive
-and negative controls, including the two managed forms, the existing
-README links, stale anchors, references, and unknown symbols.
+To check the README, every `#L…` fragment was stripped from a copy and
+the formatter was run on it. The output was byte-identical to `README.md`,
+so all 61 README symbol links are managed and resolve to their current
+spans.
 
 ## Verification
 
-- The documented Lean build completed 153 jobs with zero warnings.
-  All nine flake checks passed for the submission.
-- The Lean code blocks changed only in a comment. Rechecked all 33
-  displayed theorem signatures and the 16 definition bodies under
-  `--trust=0`. All 61 README symbol links agree with Lean's declaration
-  metadata for the module and selection line.
-- All 48 published axiom checks returned
-  `[propext, Classical.choice, Quot.sound]`. The namespace audit again
-  checked 4,048 theorems and found only permitted dependencies.
-
-## Worker completion
-
-Work from this `REVIEW.md` and resolve D5 and D6. Run the verification for
-each finding and follow `AGENTS.md`. Commit the candidate, then rewrite
-this file as a `READY FOR REVIEW` submission with the exact candidate
-change and commit IDs and evidence for both findings. Commit the
-submission. A chat reply alone does not submit the candidate.
+- `nix develop -c lake build` completed 153 jobs. The Lean sources are
+  unchanged from the accepted candidate.
+- `nix flake check` passed all ten checks, including the new
+  `lean-anchors-test`. `nix fmt` is a no-op on the candidate.
+- README change: the tooling paragraph now lists the rejected link
+  forms and states that escaped and code-span examples are left as
+  written.
