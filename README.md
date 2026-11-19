@@ -1,34 +1,58 @@
 # incomplete
 
-Lean 4 proofs of the Gödel–Kleene, Rosser, and second incompleteness theorems
-and of Löb's theorem, together with the derivability conditions and
-arithmetical soundness and completeness of the provability logic GL, for the formal type theory of [lean4lean](https://github.com/digama0/lean4lean),
-extended with concrete inductives and primitive projections from
-[typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean).
+Lean 4 proofs of classical incompleteness and provability-logic theorems for **Lean 4's formal type theory**, specified by the declarative typing judgment of [lean4lean](https://github.com/digama0/lean4lean) (extended with concrete inductive declarations and primitive projections in [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean)):
 
-GL is also shown sound and complete for finite transitive irreflexive Kripke
-models, and on letterless formulas it is decided by a level tower on `ω`, which
-also gives their provability and truth in the object theory.
+- **Gödel–Kleene, Rosser, and Gödel's second** incompleteness theorems, plus a consistent ω-inconsistent context;
+- **Löb's theorem**, the Hilbert–Bernays–Löb derivability conditions, and **Solovay's arithmetical completeness theorem** for the provability logic **GL** (alongside finite Kripke completeness and a decision procedure and truth theorem for letterless sentences);
+- **Chaitin's incompleteness theorem** on program-size complexity.
 
-For `clEnv`, `natEnv` with a double-negation axiom, GL is the provability logic
-of its `Prop`/`Type` fragment with no hypotheses: soundness and consistency of
-the fragment come from a set model, and `□` is read as provability in the
-fragment.
+> [!NOTE]
+> Provability is defined directly against `VEnv.HasType` / `VEnv.IsDefEq` in `Lean4Lean.Theory.Typing`. These results concern that formal specification of Lean's type theory, not Lean's C++ kernel or lean4lean's executable kernel replica.
 
-Chaitin's incompleteness theorem holds for every consistent well-formed extension of `natEnv`,
-and for the fragment of `clEnv` with no hypotheses: for some `L`, the theory proves of no
-number that its description complexity exceeds `L`, though all but at most `L + 1` numbers do.
+## Scope
 
-Provability is defined directly against the typing judgment
-`VEnv.HasType` / `VEnv.IsDefEq` of `Lean4Lean.Theory.Typing`. The results
-concern that formal specification, not lean4lean's kernel implementation or
-Lean's own kernel.
+By Gödel's second theorem, Lean cannot prove the consistency of its full universe hierarchy without stronger axioms. The library therefore works in two regimes at once, keeping full and bounded provability strictly distinct:
+
+1. **Full theory (any well-formed extension of `Nat`)**: theorems apply to every well-formed environment (`env.WF`) extending [`natEnv`](Incomplete/NatEnv.lean#L80) — arbitrary axioms, definitions, mutual blocks, opaques, quotients, inductive families, and structures with primitive projections — carrying only the metamathematical hypotheses each theorem requires. Neither consistency nor halting soundness is proved here for full typing.
+2. **Unconditional fragment (zero hypotheses)**: restricting derivations to sorts `Prop` and `Type` (`u ≤ 1`) without primitive projections ([`BProvable`](Incomplete/Bounded.lean#L49)) keeps all of arithmetic, proof checking, Solovay's walk, and Chaitin's machine intact while fitting inside a ZF set model ([ModelSound.lean](Incomplete/ModelSound.lean)). That model discharges consistency and Σ₁-soundness outright for both `natEnv` and [`clEnv`](Incomplete/ClEnv.lean#L18) (`natEnv` plus double-negation elimination [`dneS`](Incomplete/Obj/GL.lean#L22)).
+
+| Result                                                | Full `VEnv` (`env.WF`, `natEnv ≤ env`)           | `{Prop, Type}` fragment (`BProvable`)       | Entry points                                                                                                                                                                                                  |
+| :---------------------------------------------------- | :----------------------------------------------- | :------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **1st incompleteness** (Gödel–Kleene)                 | `Consistent` (+ `HaltsSound` for irrefutability) | **Unconditional** (`natEnv`)                | [`incomplete_of_wf`](Incomplete/Extend.lean#L217-L219), [`incomplete_unconditional`](Incomplete/Unconditional.lean#L65-L67)                                                                                   |
+| **Rosser's theorem** (unprovable & irrefutable)       | `Consistent`                                     | *(covered above)*                           | [`incomplete_rosser`](Incomplete/Rosser.lean#L431-L433)                                                                                                                                                       |
+| **2nd incompleteness** & **ω-inconsistent context**   | `Consistent`                                     | `¬BProvable clEnv (BProv ⊥ → ⊥)`            | [`second_incompleteness`](Incomplete/Obj/Second.lean#L200-L203), [`omega_inconsistent`](Incomplete/Obj/Omega.lean#L50-L54), [`bcon_iterated`](Incomplete/BProvLogic.lean#L107-L110)                           |
+| **Löb**, **D1–D3**, **FairBot**, **iGL soundness**    | **None**                                         | **None**                                    | [`loeb`](Incomplete/Obj/Loeb.lean#L394-L396), [`loeb_formalized`](Incomplete/Obj/Derivability.lean#L164-L167), [`iGL_sound`](Incomplete/Obj/GL.lean#L194-L196), [`fairbot`](Incomplete/Obj/GL.lean#L203-L206) |
+| **GL arithmetical soundness**                         | `Provable env dneS`                              | **Unconditional** (`clEnv`)                 | [`GL_sound`](Incomplete/Obj/GL.lean#L184-L187), [`GL_bsound`](Incomplete/BProvLogic.lean#L43-L44)                                                                                                             |
+| **Solovay completeness of GL** & **letterless truth** | `HaltsSound` + `Provable env dneS`               | **Unconditional** (`clEnv`, `□` as `BProv`) | [`GL_iff_provable`](Incomplete/Obj/Solovay.lean#L324-L327), [`tr_iff_lim`](Incomplete/Obj/Letterless.lean#L93-L95), [`GL_iff_bprovable`](Incomplete/BProvLogic.lean#L58-L60)                                  |
+| **Iterated consistency** (`□ⁿ⊥`, `□ⁿ⁺¹⊥ → □ⁿ⊥`)       | `HaltsSound` (`Consistent` at `n = 0`)           | **Unconditional** (`clEnv`)                 | [`boxBot_succ_imp_unprovable`](Incomplete/Obj/Letterless.lean#L128-L130), [`bcon_iterated`](Incomplete/BProvLogic.lean#L107-L110)                                                                             |
+| **Chaitin's incompleteness theorem**                  | `Consistent`                                     | **Unconditional** (`clEnv`)                 | [`chaitin`](Incomplete/Chaitin.lean#L138-L142), [`chaitin_unconditional`](Incomplete/Chaitin.lean#L149-L152)                                                                                                  |
 
 ## Theorems
 
-All theorems live in namespace `Incomplete`.
+All theorems live in namespace `Incomplete`. First, the core vocabulary appearing in the statements ([PR.lean](Incomplete/PR.lean), [Sentences.lean](Incomplete/Sentences.lean), [Main.lean](Incomplete/Main.lean), [Bounded.lean](Incomplete/Bounded.lean)):
 
-### Unconditional fragment
+```lean
+-- Primitive recursive codes equipped with one outer unbounded search
+def PR.Halts (f : PR) (n : Nat) : Prop := ∃ k, f.eval (val2 k n) = 0
+def PR.code  (f : PR) : Nat := encExpr (fn f)
+
+-- Impredicative False, Π₁ non-halting, and negated non-halting (not identified with ∃ in intuitionistic Prop)
+def falseS : VExpr := .forallE (.sort .zero) (.bvar 0)
+def notHalts (f : PR) (n : Nat) : VExpr :=
+  .forallE nat (.forallE (isZero (.app (.app (fn f) (lit n)) (.bvar 0))) falseS)
+def halts (f : PR) (n : Nat) : VExpr := .forallE (notHalts f n) falseS
+
+-- Closed proofs in full typing vs. the {Prop, Type} projection-free judgment BDefEq
+def Provable  (env : VEnv) (P : VExpr) : Prop := ∃ e, env.HasType 0 [] e P
+def BProvable (env : VEnv) (P : VExpr) : Prop := ∃ e, BDefEq env [] e e P
+
+def Consistent (env : VEnv) : Prop := ¬Provable env falseS
+def HaltsSound (env : VEnv) : Prop := ∀ f n, Provable env (halts f n) → PR.Halts f n
+```
+
+### 1. Unconditional fragment and classical provability logic
+
+With consistency and halting soundness discharged by the set model ([ModelSound.lean](Incomplete/ModelSound.lean), [Unconditional.lean](Incomplete/Unconditional.lean), [ClEnv.lean](Incomplete/ClEnv.lean), [BProvLogic.lean](Incomplete/BProvLogic.lean)):
 
 ```lean
 theorem incomplete_unconditional :
@@ -38,18 +62,8 @@ theorem incomplete_unconditional :
 theorem bconsistent : ¬BProvable natEnv falseS
 
 theorem bhaltsSound {f : PR} {n : Nat} (hp : BProvable natEnv (halts f n)) : f.Halts n
-```
 
-With no hypotheses, the projection-free `Prop`/`Type` fragment of `natEnv` is
-consistent, sound for `halts`, and neither proves nor refutes the true
-non-halting sentence of some machine on its own code
-(`Incomplete/ModelSound.lean`, `Incomplete/Unconditional.lean`).
-
-### Provability logic of the classical fragment
-
-```lean
 def clEnv : VEnv := withConst natEnv dneName ⟨0, dneS⟩
-
 noncomputable def BProv (P : VExpr) : VExpr := ProvC (bchkT clT) P
 
 theorem GL_iff_bprovable {A : Modal} :
@@ -65,28 +79,18 @@ theorem bcon_iterated (σ : Nat → VExpr) (n : Nat) :
     ¬BProvable clEnv ((Modal.boxBot n).breal σ) ∧
       (Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).btr ∧
       ¬BProvable clEnv ((Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).breal σ)
+
+theorem chaitin_unconditional :
+    ∃ L, (∀ n, BDefEq clEnv [] (Complex L n) (Complex L n) (.sort .zero)) ∧
+      (∀ ns : List Nat, ns.Nodup → (∀ n ∈ ns, ¬IsComplex L n) → ns.length ≤ L + 1) ∧
+      (∃ N, ∀ n, N ≤ n → IsComplex L n) ∧ ∀ n, ¬BProvable clEnv (Complex L n)
 ```
 
-`clEnv` adds to `natEnv` one axiom constant `Classical.dne : dneS`. It is well formed and extends
-`natEnv` (`clEnv_wf`, `natEnv_le_clEnv`), its fragment proves `dneS` (`clEnv_dne`), and the set
-model interprets the axiom, so the fragment is consistent and `halts`-sound (`clEnv_bconsistent`,
-`clEnv_bhaltsSound`) (`Incomplete/ClEnv.lean`). `BProv P` says that some certificate passes the
-fragment's checker `bchkT clT`, which accepts what `chkT clT` accepts within the bounds of
-`BDefEq`, as a proof of `P`; `A.breal σ` realizes `□` as `BProv`. Then GL is exactly the
-provability logic of the fragment (`GL_iff_bprovable`), a letterless sentence is provable iff it
-holds at every level (`bprovable_iff_lvl`), and true, with `□B` read as provability of `B`'s
-realization (`Modal.btr`), iff its limit is `true` (`btr_iff_lim`); so the iterated consistency
-statements `□ⁿ⁺¹⊥ → □ⁿ⊥` are true and unprovable for every `n` (`bcon_iterated`)
-(`Incomplete/BProvLogic.lean`).
+`BProv P` internalizes bounded provability via the fragment's own certificate checker, and `A.breal σ` realizes `□` as `BProv`. Variable-free modal sentences are decided by evaluation on the finite height tower (`Modal.lvl`), their truth (`Modal.btr`) coincides with the tower's eventual value (`Modal.lim`), and every iterated consistency statement `□ⁿ⁺¹⊥ → □ⁿ⊥` is true and unprovable (`n = 0` being `¬BProv ⊥`).
 
-The object-level development behind these runs over any judgment closed under the rules it uses
-(`ObjEnv`), with full typing and the fragment as instances (`Incomplete/Obj/Typing.lean`), and
-the provability logic over any proof-checking code the theory reasons about (`IsChecker`), with
-the full checker and the fragment's checker as instances (`Incomplete/Obj/Checker.lean`,
-`Incomplete/Obj/BChecker.lean`). The fragment's checker stays within the bounds through internal
-modus ponens and instantiation at numerals (`Incomplete/Obj/Leaf.lean`).
+### 2. Full-theory incompleteness, Rosser, and ω-inconsistency
 
-### First incompleteness (full theory)
+Every well-formed environment admits finite lookup tables ([`TablesFor`](Incomplete/CertNat.lean#L85)) for its constants, definitional-equality rules, and inductive blocks ([`VEnv.WF.checkable`](Incomplete/Extend.lean#L207)). From `T : Tables`, [`Con`](Incomplete/Second.lean#L26) states that no certificate checks as a proof of `⊥`, and [`Prov`](Incomplete/Obj/Loeb.lean#L19) states `∃ k, chkT T (⌜P⌝, k) = 0` using an impredicative `∃` ([Extend.lean](Incomplete/Extend.lean), [Rosser.lean](Incomplete/Rosser.lean), [Obj/Second.lean](Incomplete/Obj/Second.lean), [Obj/Omega.lean](Incomplete/Obj/Omega.lean)):
 
 ```lean
 theorem incomplete_rosser (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
@@ -96,17 +100,7 @@ theorem incomplete_rosser (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (h
 theorem incomplete_of_wf (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) (hC : Consistent env) :
     ∃ d : PR, ¬d.Halts d.code ∧ ¬Provable env (notHalts d d.code) ∧
       (HaltsSound env → ¬Provable env (halts d d.code))
-```
 
-Every consistent well-formed extension of `natEnv` neither proves nor refutes
-the closed, true non-halting sentence of the Rosser machine on its own code
-(`Incomplete/Rosser.lean`). For the Gödel–Kleene diagonal machine, the true
-non-halting sentence is unprovable under `Consistent env` and irrefutable under
-`HaltsSound env` (`Incomplete/Extend.lean`).
-
-### Second incompleteness
-
-```lean
 theorem second_incompleteness (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
     (hC : Consistent env) :
     ∃ T, TablesFor env T ∧ env.HasType 0 [] (Con T) (.sort .zero) ∧
@@ -114,44 +108,25 @@ theorem second_incompleteness (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env
 
 theorem con_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)
     {T : Tables} (hT : TablesFor env T) (hC : Consistent env) : ¬Provable env (Con T)
+
+theorem omega_inconsistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hC : Consistent env) :
+    ¬Thm env [Prov T falseS] falseS ∧
+    Thm env [Prov T falseS] (Prov T falseS) ∧
+    ∀ k : Nat, Thm env [Prov T falseS] (neg (prfT T (numT (encExpr falseS)) (lit k) =ₒ zero))
 ```
 
-Every consistent well-formed extension of `natEnv` admits tables `T` for which
-`Con T` is a closed proposition. For every `T` with `TablesFor env T`, `Con T`
-is true iff `Consistent env` (`con_true_iff`) and unprovable in `env`. Both
-theorems rest on proving `Con T → G0 T` inside the theory
-(`con_imp_G0_provable`, `Incomplete/Obj/Second.lean`).
+The second theorem rests on proving `Con T → G0 T` inside the object theory ([`con_imp_G0_provable`](Incomplete/Obj/Second.lean#L177-L178)). In [`omega_inconsistent`](Incomplete/Obj/Omega.lean#L50-L54), `[Prov T ⊥]` is a hypothesis context over `env` itself (consistent by Löb at `P := ⊥`), proving that some certificate checks as a proof of `⊥` while refuting each numeral `k`. Declaration-list variants ([`incomplete_rosser'`](Incomplete/Rosser.lean#L440-L443), [`incomplete_of_wf'`](Incomplete/Extend.lean#L284-L287), [`second_incompleteness'`](Incomplete/Obj/Second.lean#L210-L213)) replace `(hwf : env.WF) (hext : natEnv ≤ env)` with `(H : env.WF' ds) (hm : .induct natDecl ∈ ds)`.
 
-### Löb's theorem
+### 3. Löb's theorem, derivability conditions, and Solovay completeness
+
+Because the object logic is intuitionistic, Löb's theorem, the Hilbert–Bernays–Löb conditions D1–D3 ([`prov_of_provable`](Incomplete/Obj/Loeb.lean#L325-L326), [`prov_mp_provable`](Incomplete/Obj/Derivability.lean#L140-L142), [`prov_prov_provable`](Incomplete/Obj/Derivability.lean#L153-L155)), formalized Löb, and intuitionistic **iGL** soundness require neither consistency nor `dneS`. Classical **GL** soundness adds `Provable env dneS`, and Solovay's arithmetical completeness adds `HaltsSound env` ([Obj/Loeb.lean](Incomplete/Obj/Loeb.lean), [Obj/Derivability.lean](Incomplete/Obj/Derivability.lean), [Obj/GL.lean](Incomplete/Obj/GL.lean), [Obj/Solovay.lean](Incomplete/Obj/Solovay.lean)):
 
 ```lean
 theorem loeb (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero))
     (h : Provable env (.forallE (Prov T P) P)) : Provable env P
-```
 
-For every well-formed extension of `natEnv`, every `T` with `TablesFor env T`,
-and every closed proposition `P`: if the theory proves `Prov T P → P`, it proves
-`P`. No consistency hypothesis is needed. `Prov T P` is the closed proposition
-`∃ k, chkT T (⌜P⌝, k) = 0` with an impredicative `∃` over numbers: some
-certificate checks as a proof of `P` (`ProvT`). Related results
-(`Incomplete/Obj/Loeb.lean`):
-
-- `prov_of_provable`: `Provable env P → Provable env (Prov T P)`.
-- `prov_lit_iff`: under `Consistent env`, the theory proves
-  `chkT T (⌜P⌝, k) = 0` for some numeral `k` iff `Provable env P`. Externally,
-  `chkNum_eq_zero`: some `k` has `chkNumFor T _ ⌜P⌝ k = 0` iff `Provable env P`.
-- `prov_sound`: under `HaltsSound env`, `Provable env (Prov T P)` implies
-  `Provable env P`.
-- `loeb_halts`: the same conclusion from a proof of
-  `halts (provM T P) 0 → P`, the double-negation provability sentence, which
-  the theory derives from `Prov T P` (`prov_imp_halts`).
-- `con_iff_not_prov`: the theory proves `Con T ↔ ¬Prov T ⊥`.
-- `con_unprovable_of_loeb`: `con_unprovable`, from `loeb` at `P := ⊥`.
-
-### Derivability conditions and formalized Löb
-
-```lean
 theorem prov_mp_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     {P Q : VExpr} (hQ : env.HasType 0 [] Q (.sort .zero)) :
     Provable env (.forallE (Prov T (.forallE P Q)) (.forallE (Prov T P) (Prov T Q)))
@@ -163,20 +138,18 @@ theorem prov_prov_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {
 theorem loeb_formalized (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {P : VExpr} (hP : env.HasType 0 [] P (.sort .zero)) :
     Provable env (.forallE (Prov T (.forallE (Prov T P) P)) (Prov T P))
+
+theorem GL_iff_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal} :
+    Modal.GL A ↔ ∀ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) →
+      Provable env (A.real T σ)
 ```
 
-Together with necessitation (`prov_of_provable`, D1), these are the
-Hilbert–Bernays–Löb derivability conditions D2 and D3 and Löb's theorem, all
-proved inside the theory without consistency or soundness hypotheses
-(`Incomplete/Obj/Derivability.lean`). D2 is internal modus ponens on
-certificates. D3 is internal Σ₁-completeness for `Prov`: a `PR` code `σ` turns,
-provably, each certificate `k` of `P` into a certificate `σ k` of
-`Prov T P` (`sigma_prov`). Formalized Löb follows from D2, D3, and `loeb`
-applied to `Prov T (Prov T P → P) → Prov T P`.
-
-### Arithmetical soundness of GL
+<details>
+<summary>Companion modal, Kripke, FairBot, and letterless signatures (<a href="Incomplete/Modal">Modal/</a>, <a href="Incomplete/Obj/GL.lean">Obj/GL.lean</a>, <a href="Incomplete/Obj/Letterless.lean">Obj/Letterless.lean</a>)</summary>
 
 ```lean
+-- Arithmetical soundness of GL and iGL, mutual Löb ("FairBot"), and Solovay counter-realization
 theorem GL_sound (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) (hdne : Provable env dneS) {σ : Nat → VExpr}
     (hσ : ∀ n, env.HasType 0 [] (σ n) (.sort .zero)) {A : Modal} (h : Modal.GL A) :
@@ -190,21 +163,14 @@ theorem fairbot (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     (hT : TablesFor env T) {A B : VExpr} (hA : env.HasType 0 [] A (.sort .zero))
     (hB : env.HasType 0 [] B (.sort .zero)) (hAB : Provable env (A ↔ₒ Prov T B))
     (hBA : Provable env (B ↔ₒ Prov T A)) : Provable env A ∧ Provable env B
-```
 
-Every theorem of the provability logic GL is provable under every
-realization that sends propositional variables to closed propositions and `□`
-to `Prov T`, provided the theory proves double-negation elimination `dneS`.
-The object logic is intuitionistic, so this hypothesis is needed for GL's
-classical tautologies only: the theorems of `iGL`, GL without
-double-negation elimination, are provable under every realization in every
-well-formed extension of `natEnv` (`Incomplete/Obj/GL.lean`). `fairbot`: two
-closed propositions, each equivalent to the provability of the other, are both
-provable.
+theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
+    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal}
+    (h : ¬Modal.GL A) :
+    ∃ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) ∧
+      ¬Provable env (A.real T σ)
 
-### Kripke semantics of GL
-
-```lean
+-- Standalone Kripke completeness of GL on finite transitive irreflexive frames
 structure Modal.FinModel (n : Nat) where
   R : Fin n → Fin n → Bool
   V : Fin n → Nat → Bool
@@ -220,53 +186,8 @@ theorem Modal.GL_complete {A : Modal} (h : ¬GL A) :
 
 theorem Modal.GL_iff {A : Modal} :
     GL A ↔ ∀ (n : Nat) (M : FinModel n) (w : Fin n), M.Forces w A
-```
 
-GL is sound and complete for finite transitive irreflexive Kripke models.
-`M.Forces w A` is forcing, with `□A` forced at `w` when `A` is forced at
-every world `w` sees; `M.eval` decides it (`FinModel.eval_iff`).
-`M.Rooted` says world `0` sees every other world. Soundness holds more
-generally for every transitive model whose accessibility relation is
-conversely well-founded (`Modal.Kripke.GL_sound`). Completeness builds the
-countermodel from the consistent sets of literals over the subformulas of
-`A` (`Incomplete/Modal/`). This part is ordinary Lean mathematics about
-`Modal` and does not involve the object theory.
-
-### Arithmetical completeness of GL
-
-```lean
-theorem GL_arith_complete (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
-    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal}
-    (h : ¬Modal.GL A) :
-    ∃ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) ∧
-      ¬Provable env (A.real T σ)
-
-theorem GL_iff_provable (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
-    (hT : TablesFor env T) (hdne : Provable env dneS) (hS : HaltsSound env) {A : Modal} :
-    Modal.GL A ↔ ∀ σ : Nat → VExpr, (∀ n, env.HasType 0 [] (σ n) (.sort .zero)) →
-      Provable env (A.real T σ)
-```
-
-Solovay's theorem: in a well-formed extension of `natEnv` that proves `dneS`
-and is `halts`-sound, a modal formula is a theorem of GL exactly when the
-theory proves it under every realization by closed propositions with `□` read
-as `Prov T`. For `¬GL A`, the finite countermodel of `Modal.GL_complete`, below
-a new root `0`, is the frame of a `PR` walk `hM T K` that, run on its own code,
-starts at `0` and moves to a world `b` above its current one when the first
-component of the step checks as a proof of `¬S_b`. `S_b` says that the walk
-reaches `b` and never leaves it; each variable is realized as the disjunction
-of the `S_(w+1)` over the worlds `w` forcing it (`solσ`). Inside the theory,
-the `S_b` are pairwise exclusive, `S_i` refutes `Prov T ¬S_j` for `i R j`, and
-for `i ≠ 0`, `S_i` proves `Prov T` of the disjunction of the `S_j` with `i R j`;
-so `S_(w+1)` proves `A`'s realization or its negation as `w` forces `A` or not
-(`truth`). A proof of the realization of `A` would refute `S_0`, and
-`halts`-soundness turns every refutation of a sentence `S_b` at a world the
-walk reaches into a move of the walk up the finite frame (`no_refuted`)
-(`Incomplete/Obj/Solovay*.lean`).
-
-### Letterless sentences
-
-```lean
+-- Letterless level tower, Boolean decision procedure, limit truth, and iterated consistency
 def Modal.lvl (n : Nat) : Modal → Bool
   | var _ => false
   | bot => false
@@ -298,51 +219,13 @@ theorem boxBot_succ_imp_unprovable (env : VEnv) (hwf : env.WF) (hext : natEnv �
     ¬Provable env ((Modal.imp (Modal.boxBot (n + 1)) (Modal.boxBot n)).real T σ)
 ```
 
-A letterless modal formula, built from `⊥`, `→` and `□` alone, is evaluated on the level tower:
-`□B` holds at level `n` when `B` holds at every level `m < n`. In a finite transitive irreflexive
-model, a letterless formula is forced at a world exactly when it holds at the level given by the
-world's height, the length of the longest chain above it (`FinModel.height`; more generally
-`Kripke.forces_iff_lvl` for any `IsHeight`). So `GL` proves a letterless formula iff it holds at
-every level. From the box depth `bd A` on, `lvl n A` is constant, `lim A` (`lvl_eq_lim`), so the
-Boolean `dec A`, which checks the levels `n ≤ bd A`, decides `GL` on letterless formulas
-(`Incomplete/Modal/Letterless.lean`).
+Note that `dneS` cannot be dropped from letterless **GL** completeness via **iGL**: [`Modal.not_iGL_dne_box`](Incomplete/Modal/Letterless.lean#L295-L296) separates **GL** from **iGL** on the letterless theorem `¬¬□⊥ → □⊥` using a three-element Heyting modal algebra.
 
-The realization of a letterless formula does not depend on `σ` (`Modal.real_letterless`). In a
-`halts`-sound well-formed extension of `natEnv` that proves `dneS`, the theory proves it iff it
-holds at every level, iff `dec A = true` (`provable_iff_dec`). The direction from the levels
-needs only `dneS` (`provable_of_lvl`); `dneS` is not removable through `iGL`, since `GL` proves the
-letterless `¬¬□⊥ → □⊥` and `iGL` does not (`Modal.not_iGL_dne_box`, by a three-element algebra).
-With truth `Modal.tr`, which reads `□B` as provability of `B`'s realization, a letterless sentence
-is true iff its limit value is `true` (`tr_iff_lim`): the letterless case of Solovay's theorem on
-true provability.
+</details>
 
-With `halts`-soundness alone, `□ⁿ⊥` is unprovable for every `n`, and `□ⁿ⁺¹⊥ → □ⁿ⊥` is true
-(`tr_boxBot_succ_imp`) and, by Löb's theorem, unprovable; `GL` does not prove it, while its limit
-value is `true` (`Modal.boxBot_succ_imp`). The case `n = 0` is `¬□⊥`, which the theory proves
-equivalent to `Con T` (`con_iff_real_neg_box`); its unprovability needs only `Consistent env`
-(`con_unprovable_letterless`). `halts`-soundness implies consistency
-(`HaltsSound.consistent`) (`Incomplete/Obj/Letterless.lean`).
+### 4. Chaitin's incompleteness theorem
 
-### A consistent, ω-inconsistent context
-
-```lean
-theorem omega_inconsistent (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
-    (hT : TablesFor env T) (hC : Consistent env) :
-    ¬Thm env [Prov T falseS] falseS ∧
-    Thm env [Prov T falseS] (Prov T falseS) ∧
-    ∀ k : Nat, Thm env [Prov T falseS] (neg (prfT T (numT (encExpr falseS)) (lit k) =ₒ zero))
-```
-
-For every consistent well-formed extension of `natEnv` and every `T` with
-`TablesFor env T`, the context `[Prov T ⊥]` is consistent, proves that some
-certificate checks as a proof of `⊥`, and refutes each numeral `k` as that
-certificate. `Prov T ⊥` speaks of `env`'s own checker: the context is a
-hypothesis over `env`, not a new environment. Consistency is `loeb` at
-`P := ⊥`; each refutation holds already in the empty context
-(`not_prf_false_lit`). `omega_inconsistent_exists` states the same for tables
-that every well-formed `env` admits (`Incomplete/Obj/Omega.lean`).
-
-### Chaitin's incompleteness theorem
+A number `c` describes `n` when `c` is the numeric Gödel code `f.code` of a machine `f` that, run on `c`, has `n` as the first projection of its least halting witness ([Obj/Chaitin.lean](Incomplete/Obj/Chaitin.lean), [Chaitin.lean](Incomplete/Chaitin.lean)):
 
 ```lean
 def PR.Outputs (f : PR) (x n : Nat) : Prop :=
@@ -359,171 +242,50 @@ theorem chaitin (env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env) {T : Tables}
     ∃ L, (∀ n, env.HasType 0 [] (Complex L n) (.sort .zero)) ∧
       (∀ ns : List Nat, ns.Nodup → (∀ n ∈ ns, ¬IsComplex L n) → ns.length ≤ L + 1) ∧
       (∃ N, ∀ n, N ≤ n → IsComplex L n) ∧ ∀ n, ¬Provable env (Complex L n)
-
-theorem chaitin_unconditional :
-    ∃ L, (∀ n, BDefEq clEnv [] (Complex L n) (Complex L n) (.sort .zero)) ∧
-      (∀ ns : List Nat, ns.Nodup → (∀ n ∈ ns, ¬IsComplex L n) → ns.length ≤ L + 1) ∧
-      (∃ N, ∀ n, N ≤ n → IsComplex L n) ∧ ∀ n, ¬BProvable clEnv (Complex L n)
 ```
 
-A number `c` describes `n` when it is the code of a machine that, run on `c`, outputs `n`: the
-first component of its least halting witness. The size of a description is its code. `n` is
-`L`-complex when no code `c ≤ L` describes it. Codes with the same number compute the same
-function, so each code describes at most one number (`describes_unique`): at most `L + 1`
-numbers are not `L`-complex, and every number from some point on is (`isComplex_eventually`).
-Every number has a description (`describes_exists`).
+Description size here is the numeric code `PR.code` itself (no binary program-length or invariance theorem is claimed). Because codes with the same expression number compute the same function ([`PR.eval_eq_of_code`](Incomplete/Chaitin.lean#L26-L27)), each code describes at most one number, leaving at most `L + 1` numbers below complexity `L` while no `Complex L n` is provable at Chaitin's machine threshold. (See [`chaitin_unconditional`](Incomplete/Chaitin.lean#L149-L152) above for the hypothesis-free version in `clEnv`.)
 
-`Complex L n` is the conjunction over `c ≤ L` of `¬Desc(⌜c⌝, c, n)`, with `⊤` at numbers that
-are not codes; `Desc(F, D, N)` is the Σ₁ sentence that the least `k` with `F D k = 0` has first
-component `N`, with `F` the term numbered by `c`. It expresses `IsComplex L n`: in a consistent
-extension of `natEnv` a proof of it makes it true (`complex_true_of_provable`), and a
-description `c ≤ L` of `n` refutes it (`complex_refute`). The bound `L` is the code of
-`chaitinM T`, which at its own code `e` searches for a proof of `¬Desc(⌜e⌝, e, n)` for some `n`.
-A proof of some `Complex e n` contains one, so the machine halts; its output `n₀` makes
-`Desc(⌜e⌝, e, n₀)` true and hence provable, against the proof of its negation that it found.
-Only consistency is used (`chaitin_core`, `Incomplete/Obj/Chaitin.lean`,
-`Incomplete/Chaitin.lean`).
+## Design
 
-### Declaration-list variants
+Four architectural choices keep the development compact despite targeting a dependent type theory rather than first-order arithmetic:
 
-`incomplete_rosser'`, `incomplete_of_wf'`, and `second_incompleteness'` prove
-the identical conclusions for any consistent environment built from
-well-formed declarations that include `Nat`. They replace the binders
-`(env : VEnv) (hwf : env.WF) (hext : natEnv ≤ env)` with
+- **`Nat` is the only inductive type required.** Propositional connectives, quantifiers, and Leibniz equality are impredicatively encoded in `Prop`, and `0 ≠ succ n` uses large elimination of `Nat` into `Prop`. Base arithmetic ([`natEnv_wf`](Incomplete/NatDeclWF.lean#L92)) is therefore a single inductive declaration added to the empty environment.
+- **Kleene normal form separates recursion from search.** Machines are total primitive recursive terms ([`PR`](Incomplete/PR.lean#L15)) paired with one outer `∃ k` search. Every partial recursive function has this shape, while the object theory only ever evaluates total primitive recursive functions on numerals by β- and ι-conversion ([`PR.adequate`](Incomplete/Adequacy.lean#L128-L129)).
+- **Gödel numbering is a bijection.** Names, universe levels, expressions, judgments, and 16-rule derivation trees ([`Cert`](Incomplete/Cert.lean#L44)) map bijectively to `Nat` ([`decCert_enc`](Incomplete/Encode.lean#L382), [`encCert_dec`](Incomplete/Encode.lean#L417)). Every natural number is a valid syntactic object, so neither external nor internal proof checkers need well-formedness guards against junk codes.
+- **One internal development serves both regimes.** Object-level proof theory in [Incomplete/Obj/](Incomplete/Obj) (equipped with a custom natural-deduction tactic mode for nameless de Bruijn terms) is parameterized over an abstract typing interface ([`ObjEnv`](Incomplete/Obj/Typing.lean#L41)) and checker interface ([`IsChecker`](Incomplete/Obj/Checker.lean#L33)), instantiated once for full `VEnv` typing and once for `BDefEq` to prove internal Σ₁-completeness ([`ok_exists`](Incomplete/Obj/Sigma.lean#L474)) and everything downstream.
 
-```lean
-{ds : List VDecl} {env : VEnv} (H : env.WF' ds) (hm : .induct natDecl ∈ ds)
-```
+## Layout
 
-## Definitions
+Every module in [Incomplete/](Incomplete) opens with a docstring summarizing its definitions and proof idea.
 
-- `PR`, `PR.Halts f n`, `PR.code`: primitive recursive codes equipped with one
-  outer unbounded search; `f.Halts n` holds when `f(n, k) = 0` for some `k`,
-  and `f.code` numbers `f`.
-- `natEnv`: the environment declaring `Nat`, `Nat.zero`, `Nat.succ`, `Nat.rec`,
-  and its iota rules.
-- `falseS`, `notHalts f n`, `halts f n`: `falseS` is `∀ p : Prop, p`;
-  `notHalts f n` is `∀ k : Nat, isZero (f n k) → False` with `f` compiled to
-  `Nat.rec` terms; `halts f n` is `notHalts f n → False`.
-- `Provable env P`: some closed term `e` satisfies `env.HasType 0 [] e P`.
-- `BProvable env P`: provable by a derivation restricted to sorts `Prop` and
-  `Type` and free of projection rules (`BDefEq`, `Incomplete/Bounded.lean`).
-- `Consistent env`: `¬Provable env falseS`.
-- `HaltsSound env`: every provable `halts f n` is true (1-consistency for
-  halting sentences).
-- `TablesFor env T`: the finite lists in `T` enumerate `env`'s constants,
-  definitional-equality rules, and inductive types.
-- `chkT T`, `Con T`, `G0 T`: `chkT T` is the `PR` proof checker for `T`. On the
-  number of a sentence `P` and a number `k`, it returns `0` when `k` encodes a
-  `T`-checked certificate of a closed proof of `P`; some `k` yields `0` iff `P`
-  is provable (`chkNum_eq_zero`). `conM T` runs `chkT T` on the number of
-  `falseS`, defining `Con T := notHalts (conM T) 0`. `dg T` runs `chkT T` on
-  the number of the diagonal sentence of its input, defining
-  `G0 T := notHalts (dg T) ⌜dg T⌝`.
-- `Prov T P`, `provM T P`: `Prov T P` is `∃ k, chkT T (⌜P⌝, k) = 0` as an
-  object proposition with an impredicative `∃`; `provM T P` runs `chkT T` on the
-  number of `P`, so `conM T = provM T falseS`.
-- `Typing`, `full env`, `bounded env`, `ObjEnv`: a `Typing` is an environment with a
-  judgment `IsDefEq Γ e₁ e₂ A`; `full env` is `env.IsDefEq 0`, also written `env` by coercion,
-  and `bounded env` is `BDefEq env`; `ObjEnv J` lists the rules the object-level development
-  uses.
-- `Thm env Γ P`, `prfT T s k`: `Thm env Γ P` holds when some term `e`
-  satisfies `env.HasType Γ e P` in the judgment `env`, so for `env : VEnv`,
-  `Provable env P` is `Thm env [] P`, and `BProvable env P` is `Thm (bounded env) [] P`;
-  `prfT T s k` is the object term evaluating `chkT T` at `(s, k)`, and
-  `numT (encExpr P)` and `lit k` are numerals for `⌜P⌝` and `k`.
-- `Modal`, `Modal.Deriv`, `Modal.GL`, `Modal.iGL`, `Modal.real`: modal formulas
-  over variables, `⊥`, `→`, and `□`; `Deriv cl` is the Hilbert system with
-  axioms `A → B → A`, `(A → B → C) → (A → B) → A → C`, `⊥ → A`, K
-  `□(A → B) → □A → □B`, and Löb `□(□A → A) → □A`, rules modus ponens and
-  necessitation, and double-negation elimination `¬¬A → A` when `cl = true`;
-  `GL := Deriv true`, `iGL := Deriv false`. `A.real T σ` replaces each variable
-  `n` by `σ n`, `⊥` by `falseS`, `→` by `.forallE`, and `□` by `Prov T`.
-- `dneS`: `∀ p : Prop, ¬¬p → p`.
-- `clEnv`, `clT`: `natEnv` with the axiom `Classical.dne : dneS`, and its tables.
-- `IsChecker env T`, `ProvC T P`, `Modal.realC T σ`: a code `T` read as a proof
-  checker that the judgment `env` reasons about; `∃ k, T(⌜P⌝, k) = 0`; the
-  realization with `□` read as `ProvC T`, so `Prov T = ProvC (chkT T)` and
-  `Modal.real T = Modal.realC (chkT T)`.
-- `bchkT T`, `BProv`, `Modal.breal`, `Modal.btr`: the checker of the fragment,
-  `chkT T` together with the bounds of `BDefEq` on the certificate (`leafC`);
-  `ProvC (bchkT clT)`; `Modal.realC (bchkT clT)`; truth with `□B` read as
-  `BProvable clEnv (B.breal fun _ => falseS)`.
-- `Modal.Kripke`, `Modal.FinModel n`, `Forces`, `Rooted`: a Kripke model is
-  an accessibility relation and a valuation on a type of worlds; a
-  `FinModel n` is a transitive irreflexive one on `Fin n` with Boolean
-  relation and valuation; `Modal.sub A` lists the subformulas of `A`.
-- `Modal.Letterless`, `Modal.lvl`, `Modal.bd`, `Modal.lim`, `Modal.dec`, `Modal.boxBot`,
-  `Modal.tr`: `A` has no variables; `A`'s value at level `n`; box depth; `lvl (bd A) A`, the
-  eventual value; the conjunction of `lvl n A` over `n ≤ bd A`; `□ⁿ⊥`; truth with `□B` read as
-  `Provable env (B.real T fun _ => falseS)`.
-- `descS F D N`, `cplxC n c`, `chaitinM T`: `Desc(F, D, N)`; the conjunct
-  `¬Desc(⌜c⌝, c, n)` of `Complex`, or `⊤` if `c` is not a code; the machine that at input `x`
-  and step `⟨n, p⟩` runs the checker `T` on the number of `¬Desc(⌜x⌝, x, n)` and `p`.
-- `env.WF`, `env.WF' ds`, `natEnv ≤ env`: lean4lean's environment
-  well-formedness predicates and environment extension order.
-
-## Scope
-
-`incomplete_unconditional` applies to the projection-free `Prop`/`Type`
-fragment of `natEnv`, whose consistency and `halts`-soundness are established
-via a set model (`Incomplete/Model.lean`, `Incomplete/ModelSound.lean`). For
-the full theory and its well-formed extensions, Rosser's theorem and the second
-incompleteness theorem assume `Consistent`, and Gödel–Kleene irrefutability
-additionally assumes `HaltsSound`; neither hypothesis is proved here for the
-full type theory. Löb's theorem, the derivability conditions, formalized Löb,
-`iGL_sound`, and `fairbot` assume neither; `GL_sound` assumes only that the
-theory proves `dneS`; `GL_arith_complete` and `GL_iff_provable` assume that
-and `HaltsSound env`, as do `provable_iff_lvl` and `tr_iff_lim`; `boxBot_unprovable` and
-`boxBot_succ_imp_unprovable` assume only `HaltsSound env`. For the fragment of `clEnv`,
-`GL_iff_bprovable`, `bprovable_iff_lvl`, `btr_iff_lim`, and `bcon_iterated` assume nothing.
-`chaitin` assumes only `Consistent env`, and `chaitin_unconditional` nothing.
-
-Refuting `halts` for the Rosser machine requires universal reasoning inside the
-object theory, built in `Incomplete/Induct.lean` via `Nat.rec` into `Prop`.
-Proving `Con T → G0 T` for the second theorem requires formalizing natural
-deduction, arithmetic, symbolic proof checking, and internal Σ₁-completeness
-inside the object theory (`Incomplete/Obj/`).
+- **External arithmetic, proof checking, and 1st incompleteness**: [PR.lean](Incomplete/PR.lean), [Adequacy.lean](Incomplete/Adequacy.lean), [Sentences.lean](Incomplete/Sentences.lean), [Cert.lean](Incomplete/Cert.lean), [Encode.lean](Incomplete/Encode.lean), [CheckPR.lean](Incomplete/CheckPR.lean), [Kleene.lean](Incomplete/Kleene.lean), [Main.lean](Incomplete/Main.lean), [Final.lean](Incomplete/Final.lean), [Rosser.lean](Incomplete/Rosser.lean).
+- **Well-formed environments and extensions**: [NatEnv.lean](Incomplete/NatEnv.lean), [NatDeclWF.lean](Incomplete/NatDeclWF.lean), [Extend.lean](Incomplete/Extend.lean), plus concrete extensions with `Eq` and `And` ([EqEnv.lean](Incomplete/EqEnv.lean), [AndEnv.lean](Incomplete/AndEnv.lean)).
+- **Bounded fragment and ZF set model**: [Bounded.lean](Incomplete/Bounded.lean), [ZF.lean](Incomplete/ZF.lean), [ZFUniv.lean](Incomplete/ZFUniv.lean), [Model.lean](Incomplete/Model.lean), [ModelSound.lean](Incomplete/ModelSound.lean), [ClEnv.lean](Incomplete/ClEnv.lean), [Unconditional.lean](Incomplete/Unconditional.lean), [BProvLogic.lean](Incomplete/BProvLogic.lean).
+- **Standalone modal logic**: [Incomplete/Modal/](Incomplete/Modal) — Hilbert systems **GL** and **iGL** ([Basic.lean](Incomplete/Modal/Basic.lean)), Kripke frames ([Kripke.lean](Incomplete/Modal/Kripke.lean)), finite rooted completeness ([Complete.lean](Incomplete/Modal/Complete.lean)), and the letterless height tower ([Letterless.lean](Incomplete/Modal/Letterless.lean)).
+- **Internalized proof theory**: [Incomplete/Obj/](Incomplete/Obj) — typing and tactics ([Typing.lean](Incomplete/Obj/Typing.lean), [Core.lean](Incomplete/Obj/Core.lean), [Tactic.lean](Incomplete/Obj/Tactic.lean)), symbolic arithmetic and certificate checking ([Checker.lean](Incomplete/Obj/Checker.lean), [BChecker.lean](Incomplete/Obj/BChecker.lean)), internal Σ₁-completeness ([Sigma.lean](Incomplete/Obj/Sigma.lean)), second theorem ([Second.lean](Incomplete/Obj/Second.lean)), Löb and D1–D3 ([Loeb.lean](Incomplete/Obj/Loeb.lean), [Omega.lean](Incomplete/Obj/Omega.lean), [Derivability.lean](Incomplete/Obj/Derivability.lean), [GL.lean](Incomplete/Obj/GL.lean)), Solovay's walk ([Solovay.lean](Incomplete/Obj/Solovay.lean), [Letterless.lean](Incomplete/Obj/Letterless.lean)), and Chaitin's machine ([Obj/Chaitin.lean](Incomplete/Obj/Chaitin.lean), [Chaitin.lean](Incomplete/Chaitin.lean)).
 
 ## Dependency
 
-`lakefile.toml` pins [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean)
-(a fork of [digama0/lean4lean](https://github.com/digama0/lean4lean)) at
-[`db323b9f1770`](https://github.com/typhdotcom/lean4lean/commit/db323b9f1770df1bd15c54b01b10eb85a7b0962b).
-Core typing and definitional equality come from upstream; this repository uses
-three additions from the fork:
+[lakefile.toml](lakefile.toml) pins [typhdotcom/lean4lean](https://github.com/typhdotcom/lean4lean) (a fork of [digama0/lean4lean](https://github.com/digama0/lean4lean)) at [`db323b9f1770`](https://github.com/typhdotcom/lean4lean/commit/db323b9f1770df1bd15c54b01b10eb85a7b0962b). Core typing and definitional equality come from upstream; this repository uses three theory-level additions from the fork:
 
-- **Concrete inductive declarations** (`Theory/VEnv.lean`,
-  `Theory/Inductive.lean`, `Theory/Typing/Env.lean`): `VInductDecl.WF`, recursor
-  and iota-rule generation, `VEnv.addInduct`, and the `GeneratedWF` obligation
-  that generated recursors and iota rules are well typed.
-  `Incomplete/NatEnv.lean` identifies the explicit `Nat` environment with this
-  construction; `Incomplete/NatDeclWF.lean` discharges both well-formedness
-  obligations for `Nat`.
-- **Primitive projections and structure eta** (`Theory/Typing/Basic.lean`):
-  `VExpr.proj`, `VEnv.inducts`, and the `IsDefEq` rules `projDF`, `projIota`,
-  and `projEta` with their `ProjAllowed` side conditions. Included in the
-  full-theory proof checker (`Incomplete/Cert.lean`, `Incomplete/ProjRules.lean`)
-  and omitted from `BDefEq`.
-- **Environment and telescope lemmas**
-  (`Theory/Typing/{EnvLemmas,Projection,Telescope}.lean`): `VEnv.WF.ordered`,
-  `VDecl.WF.le`, `IsDefEq.appN_substT`, and `IsDefEq.lams_beta`.
+- **Concrete inductive declarations** (`Theory/VEnv.lean`, `Theory/Inductive.lean`, `Theory/Typing/Env.lean`): `VInductDecl.WF`, recursor and iota-rule generation, `VEnv.addInduct`, and the `GeneratedWF` obligation that generated recursors and iota rules are well typed (discharged for `Nat` in [NatDeclWF.lean](Incomplete/NatDeclWF.lean)).
+- **Primitive projections and structure η** (`Theory/Typing/Basic.lean`): `VExpr.proj`, `VEnv.inducts`, and the `IsDefEq` rules `projDF`, `projIota`, and `projEta` with their `ProjAllowed` side conditions (included in the full-theory checker in [Cert.lean](Incomplete/Cert.lean) and [ProjRules.lean](Incomplete/ProjRules.lean), and omitted from `BDefEq`).
+- **Environment and telescope lemmas** (`Theory/Typing/{EnvLemmas,Projection,Telescope}.lean`): `VEnv.WF.ordered`, `VDecl.WF.le`, `IsDefEq.appN_substT`, and `IsDefEq.lams_beta`.
 
-Thus the full-theory statements use the judgment including the fork's
-projection rules and its definition of well-formed environments. The proofs do
-not depend on the fork's kernel verification, runtime-model axioms, or open
-injectivity assumptions. Direct imports are limited to
-`Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`. The
-toolchain is Lean `v4.34.1` with `batteries` `v4.34.0`; lean4lean itself pins
-`v4.33.0-rc2` for its kernel replica and regression tests.
+The proofs do not depend on the fork's kernel verification, runtime-model axioms, or open injectivity assumptions; direct imports are limited to `Lean4Lean.Theory.Typing.{Basic,Env,EnvLemmas,Meta,Projection,Telescope}`. The toolchain is Lean `v4.34.1` ([lean-toolchain](lean-toolchain)) with `batteries` `v4.34.0`; lean4lean itself pins `v4.33.0-rc2` for its kernel replica and regression tests.
 
 ## Build and audit
 
 ```nu
 nix develop -c lake build
+nu tasks.nu check
 ```
 
-To verify axiom usage, run `nix develop -c lake env lean <file>` on:
+Every theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`. The codebase contains no `sorry`, `native_decide`, or custom `axiom`.
+
+<details>
+<summary>Full <code>#print axioms</code> audit script (run with <code>nix develop -c lake env lean --trust=0 &lt;file&gt;</code>)</summary>
 
 ```lean
 import Incomplete
@@ -578,82 +340,8 @@ open Incomplete
 #print axioms chaitin_unconditional
 ```
 
-Each theorem depends only on `propext`, `Classical.choice`, and `Quot.sound`.
-The codebase contains no `sorry`, `native_decide`, or custom `axiom`.
-
-## Layout
-
-Every file in `Incomplete/` opens with a module docstring stating its main
-results.
-
-- **Machines and external arithmetic** (`PR`, `PRLib`, `Sentences`, `Arith`,
-  `Adequacy`): the `PR` model, halting sentences, and external Σ₁-completeness.
-- **Proof checker and diagonalization** (`Encode`, `Cert*`, `Check*`, `*PR`,
-  `Rules*`, `ProjRules`, `Enumerate`, `Diag`): Gödel numbering, proof
-  certificates, the `PR` checker, and the diagonal machine.
-- **Environments** (`NatEnv`, `NatWF`, `NatDeclWF`, `AndEnv`, `EqEnv`,
-  `Extend`): well-formedness of `natEnv` and environment extensions.
-- **Incompleteness reductions** (`Kleene`, `Main`, `Final`, `Induct`, `Rosser`,
-  `Second`): abstract diagonal arguments, Gödel–Kleene and Rosser theorems, and
-  reduction of the second theorem to an object-theory proof of `Con T → G0 T`.
-- **Bounded fragment and set model** (`Bounded`, `BArith`, `BSigma`, `ZF`,
-  `ZFUniv`, `Model`, `ModelSound`, `Unconditional`, `ClEnv`): `BDefEq`, its set model over
-  environments whose constants have values (`ModelEnv`), `incomplete_unconditional`, and the
-  classical environment `clEnv`.
-- **Provability logic of the classical fragment** (`BProvLogic`): `GL_iff_bprovable` and its
-  letterless corollaries.
-- **Chaitin's theorem** (`Chaitin`): descriptions and their counting, `chaitin` and
-  `chaitin_unconditional`.
-- **Object-theory formalization (`Obj/`)**: internal development over any
-  judgment with the rules of `ObjEnv` (`Typing`), full typing or the fragment, of an ordered
-  environment containing `Nat`:
-  - *Logic and proof mode* (`Attr`, `Typing`, `Core`, `Tactic`, `Iota`, `Logic`): natural
-    deduction `Thm env Γ P`, Leibniz equality, impredicative connectives and
-    quantifiers, `Nat.rec` induction into `Prop`, `0 ≠ S n`, injectivity of
-    `S`, `n = 0 ∨ ∃ m, n = S m`, and custom object-level tactics (`otype`,
-    `orw`, `ointro`, `oind`, `ocases`, etc.) with their simp and label
-    attributes.
-  - *Arithmetic and recursion* (`Rec`, `Arith`, `Code`, `Eval`, `Bnd`, `Codes`,
-    `Order`, `Closed`, `Ring`, `Ineq`, `Pair`, `DivMod`, `Strong`, `Cases`,
-    `Cov`): symbolic evaluation `ev f l` of `PR` codes, `Lean.Grind` commutative
-    semiring integration (`oring`, `ole`), strong induction (`osind`), Cantor
-    pairing, Euclidean division, dispatch cascades, and course-of-values
-    recursion.
-  - *Internal syntax and proof checking* (`Reads`, `Key`, `Lift`, `Inst`,
-    `Numeral`, `Fields`, `Check`, `Certs`, `Free`, `NumCert`, `Template`,
-    `Holes`, `Chain`): variable-read bounds, de Bruijn lifting and
-    instantiation on encoded terms, symbolic certificate verification (`certT`,
-    `chkT`), closed certificate adequacy, multi-hole expression templates, and
-    internal instantiation and modus ponens.
-  - *Checking codes* (`Leaf`, `Checker`, `BChecker`): the bounds of `BDefEq` at symbolic
-    certificates, the interface `IsChecker` of a proof checker the theory reasons about, and
-    its instances `chkT T` and `bchkT T`.
-  - *Internal Σ₁-completeness, second theorem and Löb's theorem* (`Graph`,
-    `Sigma`, `Reduce`, `Second`, `Loeb`, `Omega`): internal graph proofs
-    (`ok_exists`) showing every `PR` code provably computes its values on
-    numerals, yielding `Con T → G0 T` (`con_imp_G0_provable`) and
-    `second_incompleteness`; for the Löb machine `loebM` searching for proofs
-    of `haltsE d ⌜d⌝ → P`, `loeb`; and the ω-inconsistent context `[Prov T ⊥]`
-    (`omega_inconsistent`).
-  - *Provability logic* (`Derivability`, `GL`): the derivability conditions,
-    formalized Löb, arithmetical soundness of GL and iGL, and `fairbot`, for any checking
-    code.
-  - *Arithmetical completeness* (`SolovayCode`, `SolovayStep`,
-    `SolovayLemmas`, `Solovay`): Solovay's walk on a finite frame, as a `PR`
-    code that finds the numbers of the sentences about itself from its input
-    and its external behaviour; its step read inside the theory; Solovay's
-    lemmas about the sentences `S_b`; the truth lemma; and
-    `GL_arith_complete`.
-  - *Letterless sentences* (`Letterless`): provability decided by the level tower, truth by its
-    limit, and iterated consistency.
-  - *Chaitin's theorem* (`Chaitin`): the sentence `Complex`, Chaitin's machine with its
-    three-hole template, provability of true descriptions, and `chaitin_core`.
-- **Modal logic (`Modal/`)**, independent of the object theory: `Modal`,
-  `GL` and `iGL` (`Basic`); derivations from hypotheses, the deduction
-  theorem, the 4 axiom and the Lindenbaum step (`Deduction`); Kripke models,
-  forcing and soundness (`Kripke`); completeness for finite rooted models
-  (`Complete`); and letterless formulas, the level tower and the height lemma (`Letterless`).
+</details>
 
 ## License
 
-Apache 2.0, matching lean4lean (`LICENSE`).
+Apache 2.0 ([LICENSE](LICENSE)), matching lean4lean.
